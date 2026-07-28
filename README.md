@@ -227,3 +227,43 @@ ElsOverlay is designed as a visual support and cooldown tracking overlay.
 
 The program does not modify game files and does not directly interact with the game client.
 
+# Development
+
+ElsOverlay is an open-source project developed with Qt 6 and CMake.
+
+## Building from source
+
+Requirements:
+
+- Qt 6.x
+- CMake 3.19 or newer
+- C++ compiler supporting C++17
+
+Steps:
+
+1. Clone the repository:
+git clone https://github.com/FungYang/ElsOverlay.git
+
+
+2. Open the project with Qt Creator or configure it using CMake.
+
+3. Build the project in Release mode.
+
+The generated executable can be deployed using Qt's `windeployqt` tool.
+
+---
+
+# Contributing
+
+Contributions, bug reports and improvements are welcome.
+
+If you modify or redistribute ElsOverlay, please follow the terms of the GNU General Public License v3.0.
+
+---
+
+## License
+
+The source code of ElsOverlay is licensed under the GNU General Public License v3.0.
+
+Third-party assets, trademarks and game-related materials remain property of their respective owners.
+
