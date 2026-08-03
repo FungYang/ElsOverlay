@@ -20,7 +20,7 @@ public:
         QWidget *parent = nullptr
         );
     void resetAllCooldowns();
-    void checkSequences();
+    void checkSequences(int key);
 
 protected:
 
@@ -38,9 +38,17 @@ private:
     QTimer *timer;
     QPoint dragPosition;
     GlobalKeyboard *keyboard;
-    QVector<int> keyBuffer;
-    static constexpr int MAX_BUFFER_SIZE = 3;
     bool trackingActive = false;
+    enum class SequenceState
+    {
+        WaitingG,
+        WaitingDirection,
+        WaitingKey
+    };
+
+    SequenceState sequenceState = SequenceState::WaitingG;
+
+    int selectedDirection = 0;
 };
 
 

@@ -24,6 +24,7 @@ signals:
 
 private:
     bool paused = false;
+    bool waitingForExit = false;
     static HHOOK hook;
     static GlobalKeyboard *instance;
 

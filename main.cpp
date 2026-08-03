@@ -76,44 +76,15 @@ int main(int argc, char *argv[])
 
 
     // =========================
-    // CHIUSURA DOPPIO ESC
+    // CHIUSURA ESC + P
     // =========================
-
-    bool escWaiting = false;
-
-
-    QTimer escTimer;
-
-    escTimer.setSingleShot(true);
-
-    escTimer.setInterval(800);
-
-
 
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::escPressed,
         [&]()
         {
-            if(escWaiting)
-            {
-                app.quit();
-            }
-            else
-            {
-                escWaiting = true;
-                escTimer.start();
-            }
-        }
-        );
-
-
-    QObject::connect(
-        &escTimer,
-        &QTimer::timeout,
-        [&]()
-        {
-            escWaiting = false;
+            app.quit();
         }
         );
 
@@ -131,16 +102,6 @@ int main(int argc, char *argv[])
         &BuffOverlay::handleKey
         );
 
-
-    QObject::connect(
-        &keyboard,
-        &GlobalKeyboard::resetPressed,
-        &buffs,
-        [&buffs]()
-        {
-            buffs.clearBuffs();
-        }
-        );
 
 
 
@@ -174,7 +135,7 @@ int main(int argc, char *argv[])
         [&buffs, &selector]()
         {
             buffs.clearBuffs();
-            selector.show();
+            //selector.show();
         }
         );
     QObject::connect(

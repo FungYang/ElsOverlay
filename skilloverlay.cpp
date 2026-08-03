@@ -90,7 +90,8 @@ SkillOverlay::SkillOverlay(
         {
             trackingActive = false;
 
-            keyBuffer.clear();
+            sequenceState = SequenceState::WaitingG;
+            selectedDirection = 0;
 
             concerto->resetCooldown();
             artifact->resetCooldown();
@@ -98,7 +99,7 @@ SkillOverlay::SkillOverlay(
             settingSun->resetCooldown();
         }
         );
-    // disposizione a croce
+    // disposizione a croceg
 
     concerto->move(60,0);
 
@@ -107,7 +108,6 @@ SkillOverlay::SkillOverlay(
 
 
     artifact->move(100,50);
-
 
     settingSun->move(60,100);
     timer = new QTimer(this);
@@ -130,22 +130,9 @@ SkillOverlay::SkillOverlay(
         this,
         [this](int key)
         {
-            if(key == '6')
-            {
-                artifact->startCooldown();
-            }
 
+        checkSequences(key);
 
-            keyBuffer.append(key);
-
-
-            if(keyBuffer.size() > 3)
-            {
-                keyBuffer.removeFirst();
-            }
-
-
-            checkSequences();
         }
         );
 
@@ -194,106 +181,105 @@ void SkillOverlay::resetAllCooldowns()
     settingSun->resetCooldown();
 }
 
-void SkillOverlay::checkSequences()
+void SkillOverlay::checkSequences(int key)
 {
     if(!trackingActive)
     {
-        keyBuffer.clear();
+        sequenceState = SequenceState::WaitingG;
         return;
     }
 
-    if(keyBuffer.size() > 3)
-    {
-        keyBuffer.removeFirst();
-    }
 
-
-    if(keyBuffer.size() == 3)
+    switch(sequenceState)
     {
 
-        // Concerto: G + Freccia Su + LCTRL
-        if(
-            keyBuffer[0] == 'G' &&
-            keyBuffer[1] == VK_UP &&
-            keyBuffer[2] == VK_LCONTROL
-            )
-        {
-            concerto->startCooldown();
+    case SequenceState::WaitingG:
 
-            keyBuffer.clear();
-            return;
+        if(key == 'G')
+        {
+            sequenceState = SequenceState::WaitingDirection;
+        }
+
+        break;
+
+
+
+    case SequenceState::WaitingDirection:
+
+        if(key == VK_UP ||
+            key == VK_LEFT ||
+            key == VK_DOWN)
+        {
+            selectedDirection = key;
+            sequenceState = SequenceState::WaitingKey;
+        }
+        else if(key == 'G')
+        {
+            // se ripremo G rimaniamo in attesa della direzione
+            sequenceState = SequenceState::WaitingDirection;
+        }
+
+        break;
+
+
+
+    case SequenceState::WaitingKey:
+
+
+        // =========================
+        // CONCERTO
+        // G + ↑ + CTRL / 6
+        // =========================
+
+        if(selectedDirection == VK_UP)
+        {
+            if(key == VK_LCONTROL ||
+                key == '6')
+            {
+                concerto->startCooldown();
+
+                sequenceState = SequenceState::WaitingG;
+            }
         }
 
 
-        // Concerto: G + Freccia Su + 6
-        if(
-            keyBuffer[0] == 'G' &&
-            keyBuffer[1] == VK_UP &&
-            keyBuffer[2] == '6'
-            )
-        {
-            concerto->startCooldown();
 
-            keyBuffer.clear();
-            return;
+        // =========================
+        // NIGHT PARADE
+        // G + ← + F / T
+        // =========================
+
+        else if(selectedDirection == VK_LEFT)
+        {
+            if(key == 'F' ||
+                key == 'T')
+            {
+                nightParade->startCooldown();
+
+                sequenceState = SequenceState::WaitingG;
+            }
         }
 
 
-        // NightParade: G + Freccia Sinistra + F
-        if(
-            keyBuffer[0] == 'G' &&
-            keyBuffer[1] == VK_LEFT &&
-            keyBuffer[2] == 'F'
-            )
-        {
-            nightParade->startCooldown();
 
-            keyBuffer.clear();
-            return;
+        // =========================
+        // SETTING SUN
+        // G + ↓ + CTRL / 6
+        // =========================
+
+        else if(selectedDirection == VK_DOWN)
+        {
+            if(key == VK_LCONTROL ||
+                key == '6')
+            {
+                settingSun->startCooldown();
+
+                sequenceState = SequenceState::WaitingG;
+            }
         }
 
 
-        // NightParade: G + Freccia Sinistra + T
-        if(
-            keyBuffer[0] == 'G' &&
-            keyBuffer[1] == VK_LEFT &&
-            keyBuffer[2] == 'T'
-            )
-        {
-            nightParade->startCooldown();
-
-            keyBuffer.clear();
-            return;
-        }
-
-
-        // SettingSun: G + Freccia Giù + LCTRL
-        if(
-            keyBuffer[0] == 'G' &&
-            keyBuffer[1] == VK_DOWN &&
-            keyBuffer[2] == VK_LCONTROL
-            )
-        {
-            settingSun->startCooldown();
-
-            keyBuffer.clear();
-            return;
-        }
-
-
-        // SettingSun: G + Freccia Giù + 6
-        if(
-            keyBuffer[0] == 'G' &&
-            keyBuffer[1] == VK_DOWN &&
-            keyBuffer[2] == '6'
-            )
-        {
-            settingSun->startCooldown();
-
-            keyBuffer.clear();
-            return;
-        }
+        break;
 
     }
-
 }
