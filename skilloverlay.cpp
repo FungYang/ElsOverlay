@@ -213,6 +213,13 @@ void SkillOverlay::checkSequences(int key)
             selectedDirection = key;
             sequenceState = SequenceState::WaitingKey;
         }
+        else if(key == VK_RIGHT)
+        {
+            // G + freccia destra non è una combo valida
+            // resetta la sequenza
+            sequenceState = SequenceState::WaitingG;
+            selectedDirection = 0;
+        }
         else if(key == 'G')
         {
             // se ripremo G rimaniamo in attesa della direzione
@@ -220,7 +227,6 @@ void SkillOverlay::checkSequences(int key)
         }
 
         break;
-
 
 
     case SequenceState::WaitingKey:
