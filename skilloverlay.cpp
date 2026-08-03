@@ -75,6 +75,11 @@ SkillOverlay::SkillOverlay(
         this,
         [this]()
         {
+            if(trackingActive){
+                artifact->startCooldown();
+                return;
+            }
+
             trackingActive = true;
 
             artifact->startCooldown();
@@ -130,9 +135,14 @@ SkillOverlay::SkillOverlay(
         this,
         [this](int key)
         {
+            if(key == '6' &&
+                sequenceState == SequenceState::WaitingG &&
+                trackingActive)
+            {
+                artifact->startCooldown();
+            }
 
-        checkSequences(key);
-
+            checkSequences(key);
         }
         );
 
