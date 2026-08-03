@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
         [&buffs, &selector]()
         {
             buffs.clearBuffs();
-            //selector.show();
+            selector.show();
         }
         );
     QObject::connect(
