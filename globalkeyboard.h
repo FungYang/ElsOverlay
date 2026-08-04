@@ -20,6 +20,7 @@ signals:
     void keyPressed(int key);
     void pauseChanged(bool paused);
     void confirmPressed();
+    void transcendenceResetPressed();
 
 
 private:

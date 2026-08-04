@@ -104,6 +104,10 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                 {
                     return CallNextHookEx(hook, nCode, wParam, lParam);
                 }
+                if(key->vkCode == '7')
+                {
+                    emit instance->transcendenceResetPressed();
+                }
 
                 emit instance->keyPressed(key->vkCode);
 

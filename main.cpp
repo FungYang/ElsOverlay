@@ -72,6 +72,27 @@ int main(int argc, char *argv[])
             overlay.resetCooldown();
         }
         );
+    QObject::connect(
+        &keyboard,
+        &GlobalKeyboard::transcendenceResetPressed,
+        &overlay,
+        [&overlay]()
+        {
+            overlay.resetCooldown();
+        }
+        );
+    QObject::connect(
+        &keyboard,
+        &GlobalKeyboard::keyPressed,
+        &overlay,
+        [&overlay](int key)
+        {
+            if(key == '6')
+            {
+                overlay.startCooldown();
+            }
+        }
+        );
 
 
 
