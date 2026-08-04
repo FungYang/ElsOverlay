@@ -5,7 +5,6 @@
 #include <QTimer>
 #include "skillbox.h"
 #include "globalkeyboard.h"
-#include <QVector>
 #include <QSettings>
 
 
@@ -19,13 +18,14 @@ public:
         GlobalKeyboard *keyboard,
         QWidget *parent = nullptr
         );
+
     void resetAllCooldowns();
     void checkSequences(int key);
+
 
 protected:
 
     void mousePressEvent(QMouseEvent *event) override;
-
     void mouseMoveEvent(QMouseEvent *event) override;
 
 
@@ -35,20 +35,43 @@ private:
     SkillBox *artifact;
     SkillBox *nightParade;
     SkillBox *settingSun;
+
     QTimer *timer;
+
     QPoint dragPosition;
+
     GlobalKeyboard *keyboard;
+
+
     bool trackingActive = false;
+
+
     enum class SequenceState
     {
         WaitingG,
-        WaitingDirection,
-        WaitingKey
+        WaitingDirection
     };
 
-    SequenceState sequenceState = SequenceState::WaitingG;
+
+    enum class ActiveTitle
+    {
+        None,
+        Concerto,
+        NightParade,
+        SettingSun,
+        Other
+    };
+
+
+    ActiveTitle currentTitle = ActiveTitle::None;
+
+
+    SequenceState sequenceState =
+        SequenceState::WaitingG;
+
 
     int selectedDirection = 0;
+
 };
 
 

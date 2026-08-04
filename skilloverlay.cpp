@@ -13,21 +13,29 @@ SkillOverlay::SkillOverlay(
 
     setFixedSize(180,165);
 
+
     setWindowFlags(
         Qt::Tool |
         Qt::FramelessWindowHint |
         Qt::WindowStaysOnTopHint
         );
 
-    setAttribute(Qt::WA_TranslucentBackground);
+
+    setAttribute(
+        Qt::WA_TranslucentBackground
+        );
+
 
     setStyleSheet(
         "background: transparent;"
         );
+
+
     QSettings settings(
         "ElsOverlay.ini",
         QSettings::IniFormat
         );
+
 
     move(
         settings.value(
@@ -36,6 +44,8 @@ SkillOverlay::SkillOverlay(
                     ).toPoint()
         );
 
+
+
     concerto =
         new SkillBox(
             "images/concerto.png",
@@ -43,6 +53,7 @@ SkillOverlay::SkillOverlay(
             60,
             this
             );
+
 
     artifact =
         new SkillBox(
@@ -69,23 +80,122 @@ SkillOverlay::SkillOverlay(
             25,
             this
             );
+
+
+
+    // =========================
+    // CONTROLLO CTRL
+    // =========================
+
+    connect(
+        keyboard,
+        &GlobalKeyboard::keyPressed,
+        this,
+        [this](int key)
+        {
+
+            if(!trackingActive)
+            {
+                checkSequences(key);
+                return;
+            }
+
+
+            // Artifact sempre con 6
+            if(key == '6' &&
+                sequenceState == SequenceState::WaitingG)
+            {
+                artifact->startCooldown();
+            }
+
+
+            // Night Parade con F/T
+            if(sequenceState == SequenceState::WaitingG &&
+                currentTitle == ActiveTitle::NightParade)
+            {
+                if(key == 'F' || key == 'T')
+                {
+                    nightParade->startCooldown();
+                }
+            }
+
+
+            checkSequences(key);
+
+        }
+        );
+
     connect(
         keyboard,
         &GlobalKeyboard::ctrlPressed,
         this,
         [this]()
         {
-            if(trackingActive){
+
+            // Primo awakening
+            if(!trackingActive)
+            {
+
+                trackingActive = true;
+
                 artifact->startCooldown();
+
+                concerto->startCooldown();
+
                 return;
+
             }
 
-            trackingActive = true;
+
+
+            // Artifact sempre con CTRL
 
             artifact->startCooldown();
-            concerto->startCooldown();
+
+
+
+            // Titolo selezionato
+
+            switch(currentTitle)
+            {
+
+            case ActiveTitle::Concerto:
+
+                concerto->startCooldown();
+
+                break;
+
+
+            case ActiveTitle::SettingSun:
+
+                settingSun->startCooldown();
+
+                break;
+
+
+            case ActiveTitle::NightParade:
+
+                nightParade->startCooldown();
+
+                break;
+
+
+            case ActiveTitle::Other:
+            case ActiveTitle::None:
+
+                break;
+
+            }
+
         }
         );
+
+
+
+
+    // =========================
+    // RESET CTRL DESTRO
+    // =========================
 
     connect(
         keyboard,
@@ -93,29 +203,45 @@ SkillOverlay::SkillOverlay(
         this,
         [this]()
         {
+
             trackingActive = false;
 
-            sequenceState = SequenceState::WaitingG;
+            sequenceState =
+                SequenceState::WaitingG;
+
+
             selectedDirection = 0;
+
+
+            currentTitle =
+                ActiveTitle::None;
+
 
             concerto->resetCooldown();
             artifact->resetCooldown();
             nightParade->resetCooldown();
             settingSun->resetCooldown();
+
         }
         );
-    // disposizione a croceg
+
+
+
+
+    // posizione croce
 
     concerto->move(60,0);
 
-
     nightParade->move(20,50);
-
 
     artifact->move(100,50);
 
     settingSun->move(60,100);
+
+
+
     timer = new QTimer(this);
+
 
     connect(
         timer,
@@ -123,26 +249,12 @@ SkillOverlay::SkillOverlay(
         this,
         [this]()
         {
+
             concerto->tick();
             artifact->tick();
             nightParade->tick();
             settingSun->tick();
-        }
-        );
-    connect(
-        keyboard,
-        &GlobalKeyboard::keyPressed,
-        this,
-        [this](int key)
-        {
-            if(key == '6' &&
-                sequenceState == SequenceState::WaitingG &&
-                trackingActive)
-            {
-                artifact->startCooldown();
-            }
 
-            checkSequences(key);
         }
         );
 
@@ -150,6 +262,10 @@ SkillOverlay::SkillOverlay(
     timer->start(1000);
 
 }
+
+
+
+
 void SkillOverlay::mousePressEvent(QMouseEvent *event)
 {
 
@@ -158,6 +274,7 @@ void SkillOverlay::mousePressEvent(QMouseEvent *event)
         - frameGeometry().topLeft();
 
 }
+
 
 
 
@@ -183,119 +300,130 @@ void SkillOverlay::mouseMoveEvent(QMouseEvent *event)
 
 }
 
+
+
+
 void SkillOverlay::resetAllCooldowns()
 {
+
     concerto->resetCooldown();
+
     artifact->resetCooldown();
+
     nightParade->resetCooldown();
+
     settingSun->resetCooldown();
+
 }
+
+
+
 
 void SkillOverlay::checkSequences(int key)
 {
+
     if(!trackingActive)
     {
-        sequenceState = SequenceState::WaitingG;
+
+        sequenceState =
+            SequenceState::WaitingG;
+
         return;
+
     }
+
 
 
     switch(sequenceState)
     {
 
+
+        // =========================
+        // ASPETTA G
+        // =========================
+
     case SequenceState::WaitingG:
+
 
         if(key == 'G')
         {
-            sequenceState = SequenceState::WaitingDirection;
+
+            sequenceState =
+                SequenceState::WaitingDirection;
+
         }
 
         break;
 
 
+
+        // =========================
+        // SCELTA TITOLO
+        // =========================
 
     case SequenceState::WaitingDirection:
 
-        if(key == VK_UP ||
-            key == VK_LEFT ||
-            key == VK_DOWN)
+
+        if(key == VK_UP)
         {
-            selectedDirection = key;
-            sequenceState = SequenceState::WaitingKey;
+
+            currentTitle =
+                ActiveTitle::Concerto;
+
         }
+
+
+        else if(key == VK_LEFT)
+        {
+
+            currentTitle =
+                ActiveTitle::NightParade;
+
+        }
+
+
+        else if(key == VK_DOWN)
+        {
+
+            currentTitle =
+                ActiveTitle::SettingSun;
+
+        }
+
+
         else if(key == VK_RIGHT)
         {
-            // G + freccia destra non è una combo valida
-            // resetta la sequenza
-            sequenceState = SequenceState::WaitingG;
-            selectedDirection = 0;
+
+            currentTitle =
+                ActiveTitle::Other;
+
         }
+
+
         else if(key == 'G')
         {
-            // se ripremo G rimaniamo in attesa della direzione
-            sequenceState = SequenceState::WaitingDirection;
+            // rimane in attesa
+
+            break;
         }
 
-        break;
 
-
-    case SequenceState::WaitingKey:
-
-
-        // =========================
-        // CONCERTO
-        // G + ↑ + CTRL / 6
-        // =========================
-
-        if(selectedDirection == VK_UP)
+        else
         {
-            if(key == VK_LCONTROL ||
-                key == '6')
-            {
-                concerto->startCooldown();
-
-                sequenceState = SequenceState::WaitingG;
-            }
+            break;
         }
 
 
 
-        // =========================
-        // NIGHT PARADE
-        // G + ← + F / T
-        // =========================
-
-        else if(selectedDirection == VK_LEFT)
-        {
-            if(key == 'F' ||
-                key == 'T')
-            {
-                nightParade->startCooldown();
-
-                sequenceState = SequenceState::WaitingG;
-            }
-        }
+        selectedDirection = key;
 
 
-
-        // =========================
-        // SETTING SUN
-        // G + ↓ + CTRL / 6
-        // =========================
-
-        else if(selectedDirection == VK_DOWN)
-        {
-            if(key == VK_LCONTROL ||
-                key == '6')
-            {
-                settingSun->startCooldown();
-
-                sequenceState = SequenceState::WaitingG;
-            }
-        }
+        sequenceState =
+            SequenceState::WaitingG;
 
 
         break;
 
     }
+
 }

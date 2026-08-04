@@ -67,23 +67,15 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                         );
                 }
 
-                // ESC funziona sempre
-                // ESC prepara la chiusura
+                // ESC prepara la chiusura ma non blocca gli input
                 if (key->vkCode == VK_ESCAPE)
                 {
                     instance->waitingForExit = true;
-
-                    return CallNextHookEx(
-                        hook,
-                        nCode,
-                        wParam,
-                        lParam
-                        );
                 }
 
 
-                // Conferma chiusura con P
-                if (instance->waitingForExit)
+                // Controllo P dopo ESC
+                else if(instance->waitingForExit)
                 {
                     if(key->vkCode == 'P')
                     {
@@ -99,7 +91,7 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                             );
                     }
 
-                    // qualsiasi altro tasto annulla
+                    // qualsiasi altro tasto annulla la chiusura
                     instance->waitingForExit = false;
                 }
                 if(key->vkCode == VK_RETURN)
