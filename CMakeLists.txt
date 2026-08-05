@@ -19,6 +19,18 @@ qt_add_executable(ElsOverlay
     buffoverlay.h buffoverlay.cpp
     classselector.h classselector.cpp
     classdata.h
+    buffvisioncore.h buffvisioncore.cpp
+    buffvisionoverlay.h buffvisionoverlay.cpp
+    buffvisionselector.h buffvisionselector.cpp
+    buffvisioncapturesetup.h buffvisioncapturesetup.cpp
+    buffvisionmanager.h buffvisionmanager.cpp
+    buffvisioncapture.h buffvisioncapture.cpp
+    buffvisiondetector.h buffvisiondetector.cpp
+    buffvisiondebug.h buffvisiondebug.cpp
+    buffvisionconfig.h
+    overlayroot.h overlayroot.cpp
+
+
 )
 target_link_libraries(ElsOverlay
     PRIVATE

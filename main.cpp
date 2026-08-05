@@ -1,11 +1,15 @@
 #include <QApplication>
-#include <QTimer>
 
 #include "overlay.h"
 #include "globalkeyboard.h"
 #include "skilloverlay.h"
 #include "buffoverlay.h"
 #include "classselector.h"
+#include "buffvisionmanager.h"
+#include "overlayroot.h"
+
+
+
 QString classTypeToString(ClassType type)
 {
     switch(type)
@@ -27,6 +31,7 @@ QString classTypeToString(ClassType type)
 }
 
 
+
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -34,71 +39,160 @@ int main(int argc, char *argv[])
 
 
     // =========================
+    // ROOT OVERLAY
+    // =========================
+
+
+    OverlayRoot *overlayRoot =
+        new OverlayRoot();
+
+
+    overlayRoot->show();
+
+
+
+
+
+    // =========================
     // OGGETTI PRINCIPALI
     // =========================
 
+
     GlobalKeyboard keyboard;
 
-    Overlay overlay;
 
-    SkillOverlay skills(&keyboard);
 
-    BuffOverlay buffs;
 
-    ClassSelector selector;
+    Overlay *overlay =
+        new Overlay(
+            overlayRoot
+            );
+
+
+
+    SkillOverlay *skills =
+        new SkillOverlay(
+            &keyboard,
+            overlayRoot
+            );
+
+
+
+    BuffOverlay *buffs =
+        new BuffOverlay(
+            overlayRoot
+            );
+
+
+
+    ClassSelector *selector =
+        new ClassSelector(
+            overlayRoot
+            );
+
+
+
+
 
 
     // =========================
-    // OVERLAY SKILL PRINCIPALE
+    // REGISTRA OVERLAY
     // =========================
+
+
+    overlayRoot->registerOverlay(
+        overlay
+        );
+
+
+    overlayRoot->registerOverlay(
+        skills
+        );
+
+
+    overlayRoot->registerOverlay(
+        buffs
+        );
+
+
+    overlayRoot->registerOverlay(
+        selector
+        );
+
+
+
+
+
+
+
+    // =========================
+    // TRANSCENDENCE
+    // =========================
+
+
 
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::ctrlPressed,
-        &overlay,
-        [&overlay]()
+        overlay,
+        [overlay]()
         {
-            overlay.startCooldown();
+            overlay->startCooldown();
         }
         );
+
 
 
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::resetPressed,
-        &overlay,
-        [&overlay]()
+        overlay,
+        [overlay]()
         {
-            overlay.resetCooldown();
+            overlay->resetCooldown();
         }
         );
+
+
+
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::transcendenceResetPressed,
-        &overlay,
-        [&overlay]()
+        overlay,
+        [overlay]()
         {
-            overlay.resetCooldown();
+            overlay->resetCooldown();
         }
         );
+
+
+
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::keyPressed,
-        &overlay,
-        [&overlay](int key)
+        overlay,
+        [overlay](int key)
         {
+
             if(key == '6')
             {
-                overlay.startCooldown();
+                overlay->startCooldown();
             }
+
         }
         );
 
 
 
+
+
+
+
+
     // =========================
-    // CHIUSURA ESC + P
+    // CHIUSURA
     // =========================
+
 
     QObject::connect(
         &keyboard,
@@ -111,37 +205,42 @@ int main(int argc, char *argv[])
 
 
 
+
+
+
+
+
     // =========================
-    // SISTEMA BUFF
+    // BUFF STANDARD
     // =========================
 
 
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::keyPressed,
-        &buffs,
+        buffs,
         &BuffOverlay::handleKey
         );
 
 
 
 
-    // =========================
-    // SELETTORE CLASSI
-    // =========================
+
 
 
     QObject::connect(
-        &selector,
+        selector,
         &ClassSelector::classSelected,
-        [&buffs](ClassType type)
+        buffs,
+        [buffs](ClassType type)
         {
 
             ClassData data =
                 getClassData(type);
 
 
-            buffs.loadBuffs(
+
+            buffs->loadBuffs(
                 classTypeToString(type),
                 data.buffs
                 );
@@ -150,33 +249,86 @@ int main(int argc, char *argv[])
         );
 
 
+
+
+
+
+
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::resetPressed,
-        [&buffs, &selector]()
+        buffs,
+        [buffs, selector, overlayRoot]()
         {
-            buffs.clearBuffs();
-            selector.show();
+
+            buffs->clearBuffs();
+
+
+            selector->show();
+
+
+            overlayRoot->raiseAll();
+
         }
         );
+
+
+
+
+
+
+
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::confirmPressed,
-        &buffs,
+        buffs,
         &BuffOverlay::confirmAll
         );
+
+
+
+
+
+
+
 
 
     // =========================
     // AVVIO
     // =========================
 
-    overlay.show();
 
-    skills.show();
+    overlay->show();
 
-    selector.show();
+    skills->show();
+
+    selector->show();
+
+
+
+    overlayRoot->raiseAll();
+
+
+
+
+
+
+
+
+    // =========================
+    // BUFF VISION
+    // =========================
+
+
+    BuffVisionManager atma(
+        &keyboard,
+        overlayRoot
+        );
+
+
+
 
 
     return app.exec();
+
 }

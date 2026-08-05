@@ -1,4 +1,5 @@
 #include "globalkeyboard.h"
+#include <QDebug>
 
 
 HHOOK GlobalKeyboard::hook = nullptr;
@@ -96,6 +97,7 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                 }
                 if(key->vkCode == VK_RETURN)
                 {
+                    // qDebug() << "ENTER DOWN";
                     emit instance->confirmPressed();
                 }
 
