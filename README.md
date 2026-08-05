@@ -1,109 +1,321 @@
 # ElsOverlay
 
-ElsOverlay is a customizable overlay for Elsword that allows you to track skill and buff cooldowns through visual elements displayed on top of the game.
+ElsOverlay is a customizable overlay for Elsword designed to track skill cooldowns and buffs through visual elements displayed above the game.
 
-The program allows separate configuration of:
+The program uses external information only, such as keyboard input and screen recognition features. It does not modify game files and does not directly interact with the game client.
 
-- Transcendence overlay.
-- Main 4-buff group.
-- Class-specific buff boxes.
+---
 
-All positions are automatically saved and restored on the next launch through the file:
+# Features
 
+ElsOverlay currently provides:
+
+* Transcendence cooldown tracking.
+* Main skill/buff overlay group.
+* Class-specific buff overlays.
+* Movable overlay elements.
+* Automatic position saving.
+* Keyboard sequence recognition.
+* Title-based skill selection system.
+* Awakening-based Artifact tracking.
+* BuffVision visual confirmation system.
+
+BuffVision uses selected screen areas and image comparison to detect visual states without interacting with the game client.
+
+---
+
+# First Launch
+
+On first launch, all overlay elements are created using default positions.
+
+Every element can be moved by dragging it with the mouse.
+
+Positions are automatically saved in:
+
+```
 ElsOverlay.ini
-No manual editing of the file is required.
+```
+
+No manual configuration editing is required.
 
 ---
 
-# First Launch
+# BuffVision System
 
-On the first launch, all elements are created using their default positions.
+BuffVision is a visual detection system used to confirm buff states through screen recognition.
 
-Every overlay element can be moved by dragging it with the mouse.
+The system works by:
 
-Once the desired position is set, it will be automatically saved.
-
----
-
-# Transcendence Overlay
-
-The Transcendence overlay is a single element that is always available.
-
-To configure it:
-
-1. Drag the overlay to the desired position.
-2. Close the program.
-
-The position will automatically be restored on future launches.
-
----
-
-# Buff Group
-
-The 4-buff group works independently from the selected class.
-
-To configure it:
-
-1. Move the group to the desired position.
-2. Close the program.
-
-The position will be preserved on future launches.
-
----
-
-# Class Selection
-
-The class selector allows you to choose the class configuration you want to use.
-
-Each class has an independent configuration.
-
-Example:No manual editing of the file is required.
-
----
-
-# First Launch
-
-On the first launch, all elements are created using their default positions.
-
-Every overlay element can be moved by dragging it with the mouse.
-
-Once the desired position is set, it will be automatically saved.
-
----
-
-# Transcendence Overlay
-
-The Transcendence overlay is a single element that is always available.
-
-To configure it:
-
-1. Drag the overlay to the desired position.
-2. Close the program.
-
-The position will automatically be restored on future launches.
-
----
-
-# Buff Group
-
-The 4-buff group works independently from the selected class.
-
-To configure it:
-
-1. Move the group to the desired position.
-2. Close the program.
-
-The position will be preserved on future launches.
-
----
-
-# Class Selection
-
-The class selector allows you to choose the class configuration you want to use.
-
-Each class has an independent configuration.
+1. Selecting specific screen areas.
+2. Saving reference images for different visual states.
+3. Capturing the selected areas during tracking.
+4. Comparing current images with stored references.
+5. Triggering events only when a valid state transition is detected.
 
 Example:
+
+```
+State 1
+   |
+   | visual change
+   v
+State 2
+   |
+   v
+Buff event
+```
+
+The system does not read game memory and does not modify the game client.
+
+---
+
+# BuffVision Configuration
+
+During BuffVision setup:
+
+1. Move the capture boxes over the desired screen areas.
+2. Press `P` to save the first reference image.
+3. Press `P` again to save the second reference image.
+4. Press `ENTER` to confirm the configuration.
+
+Reference images are stored in:
+
+```
+BuffVision/
+```
+
+The program automatically loads existing references on startup.
+
+---
+
+# Overlay Groups
+
+## Transcendence Overlay
+
+The Transcendence overlay tracks the cooldown timer.
+
+Features:
+
+* Automatic cooldown counting.
+* Manual reset through dedicated key.
+* Independent from other overlays.
+
+The position is automatically saved.
+
+---
+
+## Main Skill Group
+
+The main group contains:
+
+* Concerto
+* Artifact
+* Night Parade
+* Setting Sun
+
+The group can be moved freely.
+
+Each position is automatically restored on the next launch.
+
+---
+
+# Title Selection System
+
+Skill activation uses a title selection system.
+
+Pressing:
+
+```
+G + Direction
+```
+
+selects the current title.
+
+Available titles:
+
+```
+G + ↑ -> Concerto
+
+G + ← -> Night Parade
+
+G + ↓ -> Setting Sun
+
+G + → -> Empty title
+```
+
+The selected title remains active until another title is chosen.
+
+This prevents accidental activation of previously selected skills.
+
+---
+
+# Skill Activation
+
+## Concerto
+
+Available combinations:
+
+```
+G + ↑ + CTRL
+G + ↑ + 6
+```
+
+---
+
+## Night Parade
+
+Available combinations:
+
+```
+G + ← + F
+G + ← + T
+```
+
+---
+
+## Setting Sun
+
+Available combinations:
+
+```
+G + ↓ + CTRL
+G + ↓ + 6
+```
+
+---
+
+# Artifact
+
+Artifact works independently from the selected title.
+
+When awakening tracking is active:
+
+```
+CTRL
+6
+```
+
+activate Artifact cooldown tracking.
+
+Artifact does not depend on:
+
+* Concerto selection.
+* Night Parade selection.
+* Setting Sun selection.
+
+---
+
+# Controls
+
+## LCTRL
+
+Starts awakening/tracking mode.
+
+First activation:
+
+* Enables sequence detection.
+* Starts initial tracking cooldowns.
+
+Further presses continue normal tracking.
+
+---
+
+## RCTRL
+
+Full system reset.
+
+Effects:
+
+* Stops tracking.
+* Clears selected title.
+* Resets skill cooldowns.
+* Resets BuffVision states.
+* Restores the initial state.
+
+---
+
+## ENTER
+
+Confirms BuffVision configuration.
+
+After moving BuffVision capture boxes:
+
+1. Position the capture areas.
+2. Save the two reference images using `P`.
+3. Press ENTER.
+4. The configuration becomes active.
+
+---
+
+## SPACE
+
+Pauses overlay input detection.
+
+While paused:
+
+* Skill detection is disabled.
+* ESC remains functional.
+
+Press SPACE again to resume.
+
+---
+
+## ESC + P
+
+Exit command.
+
+The application closes only when:
+
+```
+ESC
+then
+P
+```
+
+are pressed.
+
+ESC alone does not stop the program or block other inputs.
+
+---
+
+## 7
+
+Manual Transcendence reset.
+
+This reset only affects the Transcendence timer.
+
+Useful when:
+
+* Awakening ends unexpectedly.
+* The character dies.
+* Manual synchronization is needed.
+
+It does not reset other overlays.
+
+---
+
+## 0
+
+Manual Atma Buff start/reset.
+
+This reset only affects the Atma Flow buff timer.
+
+Useful when:
+
+* Finished Raid
+* Before Starting Raid
+
+It does not reset other overlays.
+
+---
+
+# Class System
+
+Classes have independent buff configurations.
+
+Example:
+
+```
 BQ
 ├── A
 ├── D
@@ -112,158 +324,55 @@ FL
 ├── A
 ├── B
 └── C
+```
 
+When changing class:
 
-When selecting a class:
-
-- Only the buff boxes associated with that class are loaded.
-- Saved positions for that class are restored.
-- Other class configurations remain unchanged.
-
----
-
-# Class Buff Box Configuration
-
-When a class is loaded for the first time:
-
-1. The buff boxes are created in their default positions.
-2. Drag each box to the desired location.
-3. Press `ENTER` to confirm the configuration.
-
-After confirmation, the boxes become active and can receive inputs.
-
-Pressing `ENTER` without selecting a class has no effect.
+* Previous buff boxes are removed.
+* New boxes are created.
+* Saved positions are restored.
 
 ---
 
-# Controls
+# Configuration File
 
-## LCTRL
+All settings are stored in:
 
-Starts the tracking system.
-
-When pressed:
-
-- Enables sequence detection.
-- Starts the configured cooldown tracking.
-
-If tracking is already active, pressing LCTRL again will not restart the system.
-
----
-
-## RCTRL
-
-Returns the program to its initial state.
-
-Effects:
-
-- Disables tracking.
-- Resets cooldowns.
-- Clears stored sequences.
-
----
-
-## ENTER
-
-Confirms the placement of the current class buff boxes.
-
-Use this after positioning the boxes to make them active.
-
----
-
-## SPACE
-
-Pauses or resumes overlay input detection.
-
-While paused:
-
-- The overlay ignores all other keyboard inputs.
-- `ESC` continues to work normally.
-
-Press SPACE again to resume input detection.
-
----
-
-## ESC
-
-A command that remains available even while the overlay is paused.
-
----
-
-# Configuration Saving
-
-The `ElsOverlay.ini` file automatically stores all configurations.
+```
+ElsOverlay.ini
+```
 
 Example:
+
+```
 [Overlay]
 Transcendence\position=@Point(...)
+
 BuffGroup\position=@Point(...)
 
 [Classes]
 BQ\A\position=@Point(...)
-BQ\D\position=@Point(...)
+```
 
-
-Buff box positions are stored separately for each class.
-
-Deleting the `ElsOverlay.ini` file will reset the program to its default positions.
+Deleting this file restores default positions.
 
 ---
 
-# Changing Class
+# Technical Information
 
-When selecting a new class:
+Developed with:
 
-1. The previous class buff boxes are removed.
-2. The new class buff boxes are created.
-3. Saved positions for the selected class are restored.
-4. Press `ENTER` to confirm the configuration.
+* C++
+* Qt Framework
+* Windows Keyboard Hooks
+* Qt Screen Capture API
 
----
-
-# Notes
-
-ElsOverlay is designed as a visual support and cooldown tracking overlay.
-
-The program does not modify game files and does not directly interact with the game client.
-
-# Development
-
-ElsOverlay is an open-source project developed with Qt 6 and CMake.
-
-## Building from source
-
-Requirements:
-
-- Qt 6.x
-- CMake 3.19 or newer
-- C++ compiler supporting C++17
-
-Steps:
-
-1. Clone the repository:
-git clone https://github.com/FungYang/ElsOverlay.git
-
-
-2. Open the project with Qt Creator or configure it using CMake.
-
-3. Build the project in Release mode.
-
-The generated executable can be deployed using Qt's `windeployqt` tool.
+The application is designed to remain lightweight and independent from the game client.
 
 ---
 
-# Contributing
+# License
 
-Contributions, bug reports and improvements are welcome.
+License information will be specified before public release.
 
-If you modify or redistribute ElsOverlay, please follow the terms of the GNU General Public License v3.0.
-
----
-
-## License
-
-The source code of ElsOverlay is licensed under the GNU General Public License v3.0.
-
-Third-party assets, trademarks and game-related materials remain property of their respective owners.
-
+The project is intended to remain open-source and transparent.
