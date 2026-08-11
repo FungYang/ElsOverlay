@@ -255,6 +255,8 @@ While paused:
 
 * Skill detection is disabled.
 * ESC remains functional.
+* Added **ENTER as an alternative key to exit pause mode**.
+* **SPACE** still toggles pause on/off as before.
 
 Press SPACE again to resume.
 
@@ -355,6 +357,9 @@ BQ\A\position=@Point(...)
 ```
 
 Deleting this file restores default positions.
+
+
+
 
 ---
 

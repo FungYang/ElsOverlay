@@ -97,14 +97,33 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                 }
                 if(key->vkCode == VK_RETURN)
                 {
-                    // qDebug() << "ENTER DOWN";
-                    emit instance->confirmPressed();
+                    if(instance->paused)
+                    {
+                        instance->paused = false;
+
+                        emit instance->pauseChanged(
+                            false
+                            );
+                    }
+
+                    return CallNextHookEx(
+                        hook,
+                        nCode,
+                        wParam,
+                        lParam
+                        );
                 }
 
+
                 // Se siamo in pausa, ignoriamo tutti gli altri input
-                if (instance->paused)
+                if(instance->paused)
                 {
-                    return CallNextHookEx(hook, nCode, wParam, lParam);
+                    return CallNextHookEx(
+                        hook,
+                        nCode,
+                        wParam,
+                        lParam
+                        );
                 }
                 if(key->vkCode == '7')
                 {

@@ -77,7 +77,7 @@ SkillOverlay::SkillOverlay(
         new SkillBox(
             "images/settingsun.png",
             "SettingSun",
-            25,
+            30,
             this
             );
 
@@ -167,7 +167,6 @@ SkillOverlay::SkillOverlay(
 
 
             case ActiveTitle::SettingSun:
-
                 settingSun->startCooldown();
 
                 break;
@@ -175,7 +174,8 @@ SkillOverlay::SkillOverlay(
 
             case ActiveTitle::NightParade:
 
-                nightParade->startCooldown();
+                // Night Parade non parte con CTRL.
+                // Si attiva esclusivamente con F/T.
 
                 break;
 
