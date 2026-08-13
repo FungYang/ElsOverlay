@@ -101,9 +101,11 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                     {
                         instance->paused = false;
 
-                        emit instance->pauseChanged(
-                            false
-                            );
+                        emit instance->pauseChanged(false);
+                    }
+                    else
+                    {
+                        emit instance->confirmPressed();
                     }
 
                     return CallNextHookEx(
