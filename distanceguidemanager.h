@@ -7,6 +7,7 @@
 
 #include "distanceguideconfiguration.h"
 
+
 enum class MovementDirection
 {
     None,
@@ -14,33 +15,35 @@ enum class MovementDirection
     Right
 };
 
-class DistanceGuideManager : public QObject
+
+class DistanceGuideManager :
+                             public QObject
 {
     Q_OBJECT
 
+
 public:
-
-
-    MovementDirection movementDirection() const;
-
-    void setMovementDirection(
-        MovementDirection direction
-        );
 
     explicit DistanceGuideManager(
         QObject *parent = nullptr
         );
 
 
-    // =========================
+    // ==================================================
     // GUIDES
-    // =========================
+    // ==================================================
 
     QList<DistanceGuideConfiguration>
     guides() const;
 
 
     bool addGuide(
+        const QString &name,
+        const QColor &color
+        );
+
+
+    bool addRectangleGuide(
         const QString &name,
         const QColor &color
         );
@@ -79,9 +82,9 @@ public:
         ) const;
 
 
-    // =========================
+    // ==================================================
     // CHARACTER CENTER
-    // =========================
+    // ==================================================
 
     int characterCenter() const;
 
@@ -94,9 +97,9 @@ public:
         );
 
 
-    // =========================
+    // ==================================================
     // CHARACTER MOVEMENT
-    // =========================
+    // ==================================================
 
     bool characterMoving() const;
 
@@ -106,9 +109,36 @@ public:
         );
 
 
-    // =========================
+    // ==================================================
+    // MOVEMENT DIRECTION
+    // ==================================================
+
+    MovementDirection movementDirection() const;
+
+
+    void setMovementDirection(
+        MovementDirection direction
+        );
+
+
+    // ==================================================
+    // GLOBAL OPACITY
+    //
+    // 0   = completamente trasparente
+    // 255 = completamente opaco
+    // ==================================================
+
+    int globalOpacity() const;
+
+
+    void setGlobalOpacity(
+        int opacity
+        );
+
+
+    // ==================================================
     // EFFECTIVE POSITION
-    // =========================
+    // ==================================================
 
     int effectivePositionX(
         const DistanceGuideConfiguration &guide
@@ -117,28 +147,62 @@ public:
 
 signals:
 
+    // ==================================================
+    // GUIDES
+    // ==================================================
+
     void guidesChanged();
 
+
+    // ==================================================
+    // CHARACTER CENTER
+    // ==================================================
 
     void characterCenterChanged(
         int x
         );
 
 
+    // ==================================================
+    // CHARACTER MOVEMENT
+    // ==================================================
+
     void characterMovingChanged(
         bool moving
         );
+
+
+    // ==================================================
+    // MOVEMENT DIRECTION
+    // ==================================================
 
     void movementDirectionChanged(
         MovementDirection direction
         );
 
 
+    // ==================================================
+    // GLOBAL OPACITY
+    // ==================================================
+
+    void globalOpacityChanged(
+        int opacity
+        );
+
+
 private:
+
+    // ==================================================
+    // CONSTANTS
+    // ==================================================
 
     static constexpr int MovementOffset =
         80;
 
+
+    // ==================================================
+    // PERSISTENCE
+    // ==================================================
 
     void load();
 
@@ -149,9 +213,17 @@ private:
     QString createId() const;
 
 
+    // ==================================================
+    // GUIDES
+    // ==================================================
+
     QList<DistanceGuideConfiguration>
         m_guides;
 
+
+    // ==================================================
+    // GLOBAL STATE
+    // ==================================================
 
     int m_characterCenter =
         0;
@@ -161,11 +233,24 @@ private:
         false;
 
 
+    // ==================================================
+    // MOVEMENT STATE
+    // ==================================================
+
     bool m_characterMoving =
         false;
 
+
     MovementDirection m_movementDirection =
         MovementDirection::None;
+
+
+    // ==================================================
+    // GLOBAL OPACITY
+    // ==================================================
+
+    int m_globalOpacity =
+        255;
 };
 
 

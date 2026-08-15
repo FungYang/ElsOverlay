@@ -48,6 +48,22 @@ DistanceGuideConfigWindow::DistanceGuideConfigWindow(
                 return;
 
 
+            clearConfigurationObject();
+
+
+            if(m_configurationRectangle)
+            {
+                delete m_configurationRectangle;
+
+                m_configurationRectangle =
+                    nullptr;
+            }
+
+
+            m_configurationGuideId =
+                guideId;
+
+
             const QList<DistanceGuideConfiguration>
                 guides =
                 m_manager->guides();
@@ -60,50 +76,103 @@ DistanceGuideConfigWindow::DistanceGuideConfigWindow(
                     continue;
 
 
-                m_configurationGuideId =
-                    guideId;
-
-
-                if(m_configurationLine)
-                {
-                    delete m_configurationLine;
-
-                    m_configurationLine =
-                        nullptr;
-                }
-
-
-                m_configurationLine =
-                    new DistanceGuideLine(
-                        guide.color
-                        );
-
-
-                const int positionX =
+                const int centerX =
                     m_manager->effectivePositionX(
                         guide
                         );
 
 
-                m_configurationLine->move(
-                    positionX,
-                    0
-                    );
+                switch(guide.type)
+                {
+                case DistanceGuideType::VerticalLine:
+                {
+                    m_configurationLine =
+                        new DistanceGuideLine(
+                            guide.color
+                            );
 
 
-                m_configurationLine->resize(
-                    5,
-                    1080
-                    );
+                    m_configurationLine->move(
+                        centerX,
+                        0
+                        );
 
 
-                m_configurationLine->setConfigurationMode(
-                    true
-                    );
+                    m_configurationLine->resize(
+                        5,
+                        1080
+                        );
 
 
-                m_configurationLine->show();
-                m_configurationLine->raise();
+                    m_configurationLine->setConfigurationMode(
+                        true
+                        );
+
+
+                    m_configurationLine->show();
+                    m_configurationLine->raise();
+
+                    break;
+                }
+
+
+                case DistanceGuideType::Rectangle:
+                {
+                    m_configurationRectangle =
+                        new DistanceGuideRectangle(
+                            guide.color
+                            );
+
+
+                    const int width =
+                        qMax(
+                            20,
+                            guide.width
+                            );
+
+
+                    const int height =
+                        qMax(
+                            20,
+                            guide.height
+                            );
+
+
+                    const int x =
+                        centerX -
+                        width / 2;
+
+
+                    const int y =
+                        guide.positionY;
+
+
+                    m_configurationRectangle->setGeometry(
+                        x,
+                        y,
+                        width,
+                        height
+                        );
+
+
+                    m_configurationRectangle->setConfigurationMode(
+                        true
+                        );
+
+
+                    m_configurationRectangle->show();
+                    m_configurationRectangle->raise();
+
+                    break;
+                }
+
+
+                case DistanceGuideType::Circle:
+                {
+                    // Lo implementiamo dopo.
+                    break;
+                }
+                }
 
 
                 break;
@@ -156,6 +225,10 @@ void DistanceGuideConfigWindow::createUi()
         );
 
 
+    // =========================
+    // TITOLO
+    // =========================
+
     QLabel *title =
         new QLabel(
             "DISTANCE GUIDES",
@@ -192,6 +265,10 @@ void DistanceGuideConfigWindow::createUi()
         );
 
 
+    // =========================
+    // LISTA
+    // =========================
+
     m_list =
         new QListWidget(
             this
@@ -208,9 +285,38 @@ void DistanceGuideConfigWindow::createUi()
         );
 
 
+    // =========================
+    // ADD BUTTONS
+    // =========================
+
+    QHBoxLayout *addLayout =
+        new QHBoxLayout();
+
+
     m_addButton =
         new QPushButton(
-            "Add Distance Guide",
+            "Add Line",
+            this
+            );
+
+
+    m_addRectangleButton =
+        new QPushButton(
+            "Add Rectangle",
+            this
+            );
+
+
+    m_addCircleButton =
+        new QPushButton(
+            "Add Circle",
+            this
+            );
+
+
+    m_addGroupButton =
+        new QPushButton(
+            "Add Group",
             this
             );
 
@@ -220,10 +326,149 @@ void DistanceGuideConfigWindow::createUi()
         );
 
 
-    mainLayout->addWidget(
+    m_addRectangleButton->setMinimumHeight(
+        40
+        );
+
+
+    m_addCircleButton->setMinimumHeight(
+        40
+        );
+
+
+    m_addGroupButton->setMinimumHeight(
+        40
+        );
+
+
+    addLayout->addWidget(
         m_addButton
         );
 
+
+    addLayout->addWidget(
+        m_addRectangleButton
+        );
+
+
+    addLayout->addWidget(
+        m_addCircleButton
+        );
+
+
+    addLayout->addWidget(
+        m_addGroupButton
+        );
+
+
+    mainLayout->addLayout(
+        addLayout
+        );
+
+
+    // =========================
+    // GLOBAL OPACITY
+    // =========================
+
+    QHBoxLayout *opacityLayout =
+        new QHBoxLayout();
+
+
+    QLabel *opacityLabel =
+        new QLabel(
+            "Global Opacity",
+            this
+            );
+
+
+    m_opacitySlider =
+        new QSlider(
+            Qt::Horizontal,
+            this
+            );
+
+
+    m_opacitySlider->setRange(
+        0,
+        255
+        );
+
+
+    m_opacitySlider->setValue(
+        m_manager
+            ? m_manager->globalOpacity()
+            : 255
+        );
+
+
+    m_opacityValueLabel =
+        new QLabel(
+            this
+            );
+
+
+    m_opacityValueLabel->setMinimumWidth(
+        40
+        );
+
+
+    m_opacityValueLabel->setAlignment(
+        Qt::AlignRight |
+        Qt::AlignVCenter
+        );
+
+
+    m_opacityValueLabel->setText(
+        QString::number(
+            m_opacitySlider->value()
+            )
+        );
+
+
+    opacityLayout->addWidget(
+        opacityLabel
+        );
+
+
+    opacityLayout->addWidget(
+        m_opacitySlider
+        );
+
+
+    opacityLayout->addWidget(
+        m_opacityValueLabel
+        );
+
+
+    mainLayout->addLayout(
+        opacityLayout
+        );
+
+
+    // =========================
+    // FIX CHARACTER
+    // =========================
+
+    m_fixCharacterButton =
+        new QPushButton(
+            "Fix Character",
+            this
+            );
+
+
+    m_fixCharacterButton->setMinimumHeight(
+        40
+        );
+
+
+    mainLayout->addWidget(
+        m_fixCharacterButton
+        );
+
+
+    // =========================
+    // CHIUDI
+    // =========================
 
     m_closeButton =
         new QPushButton(
@@ -237,11 +482,69 @@ void DistanceGuideConfigWindow::createUi()
         );
 
 
+    // =========================
+    // CONNECTIONS
+    // =========================
+
     connect(
         m_addButton,
         &QPushButton::clicked,
         this,
         &DistanceGuideConfigWindow::addGuide
+        );
+    connect(
+        m_addRectangleButton,
+        &QPushButton::clicked,
+        this,
+        [this]()
+        {
+            if(!m_manager)
+                return;
+
+
+            bool ok =
+                false;
+
+
+            const QString name =
+                QInputDialog::getText(
+                    this,
+                    "New Rectangle",
+                    "Nome:",
+                    QLineEdit::Normal,
+                    "New Rectangle",
+                    &ok
+                    );
+
+
+            if(!ok)
+                return;
+
+
+            if(name.trimmed().isEmpty())
+                return;
+
+
+            const QColor color =
+                QColorDialog::getColor(
+                    Qt::white,
+                    this,
+                    "Choose Rectangle Color"
+                    );
+
+
+            if(!color.isValid())
+                return;
+
+
+            if(m_manager->addRectangleGuide(
+                    name,
+                    color
+                    ))
+            {
+                refresh();
+            }
+        }
         );
 
 
@@ -250,6 +553,72 @@ void DistanceGuideConfigWindow::createUi()
         &QPushButton::clicked,
         this,
         &QWidget::close
+        );
+
+
+    // =========================
+    // GLOBAL OPACITY
+    // =========================
+
+    connect(
+        m_opacitySlider,
+        &QSlider::valueChanged,
+        this,
+        [this](int value)
+        {
+            if(m_opacityValueLabel)
+            {
+                m_opacityValueLabel->setText(
+                    QString::number(
+                        value
+                        )
+                    );
+            }
+
+
+            if(m_manager)
+            {
+                m_manager->setGlobalOpacity(
+                    value
+                    );
+            }
+        }
+        );
+
+
+    connect(
+        m_manager,
+        &DistanceGuideManager::globalOpacityChanged,
+        this,
+        [this](int opacity)
+        {
+            if(m_opacitySlider)
+            {
+                m_opacitySlider->blockSignals(
+                    true
+                    );
+
+
+                m_opacitySlider->setValue(
+                    opacity
+                    );
+
+
+                m_opacitySlider->blockSignals(
+                    false
+                    );
+            }
+
+
+            if(m_opacityValueLabel)
+            {
+                m_opacityValueLabel->setText(
+                    QString::number(
+                        opacity
+                        )
+                    );
+            }
+        }
         );
 }
 
@@ -774,17 +1143,24 @@ void DistanceGuideConfigWindow::addGuide()
 
 
 
-void DistanceGuideConfigWindow::clearConfigurationLine()
+void DistanceGuideConfigWindow::clearConfigurationObject()
 {
-    if(!m_configurationLine)
-        return;
+    if(m_configurationLine)
+    {
+        delete m_configurationLine;
+
+        m_configurationLine =
+            nullptr;
+    }
 
 
-    delete m_configurationLine;
+    if(m_configurationRectangle)
+    {
+        delete m_configurationRectangle;
 
-
-    m_configurationLine =
-        nullptr;
+        m_configurationRectangle =
+            nullptr;
+    }
 
 
     m_configurationGuideId.clear();
@@ -798,12 +1174,15 @@ void DistanceGuideConfigWindow::confirmPositions()
         return;
 
 
-    if(!m_configurationLine)
-        return;
-
-
     if(m_configurationGuideId.isEmpty())
         return;
+
+
+    if(!m_configurationLine &&
+        !m_configurationRectangle)
+    {
+        return;
+    }
 
 
     if(!m_manager->characterCenterConfigured())
@@ -844,35 +1223,117 @@ void DistanceGuideConfigWindow::confirmPositions()
         m_manager->characterCenter();
 
 
-    const int lineX =
-        m_configurationLine->configurationPositionX();
+    // ==================================================
+    // LINEA
+    // ==================================================
 
-
-    updated.distance =
-        qAbs(
-            lineX -
-            center
-            );
-
-
-    if(lineX < center)
+    if(m_configurationLine)
     {
-        updated.side =
-            DistanceGuideSide::Left;
-    }
-    else
-    {
-        updated.side =
-            DistanceGuideSide::Right;
+        const int lineX =
+            m_configurationLine->configurationPositionX();
+
+
+        updated.distance =
+            qAbs(
+                lineX -
+                center
+                );
+
+
+        if(lineX < center)
+        {
+            updated.side =
+                DistanceGuideSide::Left;
+        }
+        else
+        {
+            updated.side =
+                DistanceGuideSide::Right;
+        }
     }
 
+
+    // ==================================================
+    // RETTANGOLO
+    // ==================================================
+
+    if(m_configurationRectangle)
+    {
+        const int rectangleX =
+            m_configurationRectangle->
+            configurationPositionX();
+
+
+        const int rectangleY =
+            m_configurationRectangle->
+            configurationPositionY();
+
+
+        const int rectangleWidth =
+            m_configurationRectangle->
+            configurationWidth();
+
+
+        const int rectangleHeight =
+            m_configurationRectangle->
+            configurationHeight();
+
+
+        /*
+         * Il distance viene riferito al CENTRO
+         * del rettangolo, non al suo bordo sinistro.
+         */
+
+        const int rectangleCenterX =
+            rectangleX +
+            rectangleWidth / 2;
+
+
+        updated.distance =
+            qAbs(
+                rectangleCenterX -
+                center
+                );
+
+
+        if(rectangleCenterX < center)
+        {
+            updated.side =
+                DistanceGuideSide::Left;
+        }
+        else
+        {
+            updated.side =
+                DistanceGuideSide::Right;
+        }
+
+
+        updated.positionY =
+            rectangleY;
+
+
+        updated.width =
+            rectangleWidth;
+
+
+        updated.height =
+            rectangleHeight;
+    }
+
+
+    // ==================================================
+    // SALVATAGGIO
+    // ==================================================
 
     m_manager->updateGuide(
         updated
         );
 
 
-    clearConfigurationLine();
+    clearConfigurationObject();
+
+
+    refresh();
 }
 
 
@@ -881,7 +1342,7 @@ void DistanceGuideConfigWindow::closeEvent(
     QCloseEvent *event
     )
 {
-    clearConfigurationLine();
+    clearConfigurationObject();
 
      clearCharacterCenterLine();
     event->accept();

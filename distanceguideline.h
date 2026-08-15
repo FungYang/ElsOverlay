@@ -27,6 +27,11 @@ public:
 
 
     int configurationPositionX() const;
+    void setOpacity(
+        int opacity
+        );
+
+    int opacity() const;
 
 
 protected:
@@ -54,6 +59,9 @@ protected:
 private:
 
     QColor m_color;
+
+    int m_opacity =
+        255;
 
 
     bool m_configurationMode =

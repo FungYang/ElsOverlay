@@ -1,19 +1,22 @@
 #ifndef DISTANCEGUIDEOVERLAY_H
 #define DISTANCEGUIDEOVERLAY_H
 
-#include <QWidget>
 #include <QList>
+#include <QWidget>
+
+#include "distanceguiderectangle.h"
+// #include "distanceguidecircle.h"
 
 class DistanceGuideManager;
 class DistanceGuideLine;
 class OverlayRoot;
+// class DistanceGuideCircle;
 
 
 class DistanceGuideOverlay :
                              public QWidget
 {
     Q_OBJECT
-
 
 public:
 
@@ -47,7 +50,20 @@ private:
         nullptr;
 
 
-    QList<DistanceGuideLine *> m_lines;
+    // =========================
+    // OGGETTI DISEGNO
+    // =========================
+
+    QList<DistanceGuideLine *>
+        m_lines;
+
+
+    QList<DistanceGuideRectangle *>
+        m_rectangles;
+
+
+    // QList<DistanceGuideCircle *>
+    //     m_circles;
 
 
     bool m_enabled =

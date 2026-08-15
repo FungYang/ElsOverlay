@@ -3,6 +3,7 @@
 #include "distanceguidemanager.h"
 #include "distanceguideconfiguration.h"
 #include "distanceguideline.h"
+#include "distanceguiderectangle.h"
 #include "overlayroot.h"
 
 
@@ -18,9 +19,11 @@ DistanceGuideOverlay::DistanceGuideOverlay(
         Qt::WA_TransparentForMouseEvents
         );
 
+
     setAttribute(
         Qt::WA_TranslucentBackground
         );
+
 
     setWindowFlags(
         Qt::FramelessWindowHint |
@@ -48,19 +51,6 @@ DistanceGuideOverlay::DistanceGuideOverlay(
                 if(!m_enabled)
                     return;
 
-                rebuild();
-            }
-            );
-
-
-        connect(
-            m_manager,
-            &DistanceGuideManager::characterCenterChanged,
-            this,
-            [this](int)
-            {
-                if(!m_enabled)
-                    return;
 
                 rebuild();
             }
@@ -69,32 +59,45 @@ DistanceGuideOverlay::DistanceGuideOverlay(
 
         connect(
             m_manager,
-            &DistanceGuideManager::characterMovingChanged,
+            &DistanceGuideManager::globalOpacityChanged,
             this,
-            [this](bool)
+            [this](int opacity)
             {
-                if(!m_enabled)
-                    return;
+                const double windowOpacity =
+                    opacity / 255.0;
 
-                rebuild();
-            }
-            );
 
-        connect(
-            m_manager,
-            &DistanceGuideManager::guidesChanged,
-            this,
-            [this]()
-            {
-                if(!m_enabled)
-                    return;
+                for(DistanceGuideLine *line :
+                     m_lines)
+                {
+                    if(line)
+                    {
+                        line->setOpacity(
+                            opacity
+                            );
 
-                clear();
-                rebuild();
+                        line->setWindowOpacity(
+                            windowOpacity
+                            );
+                    }
+                }
+
+
+                for(DistanceGuideRectangle *rectangle :
+                     m_rectangles)
+                {
+                    if(rectangle)
+                    {
+                        rectangle->setWindowOpacity(
+                            windowOpacity
+                            );
+                    }
+                }
             }
             );
     }
 }
+
 
 
 void DistanceGuideOverlay::setEnabled(
@@ -116,6 +119,7 @@ void DistanceGuideOverlay::setEnabled(
 }
 
 
+
 void DistanceGuideOverlay::rebuild()
 {
     if(!m_manager ||
@@ -133,6 +137,14 @@ void DistanceGuideOverlay::rebuild()
         m_manager->guides();
 
 
+    const int opacity =
+        m_manager->globalOpacity();
+
+
+    const double windowOpacity =
+        opacity / 255.0;
+
+
     for(const DistanceGuideConfiguration &guide :
          guides)
     {
@@ -142,6 +154,10 @@ void DistanceGuideOverlay::rebuild()
 
         switch(guide.type)
         {
+            // ==================================================
+            // LINEA
+            // ==================================================
+
         case DistanceGuideType::VerticalLine:
         {
             DistanceGuideLine *line =
@@ -156,16 +172,31 @@ void DistanceGuideOverlay::rebuild()
                 );
 
 
+            line->setOpacity(
+                opacity
+                );
+
+
+            line->setWindowOpacity(
+                windowOpacity
+                );
+
+
+            const int x =
+                m_manager->effectivePositionX(
+                    guide
+                    );
+
 
             line->setGeometry(
-                m_manager->effectivePositionX(guide),
+                x,
                 0,
                 5,
                 m_root->height()
                 );
 
-            line->show();
 
+            line->show();
             line->raise();
 
 
@@ -176,9 +207,89 @@ void DistanceGuideOverlay::rebuild()
 
             break;
         }
+
+
+            // ==================================================
+            // RETTANGOLO
+            // ==================================================
+
+        case DistanceGuideType::Rectangle:
+        {
+            DistanceGuideRectangle *rectangle =
+                new DistanceGuideRectangle(
+                    guide.color,
+                    m_root
+                    );
+
+
+            rectangle->setConfigurationMode(
+                false
+                );
+
+
+            rectangle->setOpacity(
+                opacity
+                );
+
+
+            const int centerX =
+                m_manager->effectivePositionX(
+                    guide
+                    );
+
+
+            const int width =
+                rectangle->width();
+
+
+            const int height =
+                rectangle->height();
+
+
+            const int x =
+                centerX -
+                width / 2;
+
+
+            const int y =
+                rectangle->y();
+
+
+            rectangle->setGeometry(
+                x,
+                y,
+                width,
+                height
+                );
+
+
+            rectangle->show();
+            rectangle->raise();
+
+
+            m_rectangles.append(
+                rectangle
+                );
+
+
+            break;
+        }
+
+
+            // ==================================================
+            // CERCHIO
+            // ==================================================
+
+        case DistanceGuideType::Circle:
+        {
+            // Lo colleghiamo nel prossimo passaggio.
+
+            break;
+        }
         }
     }
 }
+
 
 
 void DistanceGuideOverlay::clear()
@@ -189,4 +300,12 @@ void DistanceGuideOverlay::clear()
 
 
     m_lines.clear();
+
+
+    qDeleteAll(
+        m_rectangles
+        );
+
+
+    m_rectangles.clear();
 }

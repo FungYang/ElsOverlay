@@ -12,13 +12,15 @@ DistanceGuideManager::DistanceGuideManager(
 }
 
 
+// ==================================================
+// GUIDES
+// ==================================================
 
 QList<DistanceGuideConfiguration>
 DistanceGuideManager::guides() const
 {
     return m_guides;
 }
-
 
 
 bool DistanceGuideManager::contains(
@@ -32,16 +34,14 @@ bool DistanceGuideManager::contains(
             return true;
     }
 
-
     return false;
 }
 
 
-
 QString DistanceGuideManager::createId() const
 {
-    int index = 0;
-
+    int index =
+        0;
 
     while(contains(
         "guide_" +
@@ -51,12 +51,14 @@ QString DistanceGuideManager::createId() const
         ++index;
     }
 
-
     return "guide_" +
            QString::number(index);
 }
 
 
+// ==================================================
+// ADD LINE
+// ==================================================
 
 bool DistanceGuideManager::addGuide(
     const QString &name,
@@ -66,40 +68,43 @@ bool DistanceGuideManager::addGuide(
     if(name.trimmed().isEmpty())
         return false;
 
-
     if(!m_characterCenterConfigured)
         return false;
 
 
     DistanceGuideConfiguration guide;
 
-
     guide.id =
         createId();
-
 
     guide.name =
         name.trimmed();
 
-
     guide.color =
         color;
-
 
     guide.enabled =
         true;
 
-
     guide.distance =
         0;
-
 
     guide.side =
         DistanceGuideSide::Left;
 
-
     guide.type =
         DistanceGuideType::VerticalLine;
+
+
+    // Valori non utilizzati dalla linea
+    guide.positionY =
+        0;
+
+    guide.width =
+        5;
+
+    guide.height =
+        0;
 
 
     m_guides.append(
@@ -109,6 +114,71 @@ bool DistanceGuideManager::addGuide(
 
     save();
 
+    emit guidesChanged();
+
+
+    return true;
+}
+
+
+// ==================================================
+// ADD RECTANGLE
+// ==================================================
+
+bool DistanceGuideManager::addRectangleGuide(
+    const QString &name,
+    const QColor &color
+    )
+{
+    if(name.trimmed().isEmpty())
+        return false;
+
+    if(!m_characterCenterConfigured)
+        return false;
+
+
+    DistanceGuideConfiguration guide;
+
+    guide.id =
+        createId();
+
+    guide.name =
+        name.trimmed();
+
+    guide.color =
+        color;
+
+    guide.enabled =
+        true;
+
+    guide.distance =
+        0;
+
+    guide.side =
+        DistanceGuideSide::Left;
+
+    guide.type =
+        DistanceGuideType::Rectangle;
+
+
+    // Posizione verticale iniziale
+    guide.positionY =
+        100;
+
+    // Dimensioni iniziali
+    guide.width =
+        200;
+
+    guide.height =
+        100;
+
+
+    m_guides.append(
+        guide
+        );
+
+
+    save();
 
     emit guidesChanged();
 
@@ -117,6 +187,9 @@ bool DistanceGuideManager::addGuide(
 }
 
 
+// ==================================================
+// REMOVE
+// ==================================================
 
 bool DistanceGuideManager::removeGuide(
     const QString &id
@@ -132,9 +205,7 @@ bool DistanceGuideManager::removeGuide(
 
         m_guides.removeAt(i);
 
-
         save();
-
 
         emit guidesChanged();
 
@@ -147,6 +218,9 @@ bool DistanceGuideManager::removeGuide(
 }
 
 
+// ==================================================
+// UPDATE
+// ==================================================
 
 bool DistanceGuideManager::updateGuide(
     const DistanceGuideConfiguration &guide
@@ -165,7 +239,6 @@ bool DistanceGuideManager::updateGuide(
 
         save();
 
-
         emit guidesChanged();
 
 
@@ -177,6 +250,9 @@ bool DistanceGuideManager::updateGuide(
 }
 
 
+// ==================================================
+// ENABLE
+// ==================================================
 
 bool DistanceGuideManager::setGuideEnabled(
     const QString &id,
@@ -196,7 +272,6 @@ bool DistanceGuideManager::setGuideEnabled(
 
         save();
 
-
         emit guidesChanged();
 
 
@@ -208,6 +283,9 @@ bool DistanceGuideManager::setGuideEnabled(
 }
 
 
+// ==================================================
+// DISTANCE
+// ==================================================
 
 bool DistanceGuideManager::setGuideDistance(
     const QString &id,
@@ -231,7 +309,6 @@ bool DistanceGuideManager::setGuideDistance(
 
         save();
 
-
         emit guidesChanged();
 
 
@@ -243,6 +320,9 @@ bool DistanceGuideManager::setGuideDistance(
 }
 
 
+// ==================================================
+// SIDE
+// ==================================================
 
 bool DistanceGuideManager::setGuideSide(
     const QString &id,
@@ -262,7 +342,6 @@ bool DistanceGuideManager::setGuideSide(
 
         save();
 
-
         emit guidesChanged();
 
 
@@ -274,6 +353,9 @@ bool DistanceGuideManager::setGuideSide(
 }
 
 
+// ==================================================
+// LOAD
+// ==================================================
 
 void DistanceGuideManager::load()
 {
@@ -282,10 +364,18 @@ void DistanceGuideManager::load()
         QSettings::IniFormat
         );
 
+
     m_characterCenter =
         settings.value(
                     "DistanceGuides/characterCenter",
                     0
+                    ).toInt();
+
+
+    m_globalOpacity =
+        settings.value(
+                    "DistanceGuides/globalOpacity",
+                    255
                     ).toInt();
 
 
@@ -301,6 +391,9 @@ void DistanceGuideManager::load()
                     "DistanceGuides/count",
                     0
                     ).toInt();
+
+
+    m_guides.clear();
 
 
     for(int i = 0;
@@ -319,6 +412,10 @@ void DistanceGuideManager::load()
             settings.value(
                         prefix + "/id"
                         ).toString();
+
+
+        if(guide.id.isEmpty())
+            continue;
 
 
         guide.name =
@@ -368,8 +465,25 @@ void DistanceGuideManager::load()
                 );
 
 
-        if(guide.id.isEmpty())
-            continue;
+        guide.positionY =
+            settings.value(
+                        prefix + "/positionY",
+                        100
+                        ).toInt();
+
+
+        guide.width =
+            settings.value(
+                        prefix + "/width",
+                        200
+                        ).toInt();
+
+
+        guide.height =
+            settings.value(
+                        prefix + "/height",
+                        100
+                        ).toInt();
 
 
         m_guides.append(
@@ -379,6 +493,9 @@ void DistanceGuideManager::load()
 }
 
 
+// ==================================================
+// SAVE
+// ==================================================
 
 void DistanceGuideManager::save() const
 {
@@ -396,6 +513,12 @@ void DistanceGuideManager::save() const
     settings.setValue(
         "DistanceGuides/characterCenter",
         m_characterCenter
+        );
+
+
+    settings.setValue(
+        "DistanceGuides/globalOpacity",
+        m_globalOpacity
         );
 
 
@@ -468,16 +591,36 @@ void DistanceGuideManager::save() const
                 guide.type
                 )
             );
+
+
+        settings.setValue(
+            prefix + "/positionY",
+            guide.positionY
+            );
+
+
+        settings.setValue(
+            prefix + "/width",
+            guide.width
+            );
+
+
+        settings.setValue(
+            prefix + "/height",
+            guide.height
+            );
     }
 }
 
 
+// ==================================================
+// CHARACTER CENTER
+// ==================================================
 
 int DistanceGuideManager::characterCenter() const
 {
     return m_characterCenter;
 }
-
 
 
 bool DistanceGuideManager::characterCenterConfigured() const
@@ -486,14 +629,12 @@ bool DistanceGuideManager::characterCenterConfigured() const
 }
 
 
-
 void DistanceGuideManager::setCharacterCenter(
     int x
     )
 {
     m_characterCenter =
         x;
-
 
     m_characterCenterConfigured =
         true;
@@ -506,16 +647,18 @@ void DistanceGuideManager::setCharacterCenter(
         x
         );
 
-
     emit guidesChanged();
 }
 
+
+// ==================================================
+// CHARACTER MOVEMENT
+// ==================================================
 
 bool DistanceGuideManager::characterMoving() const
 {
     return m_characterMoving;
 }
-
 
 
 void DistanceGuideManager::setCharacterMoving(
@@ -534,11 +677,13 @@ void DistanceGuideManager::setCharacterMoving(
         moving
         );
 
-
     emit guidesChanged();
 }
 
 
+// ==================================================
+// EFFECTIVE POSITION
+// ==================================================
 
 int DistanceGuideManager::effectivePositionX(
     const DistanceGuideConfiguration &guide
@@ -571,9 +716,6 @@ int DistanceGuideManager::effectivePositionX(
     }
 
 
-    // Nessuna direzione ancora impostata:
-    // usa quella configurata nella guida.
-
     if(guide.side ==
         DistanceGuideSide::Left)
     {
@@ -586,12 +728,16 @@ int DistanceGuideManager::effectivePositionX(
            distance;
 }
 
+
+// ==================================================
+// MOVEMENT DIRECTION
+// ==================================================
+
 MovementDirection
 DistanceGuideManager::movementDirection() const
 {
     return m_movementDirection;
 }
-
 
 
 void DistanceGuideManager::setMovementDirection(
@@ -610,6 +756,46 @@ void DistanceGuideManager::setMovementDirection(
         direction
         );
 
+    emit guidesChanged();
+}
+
+
+// ==================================================
+// GLOBAL OPACITY
+// ==================================================
+
+int DistanceGuideManager::globalOpacity() const
+{
+    return m_globalOpacity;
+}
+
+
+void DistanceGuideManager::setGlobalOpacity(
+    int opacity
+    )
+{
+    opacity =
+        qBound(
+            0,
+            opacity,
+            255
+            );
+
+
+    if(m_globalOpacity == opacity)
+        return;
+
+
+    m_globalOpacity =
+        opacity;
+
+
+    save();
+
+
+    emit globalOpacityChanged(
+        opacity
+        );
 
     emit guidesChanged();
 }

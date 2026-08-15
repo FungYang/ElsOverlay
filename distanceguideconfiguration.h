@@ -9,7 +9,8 @@ enum class DistanceGuideType
 {
     VerticalLine,
     Rectangle,
-    Circle
+    Circle,
+    Group
 };
 
 
@@ -33,12 +34,24 @@ struct DistanceGuideConfiguration
 
     int distance =
         0;
+    int positionY =
+        0;
+
+    int width =
+        200;
+
+    int height =
+        100;
 
     DistanceGuideSide side =
         DistanceGuideSide::Left;
 
     DistanceGuideType type =
         DistanceGuideType::VerticalLine;
+
+    // Empty = oggetto standalone.
+    // Valorizzato = oggetto appartenente a un gruppo.
+    QString groupId;
 };
 
 
@@ -59,6 +72,11 @@ QString distanceGuideSideToString(
 
 DistanceGuideSide distanceGuideSideFromString(
     const QString &value
+    );
+
+bool addRectangleGuide(
+    const QString &name,
+    const QColor &color
     );
 
 
