@@ -2,10 +2,14 @@
 
 #include "distanceguidemanager.h"
 #include "distanceguideconfiguration.h"
+#include "distanceguidegroup.h"
 #include "distanceguideline.h"
 #include "distanceguiderectangle.h"
 #include "distanceguidecircle.h"
 #include "overlayroot.h"
+
+#include <QtGlobal>
+#include <QtAlgorithms>
 
 
 DistanceGuideOverlay::DistanceGuideOverlay(
@@ -71,38 +75,44 @@ DistanceGuideOverlay::DistanceGuideOverlay(
                 for(DistanceGuideLine *line :
                      m_lines)
                 {
-                    if(line)
-                    {
-                        line->setOpacity(
-                            opacity
-                            );
+                    if(!line)
+                        continue;
 
-                        line->setWindowOpacity(
-                            windowOpacity
-                            );
-                    }
+
+                    line->setOpacity(
+                        opacity
+                        );
+
+
+                    line->setWindowOpacity(
+                        windowOpacity
+                        );
                 }
 
 
                 for(DistanceGuideRectangle *rectangle :
                      m_rectangles)
                 {
-                    if(rectangle)
-                    {
-                        rectangle->setWindowOpacity(
-                            windowOpacity
-                            );
-                    }
+                    if(!rectangle)
+                        continue;
+
+
+                    rectangle->setWindowOpacity(
+                        windowOpacity
+                        );
                 }
+
+
                 for(DistanceGuideCircle *circle :
                      m_circles)
                 {
-                    if(circle)
-                    {
-                        circle->setWindowOpacity(
-                            windowOpacity
-                            );
-                    }
+                    if(!circle)
+                        continue;
+
+
+                    circle->setWindowOpacity(
+                        windowOpacity
+                        );
                 }
             }
             );
@@ -110,6 +120,9 @@ DistanceGuideOverlay::DistanceGuideOverlay(
 }
 
 
+// ==================================================
+// ENABLE
+// ==================================================
 
 void DistanceGuideOverlay::setEnabled(
     bool enabled
@@ -130,6 +143,9 @@ void DistanceGuideOverlay::setEnabled(
 }
 
 
+// ==================================================
+// REBUILD
+// ==================================================
 
 void DistanceGuideOverlay::rebuild()
 {
@@ -159,21 +175,53 @@ void DistanceGuideOverlay::rebuild()
     for(const DistanceGuideConfiguration &guide :
          guides)
     {
+        // ------------------------------------------
+        // GUIDA DISABILITATA
+        // ------------------------------------------
+
         if(!guide.enabled)
             continue;
 
 
+        // ------------------------------------------
+        // GRUPPO
+        // ------------------------------------------
+
+        if(!guide.groupId.isEmpty())
+        {
+            const DistanceGuideGroup group =
+                m_manager->group(
+                    guide.groupId
+                    );
+
+
+            if(group.id.isEmpty())
+                continue;
+
+
+            if(!group.enabled)
+                continue;
+        }
+
+
+        // ------------------------------------------
+        // TIPO GUIDA
+        // ------------------------------------------
+
         switch(guide.type)
         {
+
             // ==================================================
-            // LINEA
+            // LINEA VERTICALE
             // ==================================================
 
         case DistanceGuideType::VerticalLine:
         {
             DistanceGuideLine *line =
                 new DistanceGuideLine(
-                    guide.color,
+                    m_manager->effectiveGuideColor(
+                        guide
+                        ),
                     m_root
                     );
 
@@ -228,7 +276,9 @@ void DistanceGuideOverlay::rebuild()
         {
             DistanceGuideRectangle *rectangle =
                 new DistanceGuideRectangle(
-                    guide.color,
+                    m_manager->effectiveGuideColor(
+                        guide
+                        ),
                     m_root
                     );
 
@@ -239,7 +289,7 @@ void DistanceGuideOverlay::rebuild()
 
 
             rectangle->setWindowOpacity(
-                opacity / 255.0
+                windowOpacity
                 );
 
 
@@ -301,7 +351,9 @@ void DistanceGuideOverlay::rebuild()
         {
             DistanceGuideCircle *circle =
                 new DistanceGuideCircle(
-                    guide.color,
+                    m_manager->effectiveGuideColor(
+                        guide
+                        ),
                     m_root
                     );
 
@@ -365,12 +417,16 @@ void DistanceGuideOverlay::rebuild()
 }
 
 
+// ==================================================
+// CLEAR
+// ==================================================
 
 void DistanceGuideOverlay::clear()
 {
     qDeleteAll(
         m_lines
         );
+
 
     m_lines.clear();
 
@@ -379,12 +435,14 @@ void DistanceGuideOverlay::clear()
         m_rectangles
         );
 
+
     m_rectangles.clear();
 
 
     qDeleteAll(
         m_circles
         );
+
 
     m_circles.clear();
 }

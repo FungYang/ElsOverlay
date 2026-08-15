@@ -21,6 +21,17 @@ enum class DistanceGuideSide
 };
 
 
+struct DistanceGuideGroupConfiguration
+{
+    QString id;
+
+    QString name;
+
+    QColor color =
+        Qt::white;
+};
+
+
 struct DistanceGuideConfiguration
 {
     QString id;
@@ -74,6 +85,5 @@ QString distanceGuideSideToString(
 DistanceGuideSide distanceGuideSideFromString(
     const QString &value
     );
-
 
 #endif

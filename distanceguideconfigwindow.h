@@ -15,6 +15,7 @@ class QSlider;
 class QLabel;
 class DistanceGuideLine;
 class GlobalKeyboard;
+class DistanceGuideGroupConfigWindow;
 
 
 class DistanceGuideConfigWindow : public QWidget{
@@ -95,6 +96,10 @@ private:
 
     QLabel *m_opacityValueLabel =
         nullptr;
+    DistanceGuideGroupConfigWindow *m_groupConfigWindow =
+        nullptr;
+
+
 };
 
 

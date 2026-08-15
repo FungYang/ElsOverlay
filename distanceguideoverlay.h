@@ -4,19 +4,19 @@
 #include <QList>
 #include <QWidget>
 
-#include "distanceguiderectangle.h"
-#include "distanceguidecircle.h"
 
 class DistanceGuideManager;
 class DistanceGuideLine;
-class OverlayRoot;
+class DistanceGuideRectangle;
 class DistanceGuideCircle;
+class OverlayRoot;
 
 
 class DistanceGuideOverlay :
                              public QWidget
 {
     Q_OBJECT
+
 
 public:
 
@@ -50,9 +50,9 @@ private:
         nullptr;
 
 
-    // =========================
+    // ==================================================
     // OGGETTI DISEGNO
-    // =========================
+    // ==================================================
 
     QList<DistanceGuideLine *>
         m_lines;

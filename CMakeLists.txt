@@ -41,6 +41,8 @@ qt_add_executable(ElsOverlay
     distanceguideoverlay.h distanceguideoverlay.cpp
     distanceguiderectangle.h distanceguiderectangle.cpp
     distanceguidecircle.h distanceguidecircle.cpp
+    distanceguidegroup.h
+    distanceguidegroupconfigwindow.h distanceguidegroupconfigwindow.cpp
 
 
 
