@@ -6,6 +6,7 @@
 #include <QScreen>
 #include <QSettings>
 #include "buffvisionconfig.h"
+#include <QKeyEvent>
 
 
 
@@ -495,4 +496,23 @@ void BuffVisionCaptureSetup::setCaptureMode(
 
     update();
 
+}
+
+void BuffVisionCaptureSetup::keyPressEvent(
+    QKeyEvent *event
+    )
+{
+    if(event->key() == Qt::Key_Escape)
+    {
+        hide();
+
+        event->accept();
+
+        return;
+    }
+
+
+    QWidget::keyPressEvent(
+        event
+        );
 }

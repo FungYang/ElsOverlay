@@ -6,27 +6,51 @@
 
 BuffBox::BuffBox(
     QChar key,
-    QVector<int> cooldowns,
-    QString className,
-    QString boxId,
+    int cooldown,
     QWidget *parent
     )
-    :
-    QWidget(parent),
+    : QWidget(parent),
     m_key(key),
-    m_cooldowns(cooldowns),
-    m_currentState(0),
-    m_configured(false),
-    m_dragging(false),
-    m_remainingTime(0),
-    m_glowAlpha(80),
-    m_glowIncreasing(true),
-    className(className),
-    boxId(boxId)
+    m_cooldown(cooldown),
+    m_configurationMode(false)
 {
 
-    m_glowTimer.setInterval(30);
-    setFixedSize(42,42);
+    setFixedSize(
+        42,
+        42
+        );
+
+
+    setAttribute(
+        Qt::WA_TranslucentBackground
+        );
+
+
+    setWindowFlags(
+        Qt::Tool |
+        Qt::FramelessWindowHint |
+        Qt::WindowStaysOnTopHint
+        );
+
+
+    m_timer.setSingleShot(
+        true
+        );
+
+
+    connect(
+        &m_timer,
+        &QTimer::timeout,
+        this,
+        &BuffBox::cooldownFinished
+        );
+
+
+    m_glowTimer.setInterval(
+        30
+        );
+
+
     connect(
         &m_glowTimer,
         &QTimer::timeout,
@@ -36,17 +60,23 @@ BuffBox::BuffBox(
 
             if(m_glowIncreasing)
             {
+
                 m_glowAlpha += 8;
+
 
                 if(m_glowAlpha >= 160)
                     m_glowIncreasing = false;
+
             }
             else
             {
+
                 m_glowAlpha -= 8;
+
 
                 if(m_glowAlpha <= 80)
                     m_glowIncreasing = true;
+
             }
 
 
@@ -55,55 +85,31 @@ BuffBox::BuffBox(
         }
         );
 
-    setAttribute(
-        Qt::WA_TranslucentBackground
-        );
-
-    setWindowFlags(
-        Qt::Tool |
-        Qt::FramelessWindowHint |
-        Qt::WindowStaysOnTopHint
-        );
-
-    m_timer.setSingleShot(true);
-
-
-    connect(
-        &m_timer,
-        &QTimer::timeout,
-        this,
-        &BuffBox::cooldownFinished
-        );
-    QSettings settings(
-        "ElsOverlay.ini",
-        QSettings::IniFormat
-        );
-
-
-    move(
-        settings.value(
-                    "Classes/" + className + "/" + boxId + "/position",
-                    QPoint(100,100)
-                    ).toPoint()
-        );
-
-
 }
 
 
 
-void BuffBox::paintEvent(QPaintEvent *)
+void BuffBox::paintEvent(
+    QPaintEvent *
+    )
 {
 
     QPainter painter(this);
+
 
     painter.setRenderHint(
         QPainter::Antialiasing
         );
 
 
+
+    // =========================
+    // EXPIRED GLOW
+    // =========================
+
     if(m_state == State::Expired)
     {
+
         painter.setBrush(
             QColor(
                 255,
@@ -113,20 +119,26 @@ void BuffBox::paintEvent(QPaintEvent *)
                 )
             );
 
+
         painter.setPen(
             Qt::NoPen
             );
 
+
         painter.drawRect(
             rect()
             );
+
     }
 
 
 
-    if(!m_configured)
-    {
+    // =========================
+    // BOX
+    // =========================
 
+    if(m_configurationMode)
+    {
         painter.setPen(
             QPen(
                 Qt::white,
@@ -134,22 +146,16 @@ void BuffBox::paintEvent(QPaintEvent *)
                 )
             );
 
-        painter.setBrush(
-            Qt::NoBrush
-            );
+        painter.setBrush(Qt::NoBrush);
 
         painter.drawRect(
             1,
             1,
-            width()-2,
-            height()-2
+            width() - 2,
+            height() - 2
             );
 
-
-        painter.setPen(
-            Qt::white
-            );
-
+        painter.setPen(Qt::white);
 
         painter.setFont(
             QFont(
@@ -159,16 +165,12 @@ void BuffBox::paintEvent(QPaintEvent *)
                 )
             );
 
-
         painter.drawText(
             rect(),
             Qt::AlignCenter,
             m_key
             );
-
     }
-    // DEBUG TEMPORANEO
-    //drawDebugCountdown(painter);
 
 }
 
@@ -179,19 +181,18 @@ void BuffBox::mousePressEvent(
     )
 {
 
-    if(event->button() == Qt::LeftButton)
-    {
-
-        m_dragging = true;
+    if(event->button() != Qt::LeftButton)
+        return;
 
 
-        m_dragOffset =
-            event->pos();
+    m_dragging = true;
 
 
-        event->accept();
+    m_dragOffset =
+        event->pos();
 
-    }
+
+    event->accept();
 
 }
 
@@ -202,31 +203,25 @@ void BuffBox::mouseMoveEvent(
     )
 {
 
-    if(m_dragging)
-    {
-
-        move(
-            event->globalPosition().toPoint()
-            - m_dragOffset
-            );
+    if(!m_dragging)
+        return;
 
 
-        QSettings settings(
-            "ElsOverlay.ini",
-            QSettings::IniFormat
-            );
+    move(
+        event->globalPosition().toPoint()
+        - m_dragOffset
+        );
 
 
-        settings.setValue(
-            "Classes/" + className + "/" + boxId + "/position",
-            pos()
-            );
+    emit positionChanged(
+        pos()
+        );
 
-        // qui NON cambiamo lo stato
 
-    }
+    event->accept();
 
 }
+
 
 
 void BuffBox::mouseReleaseEvent(
@@ -234,27 +229,19 @@ void BuffBox::mouseReleaseEvent(
     )
 {
 
-    Q_UNUSED(event);
-
-
-    if(m_dragging)
-    {
-
-        if(!m_configured)
-        {
-
-            m_configured = true;
-
-            m_state = State::Ready;
-
-            update();
-
-        }
-
-    }
+    if(event->button() != Qt::LeftButton)
+        return;
 
 
     m_dragging = false;
+
+
+    emit positionChanged(
+        pos()
+        );
+
+
+    event->accept();
 
 }
 
@@ -263,42 +250,45 @@ void BuffBox::mouseReleaseEvent(
 void BuffBox::startCooldown()
 {
 
-    if(!m_configured)
+    if(m_cooldown <= 0)
         return;
 
+
     m_glowTimer.stop();
-    m_state = State::Active;
 
 
-    m_remainingTime =
-        m_cooldowns[m_currentState];
+    m_state =
+        State::Active;
 
 
     update();
 
 
     m_timer.start(
-        m_cooldowns[m_currentState] * 1000
+        m_cooldown * 1000
         );
 
-
-    if(m_currentState < m_cooldowns.size()-1)
-    {
-        m_currentState++;
-    }
-
 }
+
+
+
 void BuffBox::cooldownFinished()
 {
 
-    m_state = State::Expired;
+    m_state =
+        State::Expired;
 
-    m_currentState = 0;
 
-    m_glowAlpha = 80;
-    m_glowIncreasing = true;
+    m_glowAlpha =
+        80;
+
+
+    m_glowIncreasing =
+        true;
+
 
     m_glowTimer.start();
+
 
     update();
 
@@ -308,14 +298,27 @@ void BuffBox::cooldownFinished()
 
 void BuffBox::reset()
 {
+
     m_timer.stop();
 
-    if(m_configured)
-        m_state = State::Ready;
-    else
-        m_state = State::Placement;
+
+    m_glowTimer.stop();
+
+
+    m_glowAlpha =
+        80;
+
+
+    m_glowIncreasing =
+        true;
+
+
+    m_state =
+        State::Ready;
+
 
     update();
+
 }
 
 
@@ -325,61 +328,36 @@ QChar BuffBox::key() const
     return m_key;
 }
 
-void BuffBox::drawDebugCountdown(
-    QPainter& painter
+
+
+void BuffBox::setConfigurationPosition(
+    const QPoint &position
     )
 {
 
-    if(m_state != State::Active)
-        return;
-
-
-    painter.setPen(
-        Qt::white
-        );
-
-
-    painter.setFont(
-        QFont(
-            "Arial",
-            18,
-            QFont::Bold
-            )
-        );
-
-
-    painter.drawText(
-        rect(),
-        Qt::AlignCenter,
-        QString::number(m_remainingTime)
+    move(
+        position
         );
 
 }
-bool BuffBox::hasSavedPosition() const
+
+
+
+QPoint BuffBox::configurationPosition() const
 {
-    QSettings settings(
-        "ElsOverlay.ini",
-        QSettings::IniFormat
-        );
-
-
-    return settings.contains(
-        "Classes/" +
-        className +
-        "/" +
-        QString(m_key) +
-        "/position"
-        );
+    return pos();
 }
 
-void BuffBox::confirmPlacement()
+void BuffBox::setConfigurationMode(bool enabled)
 {
-    m_configured = true;
+    m_configurationMode = enabled;
 
-    if(m_state == State::Placement)
-    {
-        m_state = State::Ready;
-    }
+    m_state = State::Ready;
 
     update();
+}
+
+bool BuffBox::isInConfigurationMode() const
+{
+    return m_configurationMode;
 }

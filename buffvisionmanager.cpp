@@ -3,13 +3,13 @@
 #include "globalkeyboard.h"
 #include "buffvisioncore.h"
 #include "buffvisionoverlay.h"
-#include "buffvisionselector.h"
 #include "buffvisioncapturesetup.h"
 #include "overlayroot.h"
 
 #include <QTimer>
 #include <QFile>
 #include <QDebug>
+
 
 #ifdef QT_DEBUG
 #include "buffvisiondebug.h"
@@ -23,27 +23,56 @@ BuffVisionManager::BuffVisionManager(
     QObject *parent
     )
     : QObject(parent),
-    keyboard(keyboard),
-    overlayRoot(overlayRoot)
+    overlayRoot(overlayRoot),
+    keyboard(keyboard)
 {
 
+    // =========================
+    // CORE
+    // =========================
+
     core =
-        new BuffVisionCore(this);
+        new BuffVisionCore(
+            this
+            );
 
 
+
+    // =========================
+    // CAPTURE
+    // =========================
 
     capture =
-        new BuffVisionCapture(this);
+        new BuffVisionCapture(
+            this
+            );
 
 
     capture->loadSettings();
 
 
 
+    // =========================
+    // DETECTOR
+    // =========================
+
     detector =
-        new BuffVisionDetector(this);
+        new BuffVisionDetector(
+            this
+            );
 
 
+    detector->loadReferences();
+
+
+    configured =
+        detector->referencesLoaded();
+
+
+
+    // =========================
+    // DEBUG
+    // =========================
 
 #ifdef QT_DEBUG
 
@@ -57,20 +86,13 @@ BuffVisionManager::BuffVisionManager(
         debugWindow
         );
 
-
-    debugWindow->show();
-
 #endif
 
 
 
-    detector->loadReferences();
-
-
-    configured =
-        detector->referencesLoaded();
-
-
+    // =========================
+    // ATMA OVERLAY
+    // =========================
 
     overlay =
         new BuffVisionOverlay(
@@ -84,28 +106,23 @@ BuffVisionManager::BuffVisionManager(
         );
 
 
-
-    selector =
-        new BuffVisionSelector(
-            this->overlayRoot
-            );
-
-
-    this->overlayRoot->registerOverlay(
-        selector
-        );
+    // IMPORTANTE:
+    // l'overlay parte nascosto.
+    overlay->hide();
 
 
 
-    selector->show();
-
-    this->overlayRoot->raiseAll();
-
-
+    // =========================
+    // CAPTURE SETUP
+    // =========================
 
     captureSetup = nullptr;
 
 
+
+    // =========================
+    // TIMER VISIONE
+    // =========================
 
     connect(
         &visionTimer,
@@ -114,14 +131,25 @@ BuffVisionManager::BuffVisionManager(
         [this]()
         {
 
+            // Atma disabilitato:
+            // nessuna elaborazione.
             if(!enabled)
+            {
+                visionTimer.stop();
                 return;
+            }
 
 
+            // Nessuna reference:
+            // nessuna elaborazione.
             if(!configured)
                 return;
 
 
+
+            // =========================
+            // CAPTURE
+            // =========================
 
             QPixmap current1 =
                 capture->captureCrop1();
@@ -131,6 +159,10 @@ BuffVisionManager::BuffVisionManager(
                 capture->captureCrop2();
 
 
+
+            // =========================
+            // DETECTION
+            // =========================
 
             VisionState state1 =
                 detector->detectCrop1(
@@ -158,40 +190,79 @@ BuffVisionManager::BuffVisionManager(
 
 
 
-            if(lastCrop1State == VisionState::State1 &&
-                state1 == VisionState::State2)
+            // =========================
+            // CROP 1 EVENT
+            // =========================
+
+            if(
+                lastCrop1State ==
+                    VisionState::State1
+                &&
+                state1 ==
+                    VisionState::State2
+                )
             {
+
                 core->onCrop1Event();
+
             }
 
 
 
-            if(lastCrop2State == VisionState::State1 &&
-                state2 == VisionState::State2)
+            // =========================
+            // CROP 2 EVENT
+            // =========================
+
+            if(
+                lastCrop2State ==
+                    VisionState::State1
+                &&
+                state2 ==
+                    VisionState::State2
+                )
             {
+
                 core->onCrop2Event();
+
             }
 
 
 
-            if(state1 != VisionState::Unknown)
+            // =========================
+            // UPDATE PREVIOUS STATE
+            // =========================
+
+            if(
+                state1 !=
+                VisionState::Unknown
+                )
             {
-                lastCrop1State = state1;
+
+                lastCrop1State =
+                    state1;
+
             }
 
 
 
-            if(state2 != VisionState::Unknown)
+            if(
+                state2 !=
+                VisionState::Unknown
+                )
             {
-                lastCrop2State = state2;
+
+                lastCrop2State =
+                    state2;
+
             }
 
         }
         );
 
 
+
     // =========================
-    // START TRACKING + AZIONI
+    // KEYBOARD
     // =========================
 
     connect(
@@ -201,110 +272,23 @@ BuffVisionManager::BuffVisionManager(
         [this](int key)
         {
 
-            // =========================
-            // SALVATAGGIO REFERENCE CON P
-            // =========================
-
-            if(key == 'P')
-            {
-
-                if(!captureSetup)
-                    return;
-
-
-
-                captureSetup->setCaptureMode(
-                    true
-                    );
-
-
-
-                QTimer::singleShot(
-                    100,
-                    this,
-                    [this]()
-                    {
-
-                        capture->setCropAreas(
-                            captureSetup->getCropRect1(),
-                            captureSetup->getCropRect2()
-                            );
-
-
-
-                        if(referenceMode ==
-                            CaptureReferenceMode::Reference1)
-                        {
-
-                            capture->saveReference1();
-
-
-                            detector->loadReferences();
-
-
-                            captureSetup->showFeedback(
-                                "REFERENCE 1 SAVED"
-                                );
-
-
-                            referenceMode =
-                                CaptureReferenceMode::Reference2;
-
-                        }
-                        else
-                            if(referenceMode ==
-                                CaptureReferenceMode::Reference2)
-                            {
-
-                                capture->saveReference2();
-
-
-                                detector->loadReferences();
-
-
-                                configured =
-                                    detector->referencesLoaded();
-
-
-                                captureSetup->showFeedback(
-                                    "REFERENCE 2 SAVED"
-                                    );
-
-
-                                referenceMode =
-                                    CaptureReferenceMode::None;
-
-                            }
-
-
-
-                        captureSetup->setCaptureMode(
-                            false
-                            );
-
-
-                    }
-                    );
-
-
-                return;
-
-            }
-
-
-
-            // =========================
-            // DA QUI IN POI SOLO GAMEPLAY
-            // =========================
-
-
-            if(!enabled)
-                return;
-
-
+            // =================================
+            // START TRACKING
+            // =================================
 
             if(key == '0')
             {
+
+                // Atma deve essere ON.
+                if(!enabled)
+                    return;
+
+
+                // Reference necessarie.
+                if(!configured)
+                    return;
+
+
 
                 core->reset();
 
@@ -317,13 +301,14 @@ BuffVisionManager::BuffVisionManager(
                     VisionState::Unknown;
 
 
+
                 core->startTracking();
 
 
-                if(configured)
-                {
-                    visionTimer.start(50);
-                }
+
+                visionTimer.start(
+                    50
+                    );
 
 
                 return;
@@ -332,110 +317,33 @@ BuffVisionManager::BuffVisionManager(
 
 
 
-            if(key >= '1' &&
-                key <= '6')
+            // =================================
+            // ACTIONS
+            // =================================
+
+            if(
+                key >= '1' &&
+                key <= '6'
+                )
             {
+
+                if(!enabled)
+                    return;
+
 
                 core->registerAction();
 
             }
 
-
-        }
-        );
-
-
-    connect(
-        selector,
-        &BuffVisionSelector::enabled,
-        this,
-        [this]()
-        {
-
-            enabled = true;
-
-
-            referenceMode =
-                CaptureReferenceMode::Reference1;
-
-
-            configurationConfirmed = false;
-
-
-
-            visionTimer.start(50);
-
-
-
-            selector->hide();
-
-
-
-            overlay->show();
-
-
-
-            if(!captureSetup)
-            {
-
-                captureSetup =
-                    new BuffVisionCaptureSetup(
-                        this->overlayRoot
-                        );
-
-
-                this->overlayRoot->registerOverlay(
-                    captureSetup
-                    );
-
-            }
-
-
-
-            captureSetup->show();
-
-
-
-            this->overlayRoot->raiseAll();
-
         }
         );
 
 
 
-
-
-
-
-    connect(
-        selector,
-        &BuffVisionSelector::disabled,
-        this,
-        [this]()
-        {
-
-            enabled = false;
-
-
-            selector->hide();
-
-
-            overlay->hide();
-
-
-            core->reset();
-
-
-            overlay->resetOverlay();
-
-        }
-        );
-
-
-
-
-
-
+    // =========================
+    // ENTER
+    // CONFERMA CONFIGURAZIONE
+    // =========================
 
     connect(
         keyboard,
@@ -444,15 +352,13 @@ BuffVisionManager::BuffVisionManager(
         [this]()
         {
 
-            if(!enabled)
-                return;
-
-
             if(!captureSetup)
                 return;
 
 
-            if(configurationConfirmed)
+            // Se non siamo in configurazione
+            // non facciamo nulla.
+            if(!captureSetup->isVisible())
                 return;
 
 
@@ -476,11 +382,9 @@ BuffVisionManager::BuffVisionManager(
 
 
 
-            configurationConfirmed = true;
+            referenceMode =
+                CaptureReferenceMode::None;
 
-
-
-            overlay->show();
 
 
             this->overlayRoot->raiseAll();
@@ -490,9 +394,41 @@ BuffVisionManager::BuffVisionManager(
 
 
 
+    // =========================
+    // P
+    // SALVATAGGIO REFERENCE
+    // =========================
+
+    connect(
+        keyboard,
+        &GlobalKeyboard::keyPressed,
+        this,
+        [this](int key)
+        {
+
+            if(key != 'P')
+                return;
+
+
+            if(!captureSetup)
+                return;
+
+
+            if(!captureSetup->isVisible())
+                return;
 
 
 
+            saveCurrentReference();
+
+        }
+        );
+
+
+
+    // =========================
+    // RESET
+    // =========================
 
     connect(
         keyboard,
@@ -504,25 +440,35 @@ BuffVisionManager::BuffVisionManager(
             enabled = false;
 
 
-            configurationConfirmed = false;
-
+            visionTimer.stop();
 
 
             core->reset();
 
 
 
-            overlay->resetOverlay();
+            lastCrop1State =
+                VisionState::Unknown;
 
 
-            overlay->hide();
+            lastCrop2State =
+                VisionState::Unknown;
+
+
+
+            if(overlay)
+            {
+
+                overlay->resetOverlay();
+
+                overlay->hide();
+
+            }
 
 
 
             if(captureSetup)
             {
-
-                captureSetup->resetSetup();
 
                 captureSetup->hide();
 
@@ -530,14 +476,8 @@ BuffVisionManager::BuffVisionManager(
 
 
 
-            selector->resetSelector();
-
-
-            selector->show();
-
-
-
-            visionTimer.stop();
+            referenceMode =
+                CaptureReferenceMode::None;
 
 
 
@@ -548,39 +488,215 @@ BuffVisionManager::BuffVisionManager(
 
 }
 
+void BuffVisionManager::configure()
+{
 
+    if(!captureSetup)
+    {
+
+        captureSetup =
+            new BuffVisionCaptureSetup(
+                this->overlayRoot
+                );
+
+
+        this->overlayRoot->registerOverlay(
+            captureSetup
+            );
+
+    }
+
+
+
+    // Configurazione parte sempre
+    // dalla prima reference.
+
+    referenceMode =
+        CaptureReferenceMode::Reference1;
+
+
+
+    captureSetup->show();
+
+
+    captureSetup->raise();
+
+    captureSetup->activateWindow();
+    captureSetup->setFocus();
+
+
+    this->overlayRoot->raiseAll();
+
+}
+
+void BuffVisionManager::setEnabled(
+    bool enabled
+    )
+{
+
+    this->enabled =
+        enabled;
+
+
+
+    if(!enabled)
+    {
+
+        // STOP IMMEDIATO
+        visionTimer.stop();
+
+
+
+        // STOP CORE
+        core->reset();
+
+
+
+        lastCrop1State =
+            VisionState::Unknown;
+
+
+        lastCrop2State =
+            VisionState::Unknown;
+
+
+
+        // NASCONDE ATMA
+        overlay->hide();
+
+
+        overlay->resetOverlay();
+
+
+
+        return;
+
+    }
+
+
+
+    // ON:
+    // mostriamo soltanto l'overlay.
+    // NON parte il tracking.
+
+    overlay->show();
+
+
+    this->overlayRoot->raiseAll();
+
+}
+
+void BuffVisionManager::saveCurrentReference()
+{
+
+    if(!captureSetup)
+        return;
+
+
+    // =========================
+    // IMPOSTA LE CROP ATTUALI
+    // =========================
+
+    capture->setCropAreas(
+        captureSetup->getCropRect1(),
+        captureSetup->getCropRect2()
+        );
+
+
+
+    // =========================
+    // REFERENCE 1
+    // =========================
+
+    if(
+        referenceMode ==
+        CaptureReferenceMode::Reference1
+        )
+    {
+
+        capture->saveReference1();
+
+
+        detector->loadReferences();
+
+
+        captureSetup->showFeedback(
+            "REFERENCE 1 SAVED"
+            );
+
+
+        referenceMode =
+            CaptureReferenceMode::Reference2;
+
+
+        return;
+
+    }
+
+
+
+    // =========================
+    // REFERENCE 2
+    // =========================
+
+    if(
+        referenceMode ==
+        CaptureReferenceMode::Reference2
+        )
+    {
+
+        capture->saveReference2();
+
+
+        detector->loadReferences();
+
+
+        configured =
+            detector->referencesLoaded();
+
+
+        captureSetup->showFeedback(
+            "REFERENCE 2 SAVED"
+            );
+
+
+        referenceMode =
+            CaptureReferenceMode::None;
+
+
+        return;
+
+    }
+
+}
 
 BuffVisionManager::~BuffVisionManager()
 {
 
     delete overlay;
 
-    delete selector;
-
     delete captureSetup;
 
 }
 
-
-
-
 bool BuffVisionManager::hasReferences() const
 {
 
-    return QFile::exists(
-               "BuffVision/Crop1_Ref1.png"
-               )
-           &&
-           QFile::exists(
-               "BuffVision/Crop1_Ref2.png"
-               )
-           &&
-           QFile::exists(
-               "BuffVision/Crop2_Ref1.png"
-               )
-           &&
-           QFile::exists(
-               "BuffVision/Crop2_Ref2.png"
-               );
+    return
+        QFile::exists(
+            "BuffVision/Crop1_Ref1.png"
+            )
+        &&
+        QFile::exists(
+            "BuffVision/Crop1_Ref2.png"
+            )
+        &&
+        QFile::exists(
+            "BuffVision/Crop2_Ref1.png"
+            )
+        &&
+        QFile::exists(
+            "BuffVision/Crop2_Ref2.png"
+            );
 
 }

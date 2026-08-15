@@ -2,10 +2,14 @@
 
 #include <QPainter>
 #include <QMouseEvent>
+#include <QDir>
+#include <QFileInfo>
+#include <QCoreApplication>
 
 
-
-ClassSelector::ClassSelector(QWidget *parent)
+ClassSelector::ClassSelector(
+    QWidget *parent
+    )
     : QWidget(parent)
 {
 
@@ -22,68 +26,112 @@ ClassSelector::ClassSelector(QWidget *parent)
 
 
     resize(
-        300,
-        80
+        Columns * CellSize,
+        Rows * CellSize
         );
 
 
-    createButtons();
+    loadClasses();
 
 }
 
 
 
-void ClassSelector::createButtons()
+void ClassSelector::loadClasses()
 {
 
-    int size = 60;
+    buttons.clear();
 
 
-    int startX = 0;
+    QDir directory(
+        QCoreApplication::applicationDirPath() +
+        "/images/classes"
+        );
 
 
-    for(int i = 0; i < 4; i++)
+    if(!directory.exists())
+        return;
+
+
+    QStringList filters;
+
+    filters
+        << "*.png"
+        << "*.jpg"
+        << "*.jpeg";
+
+
+    QFileInfoList files =
+        directory.entryInfoList(
+            filters,
+            QDir::Files |
+                QDir::Readable,
+            QDir::Name
+            );
+
+
+    /*
+     * Massimo 60 classi:
+     *
+     * 12 colonne × 5 righe.
+     */
+
+    const int maxClasses =
+        Columns * Rows;
+
+
+    if(files.size() > maxClasses)
     {
+        files =
+            files.mid(
+                0,
+                maxClasses
+                );
+    }
+
+
+
+    for(int i = 0;
+         i < files.size();
+         ++i)
+    {
+
+        const QFileInfo &file =
+            files.at(i);
+
 
         ClassButton button;
 
 
-        button.rect =
-            QRect(
-                startX + i * size,
-                10,
-                size,
-                size
+        button.id =
+            file.completeBaseName();
+
+
+        button.imagePath =
+            file.absoluteFilePath();
+
+
+        button.image =
+            QPixmap(
+                button.imagePath
                 );
 
 
-        switch(i)
-        {
-
-        case 0:
-            button.type = ClassType::ES;
-            button.image = QPixmap("images/ES.png");
-            break;
+        const int column =
+            i % Columns;
 
 
-        case 1:
-            button.type = ClassType::FL;
-            button.image = QPixmap("images/FL.png");
-            break;
+        const int row =
+            i / Columns;
 
 
-        case 2:
-            button.type = ClassType::BQ;
-            button.image = QPixmap("images/BQ.png");
-            break;
-
-
-        case 3:
-            button.type = ClassType::AD;
-            button.image = QPixmap("images/AD.png");
-            break;
-
-        }
+        button.rect =
+            QRect(
+                column * CellSize,
+                row * CellSize,
+                CellSize,
+                CellSize
+                );
 
 
         buttons.append(
@@ -92,23 +140,18 @@ void ClassSelector::createButtons()
 
     }
 
-
-    cancelButton =
-        QRect(
-            240,
-            10,
-            size,
-            size
-            );
-
 }
 
 
 
-void ClassSelector::paintEvent(QPaintEvent *)
+void ClassSelector::paintEvent(
+    QPaintEvent *
+    )
 {
 
-    QPainter painter(this);
+    QPainter painter(
+        this
+        );
 
 
     painter.setRenderHint(
@@ -116,20 +159,44 @@ void ClassSelector::paintEvent(QPaintEvent *)
         );
 
 
-    // Pulsanti classi
+    /*
+     * Sfondo della finestra.
+     */
 
-    for(const auto &button : buttons)
+    painter.fillRect(
+        rect(),
+        QColor(
+            20,
+            20,
+            20,
+            235
+            )
+        );
+
+
+
+    /*
+     * Celle delle classi.
+     */
+
+    for(const ClassButton &button :
+         buttons)
     {
-
-        painter.setBrush(
-            Qt::NoBrush
-            );
-
 
         painter.setPen(
             QPen(
                 Qt::white,
-                2
+                1
+                )
+            );
+
+
+        painter.setBrush(
+            QColor(
+                40,
+                40,
+                40,
+                220
                 )
             );
 
@@ -139,57 +206,23 @@ void ClassSelector::paintEvent(QPaintEvent *)
             );
 
 
-        painter.drawPixmap(
-            button.rect.x() + 2,
-            button.rect.y() + 2,
-            55,
-            55,
-            button.image
-            );
+
+        if(!button.image.isNull())
+        {
+
+            painter.drawPixmap(
+                button.rect.adjusted(
+                    4,
+                    4,
+                    -4,
+                    -4
+                    ),
+                button.image
+                );
+
+        }
 
     }
-
-
-
-    // Pulsante annulla
-
-    painter.setBrush(
-        QColor(120,120,120,120)
-        );
-
-
-    painter.setPen(
-        QPen(
-            Qt::white,
-            2
-            )
-        );
-
-
-    painter.drawRect(
-        cancelButton
-        );
-
-
-    painter.setPen(
-        QColor(220,40,40)
-        );
-
-
-    painter.setFont(
-        QFont(
-            "Arial",
-            30,
-            QFont::Bold
-            )
-        );
-
-
-    painter.drawText(
-        cancelButton,
-        Qt::AlignCenter,
-        "X"
-        );
 
 }
 
@@ -204,40 +237,33 @@ void ClassSelector::mousePressEvent(
         return;
 
 
-    QPoint pos =
+    const QPoint position =
         event->pos();
 
 
-
-    for(const auto &button : buttons)
+    for(const ClassButton &button :
+         buttons)
     {
 
-        if(button.rect.contains(pos))
-        {
-
-            hide();
+        if(!button.rect.contains(position))
+            continue;
 
 
-            emit classSelected(
-                button.type
-                );
+        /*
+         * La selezione viene restituita
+         * al chiamante.
+         */
 
+        emit classSelected(
+            button.id,
+            button.imagePath
+            );
 
-            return;
-
-        }
-
-    }
-
-
-
-    if(cancelButton.contains(pos))
-    {
 
         hide();
 
 
-        emit selectionCancelled();
+        return;
 
     }
 
@@ -247,6 +273,9 @@ void ClassSelector::mousePressEvent(
 
 void ClassSelector::open()
 {
+
+    loadClasses();
+
 
     show();
 

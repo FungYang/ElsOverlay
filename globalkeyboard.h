@@ -18,6 +18,9 @@ signals:
     void escPressed();
     void resetPressed();
     void keyPressed(int key);
+    void keyReleased(
+        int key
+        );
     void pauseChanged(bool paused);
     void confirmPressed();
     void transcendenceResetPressed();
@@ -25,7 +28,6 @@ signals:
 
 private:
     bool paused = false;
-    bool waitingForExit = false;
     static HHOOK hook;
     static GlobalKeyboard *instance;
 

@@ -2,9 +2,10 @@
 #define BUFFVISIONMANAGER_H
 
 #include <QObject>
+#include <QTimer>
+
 #include "buffvisioncapture.h"
 #include "buffvisiondetector.h"
-#include <QTimer>
 #include "overlayroot.h"
 
 
@@ -12,11 +13,8 @@ class GlobalKeyboard;
 
 class BuffVisionCore;
 class BuffVisionOverlay;
-class BuffVisionSelector;
 class BuffVisionCaptureSetup;
-class BuffVisionCapture;
-class BuffVisionDetector;
-class OverlayRoot;
+
 #ifdef QT_DEBUG
 class BuffVisionDebug;
 #endif
@@ -34,9 +32,9 @@ public:
         QObject *parent = nullptr
         );
 
-
     ~BuffVisionManager();
-
+    void configure();
+    void setEnabled(bool enabled);
 
 
 private:
@@ -48,61 +46,55 @@ private:
         Reference2
     };
 
+
     OverlayRoot *overlayRoot = nullptr;
-
-    CaptureReferenceMode referenceMode =
-        CaptureReferenceMode::None;
-
-    BuffVisionCapture *capture = nullptr;
 
     GlobalKeyboard *keyboard = nullptr;
 
 
     BuffVisionCore *core = nullptr;
 
-
-    BuffVisionOverlay *overlay = nullptr;
-
-
-    BuffVisionSelector *selector = nullptr;
-
-
-    BuffVisionCaptureSetup *captureSetup = nullptr;
+    BuffVisionCapture *capture = nullptr;
 
     BuffVisionDetector *detector = nullptr;
 
-    #ifdef QT_DEBUG
-        BuffVisionDebug *debugWindow = nullptr;
-    #endif
+    BuffVisionOverlay *overlay = nullptr;
 
-    VisionState crop1State =
+    BuffVisionCaptureSetup *captureSetup = nullptr;
+
+
+#ifdef QT_DEBUG
+
+    BuffVisionDebug *debugWindow = nullptr;
+
+#endif
+
+
+    CaptureReferenceMode referenceMode =
+        CaptureReferenceMode::None;
+
+
+    VisionState lastCrop1State =
         VisionState::Unknown;
 
-
-    VisionState crop2State =
+    VisionState lastCrop2State =
         VisionState::Unknown;
-
-    VisionState lastCrop1State = VisionState::Unknown;
-    VisionState lastCrop2State = VisionState::Unknown;
-
 
 
     bool configured = false;
 
     bool enabled = false;
 
-    bool configurationConfirmed = false;
 
     QTimer visionTimer;
 
+
     bool hasReferences() const;
 
-    void showSelector();
 
     void showSetup();
 
     void saveCurrentReference();
-
 
 };
 

@@ -3,10 +3,11 @@
 #include <QtAlgorithms>
 
 
-BuffOverlay::BuffOverlay(QWidget *parent)
+BuffOverlay::BuffOverlay(
+    QWidget *parent
+    )
     : QWidget(parent)
 {
-
     setAttribute(
         Qt::WA_TranslucentBackground
         );
@@ -29,46 +30,33 @@ BuffOverlay::BuffOverlay(QWidget *parent)
         500,
         100
         );
-
 }
 
 
 
-void BuffOverlay::loadBuffs(
-    const QString& className,
-    const QList<BuffData>& buffs
+void BuffOverlay::loadConfiguration(
+    const ClassConfiguration &configuration
     )
 {
-
-    qDeleteAll(m_buffs);
-
-    m_buffs.clear();
+    clearBuffs();
 
 
-    int x = 10;
-
-
-    for(const auto &buff : buffs)
+    for(const BuffConfiguration &buff :
+         configuration.buffs)
     {
 
         BuffBox *box =
             new BuffBox(
                 buff.key,
-                buff.cooldowns,
-                className,
-                QString(buff.key),
-                nullptr
+                buff.cooldown,
+                this
                 );
 
 
-        if(!box->hasSavedPosition())
-        {
-            box->move(
-                200 + x,
-                200
-                );
-        }
-
+        box->move(
+            buff.position
+            );
+        box->setConfigurationMode(false);
 
         box->show();
 
@@ -77,26 +65,29 @@ void BuffOverlay::loadBuffs(
             box
             );
 
-
-        x += 70;
-
     }
-
 }
+
 
 
 void BuffOverlay::clearBuffs()
 {
-    qDeleteAll(m_buffs);
+    qDeleteAll(
+        m_buffs
+        );
+
+
     m_buffs.clear();
 }
 
 
 
-void BuffOverlay::handleKey(int key)
+void BuffOverlay::handleKey(
+    int key
+    )
 {
-
-    for(BuffBox *buff : m_buffs)
+    for(BuffBox *buff :
+         m_buffs)
     {
 
         if(buff->key().unicode() == key)
@@ -109,13 +100,27 @@ void BuffOverlay::handleKey(int key)
         }
 
     }
-
 }
 
-void BuffOverlay::confirmAll()
+void BuffOverlay::resetAll()
 {
     for(BuffBox *buff : m_buffs)
     {
-        buff->confirmPlacement();
+        buff->reset();
+    }
+}
+
+void BuffOverlay::removePendingBoxes()
+{
+    for(int i = m_buffs.size() - 1; i >= 0; --i)
+    {
+        BuffBox *buff = m_buffs.at(i);
+
+        if(!buff->isInConfigurationMode())
+            continue;
+
+        m_buffs.removeAt(i);
+
+        buff->deleteLater();
     }
 }

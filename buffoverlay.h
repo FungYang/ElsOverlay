@@ -5,7 +5,7 @@
 #include <QList>
 
 #include "buffbox.h"
-#include "classdata.h"
+#include "classconfigurationmanager.h"
 
 
 class BuffOverlay : public QWidget
@@ -14,21 +14,27 @@ class BuffOverlay : public QWidget
 
 public:
 
-    explicit BuffOverlay(QWidget *parent = nullptr);
+    explicit BuffOverlay(
+        QWidget *parent = nullptr
+        );
 
 
     void clearBuffs();
 
 
-    void loadBuffs(
-        const QString& className,
-        const QList<BuffData>& buffs
+    void loadConfiguration(
+        const ClassConfiguration &configuration
         );
+
+
 
 public slots:
 
-    void handleKey(int key);
-    void confirmAll();
+    void handleKey(
+        int key
+        );
+    void resetAll();
+    void removePendingBoxes();
 
 
 private:

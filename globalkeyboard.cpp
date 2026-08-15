@@ -1,37 +1,52 @@
 #include "globalkeyboard.h"
+
 #include <QDebug>
 
 
-HHOOK GlobalKeyboard::hook = nullptr;
-
-GlobalKeyboard* GlobalKeyboard::instance = nullptr;
-
+HHOOK GlobalKeyboard::hook =
+    nullptr;
 
 
-GlobalKeyboard::GlobalKeyboard(QObject *parent)
+GlobalKeyboard *GlobalKeyboard::instance =
+    nullptr;
+
+
+
+GlobalKeyboard::GlobalKeyboard(
+    QObject *parent
+    )
     : QObject(parent)
 {
+    instance =
+        this;
 
-    instance = this;
 
-
-    hook = SetWindowsHookEx(
-        WH_KEYBOARD_LL,
-        keyboardProc,
-        GetModuleHandle(nullptr),
-        0
-        );
-
+    hook =
+        SetWindowsHookEx(
+            WH_KEYBOARD_LL,
+            keyboardProc,
+            GetModuleHandle(nullptr),
+            0
+            );
 }
 
 
 
 GlobalKeyboard::~GlobalKeyboard()
 {
-
     if(hook)
-        UnhookWindowsHookEx(hook);
+    {
+        UnhookWindowsHookEx(
+            hook
+            );
 
+        hook =
+            nullptr;
+    }
+
+
+    instance =
+        nullptr;
 }
 
 
@@ -42,110 +57,169 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
     LPARAM lParam
     )
 {
-
     if(nCode == HC_ACTION)
     {
-
         KBDLLHOOKSTRUCT *key =
-            reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+            reinterpret_cast<KBDLLHOOKSTRUCT *>(
+                lParam
+                );
 
 
-        if (wParam == WM_KEYDOWN)
+        if(!instance)
         {
-            if (instance)
+            return CallNextHookEx(
+                hook,
+                nCode,
+                wParam,
+                lParam
+                );
+        }
+
+
+
+        // ==================================================
+        // KEY DOWN
+        // ==================================================
+
+        if(wParam == WM_KEYDOWN)
+        {
+            // ==============================================
+            // SPACE
+            // ==============================================
+
+            if(key->vkCode == VK_SPACE)
             {
-                // SPACE attiva/disattiva la pausa dell'overlay
-                if (key->vkCode == VK_SPACE)
-                {
-                    instance->paused = !instance->paused;
-                    emit instance->pauseChanged(instance->paused);
-
-                    return CallNextHookEx(
-                        hook,
-                        nCode,
-                        wParam,
-                        lParam
-                        );
-                }
-
-                // ESC prepara la chiusura ma non blocca gli input
-                if (key->vkCode == VK_ESCAPE)
-                {
-                    instance->waitingForExit = true;
-                }
+                instance->paused =
+                    !instance->paused;
 
 
-                // Controllo P dopo ESC
-                else if(instance->waitingForExit)
-                {
-                    if(key->vkCode == 'P')
-                    {
-                        instance->waitingForExit = false;
-
-                        emit instance->escPressed();
-
-                        return CallNextHookEx(
-                            hook,
-                            nCode,
-                            wParam,
-                            lParam
-                            );
-                    }
-
-                    // qualsiasi altro tasto annulla la chiusura
-                    instance->waitingForExit = false;
-                }
-                if(key->vkCode == VK_RETURN)
-                {
-                    if(instance->paused)
-                    {
-                        instance->paused = false;
-
-                        emit instance->pauseChanged(false);
-                    }
-                    else
-                    {
-                        emit instance->confirmPressed();
-                    }
-
-                    return CallNextHookEx(
-                        hook,
-                        nCode,
-                        wParam,
-                        lParam
-                        );
-                }
+                emit instance->pauseChanged(
+                    instance->paused
+                    );
 
 
-                // Se siamo in pausa, ignoriamo tutti gli altri input
+                return CallNextHookEx(
+                    hook,
+                    nCode,
+                    wParam,
+                    lParam
+                    );
+            }
+
+
+
+            // ==============================================
+            // ENTER
+            // ==============================================
+
+            if(key->vkCode == VK_RETURN)
+            {
                 if(instance->paused)
                 {
-                    return CallNextHookEx(
-                        hook,
-                        nCode,
-                        wParam,
-                        lParam
+                    instance->paused =
+                        false;
+
+
+                    emit instance->pauseChanged(
+                        false
                         );
                 }
-                if(key->vkCode == '7')
+                else
                 {
-                    emit instance->transcendenceResetPressed();
+                    emit instance->confirmPressed();
                 }
 
-                emit instance->keyPressed(key->vkCode);
 
-                if (key->vkCode == VK_LCONTROL)
-                {
-                    emit instance->ctrlPressed();
-                }
+                return CallNextHookEx(
+                    hook,
+                    nCode,
+                    wParam,
+                    lParam
+                    );
+            }
 
-                if (key->vkCode == VK_RCONTROL)
-                {
-                    emit instance->resetPressed();
-                }
+
+
+            // ==============================================
+            // PAUSA
+            // ==============================================
+
+            if(instance->paused)
+            {
+                return CallNextHookEx(
+                    hook,
+                    nCode,
+                    wParam,
+                    lParam
+                    );
+            }
+
+
+
+            // ==============================================
+            // TASTI SPECIALI
+            // ==============================================
+
+            if(key->vkCode == '7')
+            {
+                emit instance->transcendenceResetPressed();
+            }
+
+
+            emit instance->keyPressed(
+                static_cast<int>(
+                    key->vkCode
+                    )
+                );
+
+
+
+            // ==============================================
+            // CTRL SINISTRO
+            // ==============================================
+
+            if(key->vkCode == VK_LCONTROL)
+            {
+                emit instance->ctrlPressed();
+            }
+
+
+
+            // ==============================================
+            // CTRL DESTRO
+            // ==============================================
+
+            if(key->vkCode == VK_RCONTROL)
+            {
+                emit instance->resetPressed();
             }
         }
 
+
+
+        // ==================================================
+        // KEY UP
+        // ==================================================
+
+        else if(wParam == WM_KEYUP)
+        {
+            if(instance->paused)
+            {
+                return CallNextHookEx(
+                    hook,
+                    nCode,
+                    wParam,
+                    lParam
+                    );
+            }
+
+
+            emit instance->keyReleased(
+                static_cast<int>(
+                    key->vkCode
+                    )
+                );
+        }
     }
 
 

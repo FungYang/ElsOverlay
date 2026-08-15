@@ -18,10 +18,10 @@ qt_add_executable(ElsOverlay
     buffbox.h buffbox.cpp
     buffoverlay.h buffoverlay.cpp
     classselector.h classselector.cpp
-    classdata.h
+
     buffvisioncore.h buffvisioncore.cpp
     buffvisionoverlay.h buffvisionoverlay.cpp
-    buffvisionselector.h buffvisionselector.cpp
+
     buffvisioncapturesetup.h buffvisioncapturesetup.cpp
     buffvisionmanager.h buffvisionmanager.cpp
     buffvisioncapture.h buffvisioncapture.cpp
@@ -29,6 +29,17 @@ qt_add_executable(ElsOverlay
     buffvisiondebug.h buffvisiondebug.cpp
     buffvisionconfig.h
     overlayroot.h overlayroot.cpp
+    classconfigurationmanager.h classconfigurationmanager.cpp
+    classbuffconfigwindow.h classbuffconfigwindow.cpp
+    classbuffeditorwindow.h classbuffeditorwindow.cpp
+    newbuffdialog.h newbuffdialog.cpp
+    distanceguideconfiguration.h distanceguideconfiguration.cpp
+    distanceguidemanager.h distanceguidemanager.cpp
+    distanceguideconfigwindow.h distanceguideconfigwindow.cpp
+    distanceguidegraphic.h distanceguidegraphic.cpp
+    distanceguideline.h distanceguideline.cpp
+    distanceguideoverlay.h distanceguideoverlay.cpp
+
 
 
 )

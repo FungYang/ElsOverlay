@@ -3,11 +3,7 @@
 
 #include <QMainWindow>
 
-QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
-}
-QT_END_NAMESPACE
+class QPushButton;
 
 class MainWindow : public QMainWindow
 {
@@ -15,9 +11,44 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override;
+    ~MainWindow() override = default;
+
+signals:
+
+    void atmaConfigRequested();
+    void atmaToggled(bool enabled);
+
+    void classBuffConfigRequested();
+    void classBuffToggled(bool enabled);
+
+    void distanceGuidesConfigRequested();
+    void distanceGuidesToggled(bool enabled);
+
+    void buffTrackerConfigRequested();
 
 private:
-    Ui::MainWindow *ui;
+
+    QPushButton *atmaConfigButton;
+    QPushButton *atmaToggleButton;
+
+    QPushButton *classBuffConfigButton;
+    QPushButton *classBuffToggleButton;
+
+    QPushButton *distanceGuidesConfigButton;
+    QPushButton *distanceGuidesToggleButton;
+
+    QPushButton *buffTrackerConfigButton;
+
+    QPushButton *closeButton;
+
+    void setupToggleButton(
+        QPushButton *button
+        );
+
+    void updateToggleText(
+        QPushButton *button,
+        bool enabled
+        );
 };
+
 #endif // MAINWINDOW_H

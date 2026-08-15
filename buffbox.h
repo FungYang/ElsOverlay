@@ -5,9 +5,6 @@
 #include <QTimer>
 #include <QPoint>
 #include <QChar>
-#include <QVector>
-#include <QPainter>
-#include <QSettings>
 
 
 class BuffBox : public QWidget
@@ -18,28 +15,57 @@ public:
 
     explicit BuffBox(
         QChar key,
-        QVector<int> cooldowns,
-        QString className,
-        QString boxId,
+        int cooldown,
         QWidget *parent = nullptr
         );
 
 
     void startCooldown();
+
     void reset();
-    bool hasSavedPosition() const;
-    void confirmPlacement();
+
     QChar key() const;
+
+
+    void setConfigurationPosition(
+        const QPoint &position
+        );
+
+
+    QPoint configurationPosition() const;
+
+    void setConfigurationMode(bool enabled);
+
+    bool isInConfigurationMode() const;
+
+
+signals:
+
+    void positionChanged(
+        const QPoint &position
+        );
 
 
 protected:
 
-    void paintEvent(QPaintEvent *event) override;
+    void paintEvent(
+        QPaintEvent *event
+        ) override;
 
 
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mousePressEvent(
+        QMouseEvent *event
+        ) override;
+
+
+    void mouseMoveEvent(
+        QMouseEvent *event
+        ) override;
+
+
+    void mouseReleaseEvent(
+        QMouseEvent *event
+        ) override;
 
 
 private slots:
@@ -49,11 +75,8 @@ private slots:
 
 private:
 
-    void drawDebugCountdown(QPainter& painter);
-
     enum class State
     {
-        Placement,
         Ready,
         Active,
         Expired
@@ -62,28 +85,26 @@ private:
 
     QChar m_key;
 
-    QVector<int> m_cooldowns;
-    int m_currentState;
+    int m_cooldown = 0;
 
     QTimer m_timer;
 
-    State m_state;
+    State m_state =
+        State::Ready;
 
-    bool m_configured;
 
-    bool m_dragging;
+    bool m_dragging = false;
 
     QPoint m_dragOffset;
 
-    int m_remainingTime;
 
     QTimer m_glowTimer;
 
-    int m_glowAlpha;
-    bool m_glowIncreasing;
-    QString className;
-    QString boxId;
+    int m_glowAlpha = 80;
 
+    bool m_glowIncreasing = true;
+
+    bool m_configurationMode;
 
 };
 

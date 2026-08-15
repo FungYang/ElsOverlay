@@ -21,17 +21,20 @@ public:
     void loadSettings();
 
     void saveSettings();
+
     void resetSetup();
+
     QRect getCropRect1() const;
 
     QRect getCropRect2() const;
+
     void showFeedback(
         const QString &text
         );
+
     void setCaptureMode(
         bool active
         );
-
 
 
 
@@ -57,23 +60,30 @@ protected:
         ) override;
 
 
+    void keyPressEvent(
+        QKeyEvent *event
+        ) override;
+
 
 
 private:
+
     QString feedbackText;
 
     QTimer feedbackTimer;
 
-    QRect captureRect;
 
+    QRect captureRect;
 
     QRect cropRect1;
 
     QRect cropRect2;
 
+
     bool configured = false;
 
     bool captureMode = false;
+
 
     enum DragMode
     {

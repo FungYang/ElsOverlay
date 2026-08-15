@@ -3,8 +3,9 @@
 
 #include <QWidget>
 #include <QList>
+#include <QRect>
 #include <QPixmap>
-#include "classdata.h"
+#include <QString>
 
 
 class ClassSelector : public QWidget
@@ -13,21 +14,32 @@ class ClassSelector : public QWidget
 
 public:
 
-    explicit ClassSelector(QWidget *parent = nullptr);
+    explicit ClassSelector(
+        QWidget *parent = nullptr
+        );
+
+
     void open();
 
 
 signals:
 
-    void classSelected(ClassType type);
-    void selectionCancelled();
+    void classSelected(
+        const QString &id,
+        const QString &imagePath
+        );
 
 
 protected:
 
-    void paintEvent(QPaintEvent *event) override;
+    void paintEvent(
+        QPaintEvent *event
+        ) override;
 
-    void mousePressEvent(QMouseEvent *event) override;
+
+    void mousePressEvent(
+        QMouseEvent *event
+        ) override;
 
 
 private:
@@ -35,19 +47,27 @@ private:
     struct ClassButton
     {
         QRect rect;
+
+        QString id;
+
+        QString imagePath;
+
         QPixmap image;
-        ClassType type;
     };
 
 
     QList<ClassButton> buttons;
 
 
-    QRect cancelButton;
+    static constexpr int Columns = 12;
+
+    static constexpr int Rows = 5;
+
+    static constexpr int CellSize = 70;
 
 
-    void createButtons();
+    void loadClasses();
 
 };
 
-#endif
+#endif // CLASSSELECTOR_H
