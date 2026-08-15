@@ -1469,6 +1469,9 @@ void DistanceGuideConfigWindow::confirmPositions()
     const int center =
         m_manager->characterCenter();
 
+    bool saved =
+        false;
+
     // ==================================================
     // STANDALONE GUIDE
     // ==================================================
@@ -1606,9 +1609,10 @@ void DistanceGuideConfigWindow::confirmPositions()
                 circleSize;
         }
 
-        m_manager->updateGuide(
-            updated
-            );
+        saved =
+            m_manager->updateGuide(
+                updated
+                );
     }
 
     // ==================================================
@@ -1754,15 +1758,40 @@ void DistanceGuideConfigWindow::confirmPositions()
                 circleSize;
         }
 
-        m_manager->updateGroupGuide(
-            m_configurationGroupId,
-            updated
-            );
+        saved =
+            m_manager->updateGroupGuide(
+                m_configurationGroupId,
+                updated
+                );
     }
+
+    // ==================================================
+    // SAVE RIUSCITO
+    // ==================================================
+
+    if(!saved)
+        return;
 
     clearConfigurationObject();
 
     refresh();
+
+    // ==================================================
+    // CHIUDI CONFIGURA GRUPPO
+    // ==================================================
+
+    if(!m_configurationGroupId.isEmpty())
+    {
+        if(m_groupConfigWindow)
+        {
+            m_groupConfigWindow->close();
+
+            delete m_groupConfigWindow;
+
+            m_groupConfigWindow =
+                nullptr;
+        }
+    }
 }
 
 

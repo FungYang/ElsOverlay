@@ -40,21 +40,6 @@ DistanceGuideGroupConfigWindow::DistanceGuideGroupConfigWindow(
 
     createUi();
 
-
-    if(m_keyboard)
-    {
-        connect(
-            m_keyboard,
-            &GlobalKeyboard::confirmPressed,
-            this,
-            [this]()
-            {
-                close();
-            }
-            );
-    }
-
-
     refresh();
 }
 

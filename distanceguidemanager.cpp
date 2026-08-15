@@ -2,7 +2,6 @@
 
 #include <QSettings>
 #include <QtGlobal>
-#include <QDebug>
 
 
 DistanceGuideManager::DistanceGuideManager(
@@ -15,17 +14,14 @@ DistanceGuideManager::DistanceGuideManager(
 
 
 // ==================================================
-// GUIDES
+// GUIDES - STANDALONE
 // ==================================================
 
 QList<DistanceGuideConfiguration>
 DistanceGuideManager::guides() const
 {
     /*
-     * IMPORTANT:
-     *
-     * Questo elenco contiene ESCLUSIVAMENTE
-     * le guide standalone.
+     * SOLO guide standalone.
      *
      * Le guide appartenenti ai gruppi vivono
      * esclusivamente dentro DistanceGuideGroup::guides.
@@ -114,9 +110,6 @@ bool DistanceGuideManager::addGuide(
     guide.height =
         0;
 
-    /*
-     * Standalone = nessun gruppo.
-     */
     guide.groupId.clear();
 
 
@@ -305,13 +298,9 @@ bool DistanceGuideManager::updateGuide(
     if(guide.name.trimmed().isEmpty())
         return false;
 
-
     /*
-     * Una guida passata a updateGuide deve essere
-     * standalone.
-     *
-     * Le guide di gruppo devono passare attraverso
-     * updateGroupGuide().
+     * updateGuide gestisce esclusivamente
+     * guide standalone.
      */
     if(!guide.groupId.isEmpty())
         return false;
@@ -330,10 +319,6 @@ bool DistanceGuideManager::updateGuide(
         current.name =
             current.name.trimmed();
 
-        /*
-         * Garantiamo esplicitamente che una guida
-         * presente in m_guides sia standalone.
-         */
         current.groupId.clear();
 
 
@@ -572,16 +557,11 @@ bool DistanceGuideManager::removeGroup(
 
 
         /*
-         * IMPORTANT:
-         *
          * Le guide appartenente al gruppo è
-         * PROPRIETÀ del gruppo.
+         * proprietà del gruppo.
          *
-         * Eliminando il gruppo, eliminiamo anche
-         * le sue guide.
-         *
-         * NON trasformiamo più le guide di gruppo
-         * in standalone.
+         * Eliminando il gruppo vengono eliminate
+         * anche le sue guide.
          */
         m_groups.removeAt(i);
 
@@ -624,13 +604,6 @@ bool DistanceGuideManager::updateGroup(
             continue;
 
 
-        /*
-         * Il gruppo è proprietario della propria
-         * lista di guide.
-         *
-         * updateGroup riceve quindi anche la lista
-         * corrente senza separarla in m_guides.
-         */
         current =
             group;
 
@@ -639,8 +612,8 @@ bool DistanceGuideManager::updateGroup(
 
 
         /*
-         * Ogni guida contenuta qui appartiene
-         * necessariamente a questo gruppo.
+         * Ogni guida contenuta nel gruppo
+         * appartiene a questo gruppo.
          */
         for(DistanceGuideConfiguration &guide :
              current.guides)
@@ -823,10 +796,6 @@ bool DistanceGuideManager::addGroupGuide(
             continue;
 
 
-        /*
-         * Gli ID delle guide di gruppo sono locali
-         * al gruppo.
-         */
         int index =
             0;
 
@@ -872,9 +841,6 @@ bool DistanceGuideManager::addGroupGuide(
         guide.type =
             type;
 
-        /*
-         * Proprietà esclusiva del gruppo.
-         */
         guide.groupId =
             groupId;
 
@@ -928,21 +894,11 @@ bool DistanceGuideManager::addGroupGuide(
 
         case DistanceGuideType::Group:
         {
-            /*
-             * Un Group non è una guida concreta.
-             */
             return false;
         }
         }
 
 
-        /*
-         * IMPORTANTISSIMO:
-         *
-         * La guida viene inserita SOLO qui.
-         *
-         * NON viene aggiunta a m_guides.
-         */
         group.guides.append(
             guide
             );
@@ -1046,11 +1002,6 @@ bool DistanceGuideManager::updateGroupGuide(
             current.name =
                 current.name.trimmed();
 
-
-            /*
-             * La guida resta SEMPRE proprietà
-             * del gruppo che la contiene.
-             */
             current.groupId =
                 groupId;
 
@@ -1122,7 +1073,7 @@ bool DistanceGuideManager::setGroupGuideEnabled(
 
 
 // ==================================================
-// ASSIGN STANDALONE GUIDE TO GROUP
+// GUIDE -> GROUP
 // ==================================================
 
 bool DistanceGuideManager::setGuideGroup(
@@ -1131,32 +1082,10 @@ bool DistanceGuideManager::setGuideGroup(
     )
 {
     /*
-     * Questa funzione NON mette più semplicemente
-     * groupId dentro una guida standalone.
-     *
-     * Se groupId è valorizzato:
-     *
-     *     m_guides
-     *          |
-     *          +----> group.guides
-     *
-     * La guida viene realmente trasferita.
-     *
-     * Questo elimina il vecchio stato:
-     *
-     *     m_guides[guide].groupId = "group_0"
-     *
-     * che era la causa delle guide appartenenti
-     * a un gruppo che continuavano a comparire
-     * nella lista generale.
-     */
-
-
-    /*
      * Stringa vuota = nessun gruppo.
      *
-     * In questo caso non c'è nulla da fare se la
-     * guida è già standalone.
+     * Una guida di gruppo non viene resa standalone
+     * automaticamente.
      */
     if(groupId.isEmpty())
     {
@@ -1178,27 +1107,14 @@ bool DistanceGuideManager::setGuideGroup(
         }
 
 
-        /*
-         * Una guida di gruppo NON viene resa standalone
-         * automaticamente.
-         *
-         * Per farlo deve essere esplicitamente copiata
-         * tramite una futura operazione di detach.
-         */
         return false;
     }
 
 
-    /*
-     * Il gruppo deve esistere.
-     */
     if(!containsGroup(groupId))
         return false;
 
 
-    /*
-     * Cerchiamo esclusivamente una guida standalone.
-     */
     int standaloneIndex =
         -1;
 
@@ -1220,7 +1136,7 @@ bool DistanceGuideManager::setGuideGroup(
 
     /*
      * Se non è standalone controlliamo se è già
-     * una guida del gruppo.
+     * presente nel gruppo richiesto.
      */
     if(standaloneIndex < 0)
     {
@@ -1237,25 +1153,16 @@ bool DistanceGuideManager::setGuideGroup(
     }
 
 
-    /*
-     * Copia della guida da trasferire.
-     */
     DistanceGuideConfiguration guide =
         m_guides[standaloneIndex];
 
 
-    /*
-     * La proprietà cambia realmente.
-     */
     guide.groupId =
         groupId;
 
 
     /*
-     * Evitiamo ID duplicati all'interno del gruppo.
-     *
-     * Se l'ID standalone è già utilizzato dal gruppo,
-     * generiamo un ID locale.
+     * Evitiamo ID duplicati nel gruppo.
      */
     if(containsGroupGuide(
             groupId,
@@ -1289,9 +1196,6 @@ bool DistanceGuideManager::setGuideGroup(
     }
 
 
-    /*
-     * Inserimento nel gruppo.
-     */
     for(DistanceGuideGroup &group :
          m_groups)
     {
@@ -1304,9 +1208,6 @@ bool DistanceGuideManager::setGuideGroup(
             );
 
 
-        /*
-         * Rimozione dalla lista standalone.
-         */
         m_guides.removeAt(
             standaloneIndex
             );
@@ -1328,8 +1229,45 @@ bool DistanceGuideManager::setGuideGroup(
 
 
 // ==================================================
-// EFFECTIVE COLOR
+// EFFECTIVE STATE
 // ==================================================
+
+bool DistanceGuideManager::isGuideEffectivelyEnabled(
+    const DistanceGuideConfiguration &guide
+    ) const
+{
+    if(!guide.enabled)
+        return false;
+
+
+    /*
+     * Guida standalone.
+     */
+    if(guide.groupId.isEmpty())
+        return true;
+
+
+    /*
+     * Guida appartenente a un gruppo:
+     * anche il gruppo deve essere abilitato.
+     */
+    for(const DistanceGuideGroup &group :
+         m_groups)
+    {
+        if(group.id != guide.groupId)
+            continue;
+
+
+        return group.enabled;
+    }
+
+
+    /*
+     * Gruppo inesistente = guida orfana.
+     */
+    return false;
+}
+
 
 QColor DistanceGuideManager::effectiveGuideColor(
     const DistanceGuideConfiguration &guide
@@ -1343,11 +1281,208 @@ QColor DistanceGuideManager::effectiveGuideColor(
             if(group.id != guide.groupId)
                 continue;
 
+
             return group.color;
         }
     }
 
+
     return guide.color;
+}
+
+
+int DistanceGuideManager::effectivePositionX(
+    const DistanceGuideConfiguration &guide
+    ) const
+{
+    int positionX =
+        m_characterCenter;
+
+
+    // ==================================================
+    // POSIZIONE BASE DELLA GUIDA
+    // ==================================================
+
+    if(guide.side ==
+        DistanceGuideSide::Left)
+    {
+        positionX -=
+            guide.distance;
+    }
+    else
+    {
+        positionX +=
+            guide.distance;
+    }
+
+
+    // ==================================================
+    // MOVIMENTO PERSONAGGIO
+    // ==================================================
+
+    if(m_characterMoving)
+    {
+        if(m_movementDirection ==
+            MovementDirection::Right)
+        {
+            positionX +=
+                MovementOffset;
+        }
+        else if(m_movementDirection ==
+                 MovementDirection::Left)
+        {
+            positionX -=
+                MovementOffset;
+        }
+    }
+
+
+    return positionX;
+}
+
+
+// ==================================================
+// CHARACTER CENTER
+// ==================================================
+
+int DistanceGuideManager::characterCenter() const
+{
+    return m_characterCenter;
+}
+
+
+bool DistanceGuideManager::characterCenterConfigured() const
+{
+    return m_characterCenterConfigured;
+}
+
+
+void DistanceGuideManager::setCharacterCenter(
+    int x
+    )
+{
+    m_characterCenter =
+        x;
+
+
+    m_characterCenterConfigured =
+        true;
+
+
+    save();
+
+
+    emit characterCenterChanged(
+        x
+        );
+
+
+    emit guidesChanged();
+}
+
+
+// ==================================================
+// CHARACTER MOVEMENT
+// ==================================================
+
+bool DistanceGuideManager::characterMoving() const
+{
+    return m_characterMoving;
+}
+
+
+void DistanceGuideManager::setCharacterMoving(
+    bool moving
+    )
+{
+    if(m_characterMoving == moving)
+        return;
+
+
+    m_characterMoving =
+        moving;
+
+
+    emit characterMovingChanged(
+        moving
+        );
+
+
+    emit guidesChanged();
+}
+
+
+// ==================================================
+// MOVEMENT DIRECTION
+// ==================================================
+
+MovementDirection
+DistanceGuideManager::movementDirection() const
+{
+    return m_movementDirection;
+}
+
+
+void DistanceGuideManager::setMovementDirection(
+    MovementDirection direction
+    )
+{
+    if(m_movementDirection == direction)
+        return;
+
+
+    m_movementDirection =
+        direction;
+
+
+    emit movementDirectionChanged(
+        direction
+        );
+
+
+    emit guidesChanged();
+}
+
+
+// ==================================================
+// GLOBAL OPACITY
+// ==================================================
+
+int DistanceGuideManager::globalOpacity() const
+{
+    return m_globalOpacity;
+}
+
+
+void DistanceGuideManager::setGlobalOpacity(
+    int opacity
+    )
+{
+    opacity =
+        qBound(
+            0,
+            opacity,
+            255
+            );
+
+
+    if(m_globalOpacity == opacity)
+        return;
+
+
+    m_globalOpacity =
+        opacity;
+
+
+    save();
+
+
+    emit globalOpacityChanged(
+        opacity
+        );
+
+
+    emit guidesChanged();
 }
 
 
@@ -1457,10 +1592,6 @@ void DistanceGuideManager::load()
         group.guides.clear();
 
 
-        // ==================================================
-        // GROUP OWNED GUIDES
-        // ==================================================
-
         const int guideCount =
             settings.value(
                         prefix + "/guideCount",
@@ -1564,9 +1695,6 @@ void DistanceGuideManager::load()
 
 
             /*
-             * NON leggiamo groupId dal file per decidere
-             * la proprietà.
-             *
              * Il contenitore è la fonte di verità.
              */
             guide.groupId =
@@ -1693,26 +1821,13 @@ void DistanceGuideManager::load()
                         ).toInt();
 
 
-        /*
-         * IMPORTANT:
-         *
-         * Le nuove guide standalone NON hanno gruppo.
-         *
-         * Non ricostruiamo più un'associazione logica
-         * attraverso groupId.
-         */
         guide.groupId.clear();
 
 
         /*
-         * Protezione contro vecchi file:
-         *
-         * se troviamo una vecchia guida standalone con
-         * groupId valorizzato e il gruppo esiste,
-         * la spostiamo direttamente nel gruppo.
-         *
-         * In questo modo il vecchio formato viene
-         * automaticamente convertito al nuovo modello.
+         * Compatibilità con il vecchio formato:
+         * se la guida standalone aveva un groupId
+         * valido, la trasferiamo nel gruppo.
          */
         const QString legacyGroupId =
             settings.value(
@@ -1728,7 +1843,7 @@ void DistanceGuideManager::load()
                 legacyGroupId;
 
 
-            bool alreadyExists =
+            const bool alreadyExists =
                 containsGroupGuide(
                     legacyGroupId,
                     guide.id
@@ -1755,15 +1870,12 @@ void DistanceGuideManager::load()
 
 
             /*
-             * NON la aggiungiamo a m_guides.
+             * Non la aggiungiamo a m_guides.
              */
             continue;
         }
 
 
-        /*
-         * Vera standalone.
-         */
         guide.groupId.clear();
 
 
@@ -1774,9 +1886,7 @@ void DistanceGuideManager::load()
 
 
     /*
-     * Se abbiamo convertito vecchie guide da
-     * standalone a gruppo, normalizziamo subito
-     * il file.
+     * Normalizza il vecchio formato sul disco.
      */
     save();
 }
@@ -1795,10 +1905,7 @@ void DistanceGuideManager::save() const
 
 
     /*
-     * Ricostruiamo interamente la sezione.
-     *
-     * Questo evita che vecchie entry rimangano
-     * nel file dopo la migrazione.
+     * Ricostruiamo interamente DistanceGuides.
      */
     settings.remove(
         "DistanceGuides"
@@ -1962,11 +2069,6 @@ void DistanceGuideManager::save() const
                 );
 
 
-            /*
-             * Informazione ridondante ma coerente:
-             * il contenitore resta comunque la fonte
-             * di verità.
-             */
             settings.setValue(
                 guidePrefix + "/groupId",
                 group.id
@@ -1998,9 +2100,6 @@ void DistanceGuideManager::save() const
             QString::number(i);
 
 
-        /*
-         * Una guida presente qui DEVE essere standalone.
-         */
         settings.setValue(
             prefix + "/id",
             guide.id
@@ -2065,9 +2164,6 @@ void DistanceGuideManager::save() const
             );
 
 
-        /*
-         * Una standalone non ha gruppo.
-         */
         settings.setValue(
             prefix + "/groupId",
             QString()
@@ -2077,231 +2173,3 @@ void DistanceGuideManager::save() const
 
     settings.sync();
 }
-
-
-// ==================================================
-// CHARACTER CENTER
-// ==================================================
-
-int DistanceGuideManager::characterCenter() const
-{
-    return m_characterCenter;
-}
-
-
-bool DistanceGuideManager::characterCenterConfigured() const
-{
-    return m_characterCenterConfigured;
-}
-
-
-void DistanceGuideManager::setCharacterCenter(
-    int x
-    )
-{
-    m_characterCenter =
-        x;
-
-
-    m_characterCenterConfigured =
-        true;
-
-
-    save();
-
-
-    emit characterCenterChanged(
-        x
-        );
-
-
-    emit guidesChanged();
-}
-
-
-// ==================================================
-// CHARACTER MOVEMENT
-// ==================================================
-
-bool DistanceGuideManager::characterMoving() const
-{
-    return m_characterMoving;
-}
-
-
-void DistanceGuideManager::setCharacterMoving(
-    bool moving
-    )
-{
-    if(m_characterMoving == moving)
-        return;
-
-
-    m_characterMoving =
-        moving;
-
-
-    emit characterMovingChanged(
-        moving
-        );
-
-
-    emit guidesChanged();
-}
-
-
-// ==================================================
-// EFFECTIVE POSITION
-// ==================================================
-
-int DistanceGuideManager::effectivePositionX(
-    const DistanceGuideConfiguration &guide
-    ) const
-{
-    int distance =
-        guide.distance;
-
-
-    if(m_characterMoving)
-    {
-        distance +=
-            MovementOffset;
-    }
-
-
-    DistanceGuideSide effectiveSide =
-        guide.side;
-
-
-    if(m_movementDirection ==
-        MovementDirection::Left)
-    {
-        if(effectiveSide ==
-            DistanceGuideSide::Left)
-        {
-            effectiveSide =
-                DistanceGuideSide::Right;
-        }
-        else
-        {
-            effectiveSide =
-                DistanceGuideSide::Left;
-        }
-    }
-
-
-    if(effectiveSide ==
-        DistanceGuideSide::Left)
-    {
-        return m_characterCenter -
-               distance;
-    }
-
-
-    return m_characterCenter +
-           distance;
-}
-
-
-// ==================================================
-// MOVEMENT DIRECTION
-// ==================================================
-
-MovementDirection
-DistanceGuideManager::movementDirection() const
-{
-    return m_movementDirection;
-}
-
-
-void DistanceGuideManager::setMovementDirection(
-    MovementDirection direction
-    )
-{
-    if(m_movementDirection == direction)
-        return;
-
-
-    m_movementDirection =
-        direction;
-
-
-    emit movementDirectionChanged(
-        direction
-        );
-
-
-    emit guidesChanged();
-}
-
-
-// ==================================================
-// GLOBAL OPACITY
-// ==================================================
-
-int DistanceGuideManager::globalOpacity() const
-{
-    return m_globalOpacity;
-}
-
-
-void DistanceGuideManager::setGlobalOpacity(
-    int opacity
-    )
-{
-    opacity =
-        qBound(
-            0,
-            opacity,
-            255
-            );
-
-
-    if(m_globalOpacity == opacity)
-        return;
-
-
-    m_globalOpacity =
-        opacity;
-
-
-    save();
-
-
-    emit globalOpacityChanged(
-        opacity
-        );
-
-
-    emit guidesChanged();
-}
-
-
-bool DistanceGuideManager::isGuideEffectivelyEnabled(
-    const DistanceGuideConfiguration &guide
-    ) const
-{
-    // La guida deve essere ON
-    if(!guide.enabled)
-        return false;
-
-    // Guida standalone
-    if(guide.groupId.isEmpty())
-        return true;
-
-    // Guida di gruppo:
-    // anche il gruppo deve essere ON
-    for(const DistanceGuideGroup &group :
-         m_groups)
-    {
-        if(group.id != guide.groupId)
-            continue;
-
-        return group.enabled;
-    }
-
-    // Se il gruppo non esiste, non disegniamo
-    // la guida orfana.
-    return false;
-}
-
