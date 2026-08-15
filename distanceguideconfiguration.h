@@ -34,6 +34,7 @@ struct DistanceGuideConfiguration
 
     int distance =
         0;
+
     int positionY =
         0;
 
@@ -72,11 +73,6 @@ QString distanceGuideSideToString(
 
 DistanceGuideSide distanceGuideSideFromString(
     const QString &value
-    );
-
-bool addRectangleGuide(
-    const QString &name,
-    const QColor &color
     );
 
 

@@ -48,6 +48,11 @@ public:
         const QColor &color
         );
 
+    bool addCircleGuide(
+        const QString &name,
+        const QColor &color
+        );
+
 
     bool removeGuide(
         const QString &id

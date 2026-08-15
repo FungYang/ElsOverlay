@@ -5,7 +5,7 @@
 
 #include "distanceguidemanager.h"
 #include "distanceguiderectangle.h"
-// #include "distanceguidecircle.h"
+#include "distanceguidecircle.h"
 #include "globalkeyboard.h"
 
 
@@ -67,7 +67,7 @@ private:
 
     DistanceGuideLine *m_configurationLine = nullptr;
     DistanceGuideRectangle *m_configurationRectangle = nullptr;
-    // DistanceGuideCircle *m_configurationCircle = nullptr;
+    DistanceGuideCircle *m_configurationCircle = nullptr;
 
     GlobalKeyboard *m_keyboard = nullptr;
 

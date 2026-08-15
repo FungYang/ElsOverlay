@@ -700,23 +700,28 @@ int DistanceGuideManager::effectivePositionX(
     }
 
 
+    DistanceGuideSide effectiveSide =
+        guide.side;
+
+
     if(m_movementDirection ==
         MovementDirection::Left)
     {
-        return m_characterCenter -
-               distance;
+        if(effectiveSide ==
+            DistanceGuideSide::Left)
+        {
+            effectiveSide =
+                DistanceGuideSide::Right;
+        }
+        else
+        {
+            effectiveSide =
+                DistanceGuideSide::Left;
+        }
     }
 
 
-    if(m_movementDirection ==
-        MovementDirection::Right)
-    {
-        return m_characterCenter +
-               distance;
-    }
-
-
-    if(guide.side ==
+    if(effectiveSide ==
         DistanceGuideSide::Left)
     {
         return m_characterCenter -
@@ -798,4 +803,74 @@ void DistanceGuideManager::setGlobalOpacity(
         );
 
     emit guidesChanged();
+}
+
+bool DistanceGuideManager::addCircleGuide(
+    const QString &name,
+    const QColor &color
+    )
+{
+    if(name.trimmed().isEmpty())
+        return false;
+
+
+    if(!m_characterCenterConfigured)
+        return false;
+
+
+    DistanceGuideConfiguration guide;
+
+
+    guide.id =
+        createId();
+
+
+    guide.name =
+        name.trimmed();
+
+
+    guide.color =
+        color;
+
+
+    guide.enabled =
+        true;
+
+
+    guide.distance =
+        0;
+
+
+    guide.side =
+        DistanceGuideSide::Left;
+
+
+    guide.type =
+        DistanceGuideType::Circle;
+
+
+    guide.positionY =
+        100;
+
+
+    guide.width =
+        150;
+
+
+    guide.height =
+        150;
+
+
+    m_guides.append(
+        guide
+        );
+
+
+    save();
+
+
+    emit guidesChanged();
+
+
+    return true;
 }

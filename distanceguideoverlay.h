@@ -5,12 +5,12 @@
 #include <QWidget>
 
 #include "distanceguiderectangle.h"
-// #include "distanceguidecircle.h"
+#include "distanceguidecircle.h"
 
 class DistanceGuideManager;
 class DistanceGuideLine;
 class OverlayRoot;
-// class DistanceGuideCircle;
+class DistanceGuideCircle;
 
 
 class DistanceGuideOverlay :
@@ -62,8 +62,8 @@ private:
         m_rectangles;
 
 
-    // QList<DistanceGuideCircle *>
-    //     m_circles;
+    QList<DistanceGuideCircle *>
+        m_circles;
 
 
     bool m_enabled =

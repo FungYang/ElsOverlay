@@ -51,15 +51,6 @@ DistanceGuideConfigWindow::DistanceGuideConfigWindow(
             clearConfigurationObject();
 
 
-            if(m_configurationRectangle)
-            {
-                delete m_configurationRectangle;
-
-                m_configurationRectangle =
-                    nullptr;
-            }
-
-
             m_configurationGuideId =
                 guideId;
 
@@ -169,7 +160,45 @@ DistanceGuideConfigWindow::DistanceGuideConfigWindow(
 
                 case DistanceGuideType::Circle:
                 {
-                    // Lo implementiamo dopo.
+                    m_configurationCircle =
+                        new DistanceGuideCircle(
+                            guide.color
+                            );
+
+
+                    const int size =
+                        qMax(
+                            20,
+                            guide.width
+                            );
+
+
+                    const int x =
+                        centerX -
+                        size / 2;
+
+
+                    const int y =
+                        guide.positionY -
+                        size / 2;
+
+
+                    m_configurationCircle->setGeometry(
+                        x,
+                        y,
+                        size,
+                        size
+                        );
+
+
+                    m_configurationCircle->setConfigurationMode(
+                        true
+                        );
+
+
+                    m_configurationCircle->show();
+                    m_configurationCircle->raise();
+
                     break;
                 }
                 }
@@ -486,6 +515,60 @@ void DistanceGuideConfigWindow::createUi()
     // CONNECTIONS
     // =========================
 
+    connect(
+        m_addCircleButton,
+        &QPushButton::clicked,
+        this,
+        [this]()
+        {
+            if(!m_manager)
+                return;
+
+
+            bool ok =
+                false;
+
+
+            const QString name =
+                QInputDialog::getText(
+                    this,
+                    "New Circle",
+                    "Nome:",
+                    QLineEdit::Normal,
+                    "New Circle",
+                    &ok
+                    );
+
+
+            if(!ok)
+                return;
+
+
+            if(name.trimmed().isEmpty())
+                return;
+
+
+            const QColor color =
+                QColorDialog::getColor(
+                    Qt::white,
+                    this,
+                    "Choose Circle Color"
+                    );
+
+
+            if(!color.isValid())
+                return;
+
+
+            if(m_manager->addCircleGuide(
+                    name,
+                    color
+                    ))
+            {
+                refresh();
+            }
+        }
+        );
     connect(
         m_addButton,
         &QPushButton::clicked,
@@ -1163,6 +1246,15 @@ void DistanceGuideConfigWindow::clearConfigurationObject()
     }
 
 
+    if(m_configurationCircle)
+    {
+        delete m_configurationCircle;
+
+        m_configurationCircle =
+            nullptr;
+    }
+
+
     m_configurationGuideId.clear();
 }
 
@@ -1179,7 +1271,8 @@ void DistanceGuideConfigWindow::confirmPositions()
 
 
     if(!m_configurationLine &&
-        !m_configurationRectangle)
+        !m_configurationRectangle &&
+        !m_configurationCircle)
     {
         return;
     }
@@ -1318,6 +1411,57 @@ void DistanceGuideConfigWindow::confirmPositions()
 
         updated.height =
             rectangleHeight;
+    }
+    // ==================================================
+    // CERCHIO
+    // ==================================================
+
+    if(m_configurationCircle)
+    {
+        const int circleCenterX =
+            m_configurationCircle->
+            configurationPositionX();
+
+
+        const int circleCenterY =
+            m_configurationCircle->
+            configurationPositionY();
+
+
+        const int circleSize =
+            m_configurationCircle->
+            configurationSize();
+
+
+        updated.distance =
+            qAbs(
+                circleCenterX -
+                center
+                );
+
+
+        if(circleCenterX < center)
+        {
+            updated.side =
+                DistanceGuideSide::Left;
+        }
+        else
+        {
+            updated.side =
+                DistanceGuideSide::Right;
+        }
+
+
+        updated.positionY =
+            circleCenterY;
+
+
+        updated.width =
+            circleSize;
+
+
+        updated.height =
+            circleSize;
     }
 
 

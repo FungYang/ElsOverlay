@@ -4,6 +4,7 @@
 #include "distanceguideconfiguration.h"
 #include "distanceguideline.h"
 #include "distanceguiderectangle.h"
+#include "distanceguidecircle.h"
 #include "overlayroot.h"
 
 
@@ -89,6 +90,16 @@ DistanceGuideOverlay::DistanceGuideOverlay(
                     if(rectangle)
                     {
                         rectangle->setWindowOpacity(
+                            windowOpacity
+                            );
+                    }
+                }
+                for(DistanceGuideCircle *circle :
+                     m_circles)
+                {
+                    if(circle)
+                    {
+                        circle->setWindowOpacity(
                             windowOpacity
                             );
                     }
@@ -288,7 +299,64 @@ void DistanceGuideOverlay::rebuild()
 
         case DistanceGuideType::Circle:
         {
-            // Lo colleghiamo nel prossimo passaggio.
+            DistanceGuideCircle *circle =
+                new DistanceGuideCircle(
+                    guide.color,
+                    m_root
+                    );
+
+
+            circle->setConfigurationMode(
+                false
+                );
+
+
+            circle->setWindowOpacity(
+                windowOpacity
+                );
+
+
+            const int centerX =
+                m_manager->effectivePositionX(
+                    guide
+                    );
+
+
+            const int centerY =
+                guide.positionY;
+
+
+            const int size =
+                qMax(
+                    20,
+                    guide.width
+                    );
+
+
+            circle->setGeometry(
+                0,
+                0,
+                size,
+                size
+                );
+
+
+            circle->move(
+                centerX -
+                    size / 2,
+                centerY -
+                    size / 2
+                );
+
+
+            circle->show();
+            circle->raise();
+
+
+            m_circles.append(
+                circle
+                );
+
 
             break;
         }
@@ -304,7 +372,6 @@ void DistanceGuideOverlay::clear()
         m_lines
         );
 
-
     m_lines.clear();
 
 
@@ -312,6 +379,12 @@ void DistanceGuideOverlay::clear()
         m_rectangles
         );
 
-
     m_rectangles.clear();
+
+
+    qDeleteAll(
+        m_circles
+        );
+
+    m_circles.clear();
 }
