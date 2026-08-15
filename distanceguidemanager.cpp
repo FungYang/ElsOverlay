@@ -1335,16 +1335,6 @@ QColor DistanceGuideManager::effectiveGuideColor(
     const DistanceGuideConfiguration &guide
     ) const
 {
-    /*
-     * Una guida standalone usa il proprio colore.
-     *
-     * Le guide di gruppo normalmente vengono gestite
-     * tramite il loro gruppo e quindi ricevono il
-     * colore del gruppo quando vengono renderizzate
-     * dal codice del gruppo.
-     *
-     * Manteniamo comunque questo metodo compatibile.
-     */
     if(!guide.groupId.isEmpty())
     {
         for(const DistanceGuideGroup &group :
@@ -1353,11 +1343,9 @@ QColor DistanceGuideManager::effectiveGuideColor(
             if(group.id != guide.groupId)
                 continue;
 
-
             return group.color;
         }
     }
-
 
     return guide.color;
 }
@@ -2287,3 +2275,33 @@ void DistanceGuideManager::setGlobalOpacity(
 
     emit guidesChanged();
 }
+
+
+bool DistanceGuideManager::isGuideEffectivelyEnabled(
+    const DistanceGuideConfiguration &guide
+    ) const
+{
+    // La guida deve essere ON
+    if(!guide.enabled)
+        return false;
+
+    // Guida standalone
+    if(guide.groupId.isEmpty())
+        return true;
+
+    // Guida di gruppo:
+    // anche il gruppo deve essere ON
+    for(const DistanceGuideGroup &group :
+         m_groups)
+    {
+        if(group.id != guide.groupId)
+            continue;
+
+        return group.enabled;
+    }
+
+    // Se il gruppo non esiste, non disegniamo
+    // la guida orfana.
+    return false;
+}
+

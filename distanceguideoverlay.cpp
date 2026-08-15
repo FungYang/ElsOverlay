@@ -64,6 +64,21 @@ DistanceGuideOverlay::DistanceGuideOverlay(
 
         connect(
             m_manager,
+            &DistanceGuideManager::groupsChanged,
+            this,
+            [this]()
+            {
+                if(!m_enabled)
+                    return;
+
+
+                rebuild();
+            }
+            );
+
+
+        connect(
+            m_manager,
             &DistanceGuideManager::globalOpacityChanged,
             this,
             [this](int opacity)
@@ -128,6 +143,15 @@ void DistanceGuideOverlay::setEnabled(
     bool enabled
     )
 {
+    if(m_enabled == enabled)
+    {
+        if(m_enabled)
+            rebuild();
+
+        return;
+    }
+
+
     m_enabled =
         enabled;
 
@@ -150,18 +174,14 @@ void DistanceGuideOverlay::setEnabled(
 void DistanceGuideOverlay::rebuild()
 {
     if(!m_manager ||
-        !m_root)
+        !m_root ||
+        !m_enabled)
     {
         return;
     }
 
 
     clear();
-
-
-    const QList<DistanceGuideConfiguration>
-        guides =
-        m_manager->guides();
 
 
     const int opacity =
@@ -172,47 +192,31 @@ void DistanceGuideOverlay::rebuild()
         opacity / 255.0;
 
 
+    // ==================================================
+    // STANDALONE GUIDES
+    // ==================================================
+
+    const QList<DistanceGuideConfiguration>
+        standaloneGuides =
+        m_manager->guides();
+
+
     for(const DistanceGuideConfiguration &guide :
-         guides)
+         standaloneGuides)
     {
-        // ------------------------------------------
-        // GUIDA DISABILITATA
-        // ------------------------------------------
-
-        if(!guide.enabled)
-            continue;
-
-
-        // ------------------------------------------
-        // GRUPPO
-        // ------------------------------------------
-
-        if(!guide.groupId.isEmpty())
+        if(!m_manager->isGuideEffectivelyEnabled(
+                guide
+                ))
         {
-            const DistanceGuideGroup group =
-                m_manager->group(
-                    guide.groupId
-                    );
-
-
-            if(group.id.isEmpty())
-                continue;
-
-
-            if(!group.enabled)
-                continue;
+            continue;
         }
 
-
-        // ------------------------------------------
-        // TIPO GUIDA
-        // ------------------------------------------
 
         switch(guide.type)
         {
 
             // ==================================================
-            // LINEA VERTICALE
+            // VERTICAL LINE
             // ==================================================
 
         case DistanceGuideType::VerticalLine:
@@ -269,7 +273,7 @@ void DistanceGuideOverlay::rebuild()
 
 
             // ==================================================
-            // RETTANGOLO
+            // RECTANGLE
             // ==================================================
 
         case DistanceGuideType::Rectangle:
@@ -344,7 +348,7 @@ void DistanceGuideOverlay::rebuild()
 
 
             // ==================================================
-            // CERCHIO
+            // CIRCLE
             // ==================================================
 
         case DistanceGuideType::Circle:
@@ -412,6 +416,256 @@ void DistanceGuideOverlay::rebuild()
 
             break;
         }
+
+
+        case DistanceGuideType::Group:
+        {
+            /*
+             * Group non è una guida concreta.
+             */
+            break;
+        }
+        }
+    }
+
+
+    // ==================================================
+    // GROUP GUIDES
+    // ==================================================
+
+    const QList<DistanceGuideGroup>
+        groups =
+        m_manager->groups();
+
+
+    for(const DistanceGuideGroup &group :
+         groups)
+    {
+        for(const DistanceGuideConfiguration &guide :
+             group.guides)
+        {
+            if(!m_manager->isGuideEffectivelyEnabled(
+                    guide
+                    ))
+            {
+                continue;
+            }
+
+
+            switch(guide.type)
+            {
+
+                // ==================================================
+                // VERTICAL LINE
+                // ==================================================
+
+            case DistanceGuideType::VerticalLine:
+            {
+                DistanceGuideLine *line =
+                    new DistanceGuideLine(
+                        m_manager->effectiveGuideColor(
+                            guide
+                            ),
+                        m_root
+                        );
+
+
+                line->setConfigurationMode(
+                    false
+                    );
+
+
+                line->setOpacity(
+                    opacity
+                    );
+
+
+                line->setWindowOpacity(
+                    windowOpacity
+                    );
+
+
+                const int x =
+                    m_manager->effectivePositionX(
+                        guide
+                        );
+
+
+                line->setGeometry(
+                    x,
+                    0,
+                    5,
+                    m_root->height()
+                    );
+
+
+                line->show();
+                line->raise();
+
+
+                m_lines.append(
+                    line
+                    );
+
+
+                break;
+            }
+
+
+                // ==================================================
+                // RECTANGLE
+                // ==================================================
+
+            case DistanceGuideType::Rectangle:
+            {
+                DistanceGuideRectangle *rectangle =
+                    new DistanceGuideRectangle(
+                        m_manager->effectiveGuideColor(
+                            guide
+                            ),
+                        m_root
+                        );
+
+
+                rectangle->setConfigurationMode(
+                    false
+                    );
+
+
+                rectangle->setWindowOpacity(
+                    windowOpacity
+                    );
+
+
+                const int centerX =
+                    m_manager->effectivePositionX(
+                        guide
+                        );
+
+
+                const int width =
+                    qMax(
+                        20,
+                        guide.width
+                        );
+
+
+                const int height =
+                    qMax(
+                        20,
+                        guide.height
+                        );
+
+
+                const int x =
+                    centerX -
+                    width / 2;
+
+
+                const int y =
+                    guide.positionY;
+
+
+                rectangle->setGeometry(
+                    x,
+                    y,
+                    width,
+                    height
+                    );
+
+
+                rectangle->show();
+                rectangle->raise();
+
+
+                m_rectangles.append(
+                    rectangle
+                    );
+
+
+                break;
+            }
+
+
+                // ==================================================
+                // CIRCLE
+                // ==================================================
+
+            case DistanceGuideType::Circle:
+            {
+                DistanceGuideCircle *circle =
+                    new DistanceGuideCircle(
+                        m_manager->effectiveGuideColor(
+                            guide
+                            ),
+                        m_root
+                        );
+
+
+                circle->setConfigurationMode(
+                    false
+                    );
+
+
+                circle->setWindowOpacity(
+                    windowOpacity
+                    );
+
+
+                const int centerX =
+                    m_manager->effectivePositionX(
+                        guide
+                        );
+
+
+                const int centerY =
+                    guide.positionY;
+
+
+                const int size =
+                    qMax(
+                        20,
+                        guide.width
+                        );
+
+
+                circle->setGeometry(
+                    0,
+                    0,
+                    size,
+                    size
+                    );
+
+
+                circle->move(
+                    centerX -
+                        size / 2,
+                    centerY -
+                        size / 2
+                    );
+
+
+                circle->show();
+                circle->raise();
+
+
+                m_circles.append(
+                    circle
+                    );
+
+
+                break;
+            }
+
+
+            case DistanceGuideType::Group:
+            {
+                /*
+                 * Group non è una guida concreta.
+                 */
+                break;
+            }
+            }
         }
     }
 }

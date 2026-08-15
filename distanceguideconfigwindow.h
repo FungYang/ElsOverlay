@@ -38,8 +38,10 @@ public:
 signals:
 
     void configureRequested(
-        const QString &guideId
+        const QString &guideId,
+        const QString &groupId
         );
+
 
 protected:
 
@@ -50,6 +52,10 @@ protected:
 
 private:
 
+    void configureGuide(
+        const QString &guideId,
+        const QString &groupId
+        );
     void createUi();
     void populateList();
     void addGuide();
@@ -98,6 +104,7 @@ private:
         nullptr;
     DistanceGuideGroupConfigWindow *m_groupConfigWindow =
         nullptr;
+    QString m_configurationGroupId;
 
 
 };
