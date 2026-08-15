@@ -227,8 +227,8 @@ void DistanceGuideOverlay::rebuild()
                 );
 
 
-            rectangle->setOpacity(
-                opacity
+            rectangle->setWindowOpacity(
+                opacity / 255.0
                 );
 
 
@@ -239,11 +239,17 @@ void DistanceGuideOverlay::rebuild()
 
 
             const int width =
-                rectangle->width();
+                qMax(
+                    20,
+                    guide.width
+                    );
 
 
             const int height =
-                rectangle->height();
+                qMax(
+                    20,
+                    guide.height
+                    );
 
 
             const int x =
@@ -252,7 +258,7 @@ void DistanceGuideOverlay::rebuild()
 
 
             const int y =
-                rectangle->y();
+                guide.positionY;
 
 
             rectangle->setGeometry(
