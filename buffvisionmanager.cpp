@@ -569,7 +569,6 @@ void BuffVisionManager::setEnabled(
 
 void BuffVisionManager::saveCurrentReference()
 {
-
     if(!captureSetup)
         return;
 
@@ -584,71 +583,88 @@ void BuffVisionManager::saveCurrentReference()
         );
 
 
-
     // =========================
-    // REFERENCE 1
-    // =========================
-
-    if(
-        referenceMode ==
-        CaptureReferenceMode::Reference1
-        )
-    {
-
-        capture->saveReference1();
-
-
-        detector->loadReferences();
-
-
-        captureSetup->showFeedback(
-            "REFERENCE 1 SAVED"
-            );
-
-
-        referenceMode =
-            CaptureReferenceMode::Reference2;
-
-
-        return;
-
-    }
-
-
-
-    // =========================
-    // REFERENCE 2
+    // NASCONDI I RETTANGOLI
     // =========================
 
-    if(
-        referenceMode ==
-        CaptureReferenceMode::Reference2
-        )
-    {
-
-        capture->saveReference2();
+    captureSetup->setCaptureMode(true);
 
 
-        detector->loadReferences();
+    // Diamo tempo a Qt di ridisegnare
+    // la finestra senza i rettangoli.
+
+    QTimer::singleShot(
+        100,
+        this,
+        [this]()
+        {
+
+            // =========================
+            // REFERENCE 1
+            // =========================
+
+            if(
+                referenceMode ==
+                CaptureReferenceMode::Reference1
+                )
+            {
+
+                capture->saveReference1();
 
 
-        configured =
-            detector->referencesLoaded();
+                detector->loadReferences();
 
 
-        captureSetup->showFeedback(
-            "REFERENCE 2 SAVED"
-            );
+                captureSetup->showFeedback(
+                    "REFERENCE 1 SAVED"
+                    );
 
 
-        referenceMode =
-            CaptureReferenceMode::None;
+                referenceMode =
+                    CaptureReferenceMode::Reference2;
+
+            }
 
 
-        return;
+            // =========================
+            // REFERENCE 2
+            // =========================
 
-    }
+            else if(
+                referenceMode ==
+                CaptureReferenceMode::Reference2
+                )
+            {
 
+                capture->saveReference2();
+
+
+                detector->loadReferences();
+
+
+                configured =
+                    detector->referencesLoaded();
+
+
+                captureSetup->showFeedback(
+                    "REFERENCE 2 SAVED"
+                    );
+
+
+                referenceMode =
+                    CaptureReferenceMode::None;
+
+            }
+
+
+            // =========================
+            // RIATTIVA RETTANGOLI
+            // =========================
+
+            captureSetup->setCaptureMode(false);
+
+        }
+        );
 }
 
 BuffVisionManager::~BuffVisionManager()

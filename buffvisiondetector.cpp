@@ -78,6 +78,7 @@ VisionState BuffVisionDetector::detect(
     )
 {
 
+
     if(current.isNull() ||
         ref1.isNull() ||
         ref2.isNull())
@@ -109,6 +110,9 @@ VisionState BuffVisionDetector::detect(
             current,
             ref2
             );
+    // qDebug() << "[BuffVision] scores:"
+    //          << "State1 =" << s1
+    //          << "State2 =" << s2;
 
 
 
@@ -227,6 +231,9 @@ double BuffVisionDetector::compareImages(
 
 
 
+    constexpr int COLOR_TOLERANCE = 10;
+
+
     long long totalDiff = 0;
 
 
@@ -262,19 +269,45 @@ double BuffVisionDetector::compareImages(
 
 
 
-            totalDiff +=
+            int redDiff =
                 abs(ca.red() -
                     cb.red());
 
-
-            totalDiff +=
+            int greenDiff =
                 abs(ca.green() -
                     cb.green());
 
-
-            totalDiff +=
+            int blueDiff =
                 abs(ca.blue() -
                     cb.blue());
+
+
+
+            // Small color variations are ignored.
+            if(redDiff <= COLOR_TOLERANCE)
+                redDiff = 0;
+            else
+                redDiff -= COLOR_TOLERANCE;
+
+
+
+            if(greenDiff <= COLOR_TOLERANCE)
+                greenDiff = 0;
+            else
+                greenDiff -= COLOR_TOLERANCE;
+
+
+
+            if(blueDiff <= COLOR_TOLERANCE)
+                blueDiff = 0;
+            else
+                blueDiff -= COLOR_TOLERANCE;
+
+
+
+            totalDiff += redDiff;
+            totalDiff += greenDiff;
+            totalDiff += blueDiff;
 
         }
 
@@ -284,7 +317,7 @@ double BuffVisionDetector::compareImages(
 
     double maxDiff =
         pixels *
-        255.0 *
+        (255.0 - COLOR_TOLERANCE) *
         3.0;
 
 

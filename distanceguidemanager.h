@@ -382,7 +382,7 @@ private:
     // MOVEMENT OFFSET
     // ==================================================
 
-    static constexpr int MovementOffset = 100;
+    static constexpr int MovementOffset = 0;
 };
 
 #endif // DISTANCEGUIDEMANAGER_H
