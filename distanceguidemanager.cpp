@@ -1295,25 +1295,45 @@ int DistanceGuideManager::effectivePositionX(
     const DistanceGuideConfiguration &guide
     ) const
 {
-    int positionX =
-        m_characterCenter;
+    int offset = 0;
 
 
     // ==================================================
-    // POSIZIONE BASE DELLA GUIDA
+    // OFFSET BASE DELLA GUIDA
     // ==================================================
 
     if(guide.side ==
         DistanceGuideSide::Left)
     {
-        positionX -=
-            guide.distance;
+        offset =
+            -guide.distance;
     }
     else
     {
-        positionX +=
+        offset =
             guide.distance;
     }
+
+
+    // ==================================================
+    // SPECCHIATURA FACING
+    // ==================================================
+
+    if(m_characterFacing ==
+        CharacterFacing::Left)
+    {
+        offset =
+            -offset;
+    }
+
+
+    // ==================================================
+    // POSIZIONE FINALE
+    // ==================================================
+
+    int positionX =
+        m_characterCenter +
+        offset;
 
 
     // ==================================================
@@ -2172,4 +2192,26 @@ void DistanceGuideManager::save() const
 
 
     settings.sync();
+}
+
+CharacterFacing
+DistanceGuideManager::characterFacing() const
+{
+    return m_characterFacing;
+}
+
+
+void DistanceGuideManager::setCharacterFacing(
+    CharacterFacing facing
+    )
+{
+    if(m_characterFacing == facing)
+        return;
+
+
+    m_characterFacing =
+        facing;
+
+
+    emit guidesChanged();
 }

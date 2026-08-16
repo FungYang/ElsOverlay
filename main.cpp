@@ -107,6 +107,10 @@ int main(int argc, char *argv[])
                     MovementDirection::Left
                     );
 
+                distanceGuideManager.setCharacterFacing(
+                    CharacterFacing::Left
+                    );
+
                 distanceGuideManager.setCharacterMoving(
                     true
                     );
@@ -119,6 +123,10 @@ int main(int argc, char *argv[])
             {
                 distanceGuideManager.setMovementDirection(
                     MovementDirection::Right
+                    );
+
+                distanceGuideManager.setCharacterFacing(
+                    CharacterFacing::Right
                     );
 
                 distanceGuideManager.setCharacterMoving(

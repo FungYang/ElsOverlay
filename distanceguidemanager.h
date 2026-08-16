@@ -15,6 +15,11 @@ enum class MovementDirection
     Left,
     Right
 };
+enum class CharacterFacing
+{
+    Right,
+    Left
+};
 
 
 class DistanceGuideManager : public QObject
@@ -263,6 +268,12 @@ public:
         int opacity
         );
 
+    CharacterFacing characterFacing() const;
+
+    void setCharacterFacing(
+        CharacterFacing facing
+        );
+
 
 signals:
 
@@ -315,6 +326,9 @@ private:
 
 
 private:
+
+    CharacterFacing m_characterFacing =
+        CharacterFacing::Right;
 
     // ==================================================
     // STANDALONE GUIDES
