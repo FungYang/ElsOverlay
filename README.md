@@ -1,383 +1,458 @@
 # ElsOverlay
 
-ElsOverlay is a customizable overlay for Elsword designed to track skill cooldowns and buffs through visual elements displayed above the game.
+**ElsOverlay** is a customizable overlay for **Elsword** designed to help track skill cooldowns, buffs, transcendence and distance-related information directly on screen.
 
-The program uses external information only, such as keyboard input and screen recognition features. It does not modify game files and does not directly interact with the game client.
-
----
-
-# Features
-
-ElsOverlay currently provides:
-
-* Transcendence cooldown tracking.
-* Main skill/buff overlay group.
-* Class-specific buff overlays.
-* Movable overlay elements.
-* Automatic position saving.
-* Keyboard sequence recognition.
-* Title-based skill selection system.
-* Awakening-based Artifact tracking.
-* BuffVision visual confirmation system.
-
-BuffVision uses selected screen areas and image comparison to detect visual states without interacting with the game client.
+The application is designed to remain completely external to the game: it relies on keyboard input and screen recognition and does not modify game files or directly interact with the game client.
 
 ---
 
-# First Launch
+## Features
 
-On first launch, all overlay elements are created using default positions.
+ElsOverlay currently provides several independent overlay systems that can be enabled or disabled from the main window.
 
-Every element can be moved by dragging it with the mouse.
+### Transcendence
 
-Positions are automatically saved in:
+Tracks the cooldown of the Transcendence system.
 
-```
-ElsOverlay.ini
-```
-
-No manual configuration editing is required.
-
----
-
-# BuffVision System
-
-BuffVision is a visual detection system used to confirm buff states through screen recognition.
-
-The system works by:
-
-1. Selecting specific screen areas.
-2. Saving reference images for different visual states.
-3. Capturing the selected areas during tracking.
-4. Comparing current images with stored references.
-5. Triggering events only when a valid state transition is detected.
-
-Example:
-
-```
-State 1
-   |
-   | visual change
-   v
-State 2
-   |
-   v
-Buff event
-```
-
-The system does not read game memory and does not modify the game client.
-
----
-
-# BuffVision Configuration
-
-During BuffVision setup:
-
-1. Move the capture boxes over the desired screen areas.
-2. Press `P` to save the first reference image.
-3. Press `P` again to save the second reference image.
-4. Press `ENTER` to confirm the configuration.
-
-Reference images are stored in:
-
-```
-BuffVision/
-```
-
-The program automatically loads existing references on startup.
-
----
-
-# Overlay Groups
-
-## Transcendence Overlay
-
-The Transcendence overlay tracks the cooldown timer.
+The overlay displays the remaining cooldown and can be controlled through keyboard input.
 
 Features:
 
-* Automatic cooldown counting.
-* Manual reset through dedicated key.
-* Independent from other overlays.
-
-The position is automatically saved.
-
----
-
-## Main Skill Group
-
-The main group contains:
-
-* Concerto
-* Artifact
-* Night Parade
-* Setting Sun
-
-The group can be moved freely.
-
-Each position is automatically restored on the next launch.
+- Transcendence cooldown tracking
+- Reset support
+- Ability to pause the cooldown
+- Movable overlay
+- Automatic position saving
 
 ---
 
-# Title Selection System
+### Main Skill Overlay
 
-Skill activation uses a title selection system.
+Tracks the cooldowns of the main skills associated with the character.
 
-Pressing:
+The overlay currently supports:
 
-```
-G + Direction
-```
+- Concerto
+- Artifact
+- Night Parade
+- Setting Sun
 
-selects the current title.
+The skill overlay uses keyboard sequences to determine which title/skill is currently active.
 
-Available titles:
+#### Title selection
 
-```
-G + ↑ -> Concerto
+After the awakening sequence, the title can be selected using the directional keys:
 
-G + ← -> Night Parade
+| Direction | Title |
+|---|---|
+| `↑` | Concerto |
+| `←` | Night Parade |
+| `↓` | Setting Sun |
+| `→` | Other |
 
-G + ↓ -> Setting Sun
-
-G + → -> Empty title
-```
-
-The selected title remains active until another title is chosen.
-
-This prevents accidental activation of previously selected skills.
+The overlay then tracks the corresponding cooldown according to the detected input sequence.
 
 ---
 
-# Skill Activation
+### Class Buffs
 
-## Concerto
+ElsOverlay includes a configurable system for tracking class-specific buffs.
 
-Available combinations:
+Class buffs can be configured from the main window and displayed through a dedicated overlay.
 
-```
-G + ↑ + CTRL
-G + ↑ + 6
-```
+The system supports:
 
----
-
-## Night Parade
-
-Available combinations:
-
-```
-G + ← + F
-G + ← + T
-```
+- Multiple class configurations
+- Custom buff entries
+- Custom names
+- Custom icons
+- Cooldown tracking
+- Enable/disable toggle
+- Configuration editor
 
 ---
 
-## Setting Sun
+### Buff Titles
 
-Available combinations:
+Buff Titles can be independently enabled or disabled from the main window.
 
-```
-G + ↓ + CTRL
-G + ↓ + 6
-```
+This allows the user to control exactly which buff information is displayed without affecting the other overlay systems.
 
 ---
 
-# Artifact
+### Buff Trascendenza
 
-Artifact works independently from the selected title.
+The Transcendence buff overlay can also be independently enabled or disabled.
 
-When awakening tracking is active:
+This makes it possible to keep the Transcendence cooldown system separate from the visual buff display.
 
+---
+
+### Atma / BuffVision
+
+The Atma system uses **BuffVision**, a screen-recognition system designed to detect visual changes in selected areas of the screen.
+
+BuffVision does not read game memory.
+
+Instead, it:
+
+1. Captures selected areas of the screen.
+2. Stores reference images.
+3. Compares the current screen with the stored references.
+4. Detects state transitions.
+5. Triggers the corresponding buff logic.
+
+This allows the system to react to visual changes without directly interacting with the game client.
+
+---
+
+### Distance Guides
+
+Distance Guides provide visual guides that can be placed over the game.
+
+Supported guide types include:
+
+- Vertical lines
+- Rectangles
+- Circles
+
+Guides can be:
+
+- Created
+- Removed
+- Configured
+- Moved
+- Grouped
+- Enabled or disabled
+
+#### Groups
+
+Distance Guides can be organized into groups.
+
+Each group can contain any number of guides.
+
+For example:
+
+```text
+Group: Boss Position
+
+    ├── Player Position
+    ├── Boss Position
+    ├── Left Limit
+    ├── Right Limit
+    └── Safe Area
 ```
-CTRL
-6
-```
 
-activate Artifact cooldown tracking.
+Groups can be configured independently, making it possible to quickly switch between different guide setups.
 
-Artifact does not depend on:
+---
 
-* Concerto selection.
-* Night Parade selection.
-* Setting Sun selection.
+## Main Window
+
+The main window provides independent controls for the different overlay systems.
+
+Each system can be turned ON or OFF without affecting the others.
+
+Available sections include:
+
+- Atma
+- Class Buff
+- Distance Guides
+- Buff Tracker
+- Buff Titles
+- Buff Trascendenza
+
+The configuration windows can be opened separately using the corresponding **Configura** buttons.
 
 ---
 
 # Controls
 
-## LCTRL
+The exact keyboard behavior depends on the active overlay system.
 
-Starts awakening/tracking mode.
+Common controls include:
 
-First activation:
+| Key | Function |
+|---|---|
+| `CTRL` | Start/reset relevant cooldown tracking |
+| `CTRL Right` | Reset relevant cooldown systems |
+| `0` | Start AtmaFlowBuff tracking |
+| `1` - `6` | AtmaFlowBuff action input |
+| `G` | Begin title selection sequence |
+| `↑` | Select Concerto |
+| `←` | Select Night Parade |
+| `↓` | Select Setting Sun |
+| `→` | Select Other |
+| `P` | Save AtmaFlowBuff reference |
+| `ENTER` | Confirm configuration |
+| `8` | Pause/resume Transcendence cooldown |
 
-* Enables sequence detection.
-* Starts initial tracking cooldowns.
-
-Further presses continue normal tracking.
-
----
-
-## RCTRL
-
-Full system reset.
-
-Effects:
-
-* Stops tracking.
-* Clears selected title.
-* Resets skill cooldowns.
-* Resets BuffVision states.
-* Restores the initial state.
+> Some keys are handled only when the corresponding subsystem is enabled.
 
 ---
 
-## ENTER
+# Moving Overlays
 
-Confirms BuffVision configuration.
+Overlay elements can generally be moved directly with the mouse.
 
-After moving BuffVision capture boxes:
+To move an overlay:
 
-1. Position the capture areas.
-2. Save the two reference images using `P`.
-3. Press ENTER.
-4. The configuration becomes active.
+1. Click and hold the overlay.
+2. Drag it to the desired position.
+3. Release the mouse button.
 
----
+Positions are automatically saved.
 
-## SPACE
-
-Pauses overlay input detection.
-
-While paused:
-
-* Skill detection is disabled.
-* ESC remains functional.
-* Added **ENTER as an alternative key to exit pause mode**.
-* **SPACE** still toggles pause on/off as before.
-
-Press SPACE again to resume.
+The next time ElsOverlay is launched, the overlays are restored to their previous positions.
 
 ---
 
-## ESC + P
+# Configuration
 
-Exit command.
+Most configuration is performed directly through the application's graphical interface.
 
-The application closes only when:
+No manual editing of configuration files is normally required.
 
-```
-ESC
-then
-P
-```
+The application stores positional and configuration data locally.
 
-are pressed.
+The main position file is:
 
-ESC alone does not stop the program or block other inputs.
-
----
-
-## 7
-
-Manual Transcendence reset.
-
-This reset only affects the Transcendence timer.
-
-Useful when:
-
-* Awakening ends unexpectedly.
-* The character dies.
-* Manual synchronization is needed.
-
-It does not reset other overlays.
-
----
-
-## 0
-
-Manual Atma Buff start/reset.
-
-This reset only affects the Atma Flow buff timer.
-
-Useful when:
-
-* Finished Raid
-* Before Starting Raid
-
-It does not reset other overlays.
-
----
-
-# Class System
-
-Classes have independent buff configurations.
-
-Example:
-
-```
-BQ
-├── A
-├── D
-
-FL
-├── A
-├── B
-└── C
-```
-
-When changing class:
-
-* Previous buff boxes are removed.
-* New boxes are created.
-* Saved positions are restored.
-
----
-
-# Configuration File
-
-All settings are stored in:
-
-```
+```text
 ElsOverlay.ini
 ```
 
-Example:
+---
 
+# AtmaFlowBuff Setup
+
+To configure Atma/AtmaFlowBuff:
+
+1. Enable **Atma** from the main window.
+2. Open the Atma configuration window.
+3. Position the capture areas over the desired parts of the screen.
+4. Save the first reference using `P`.
+5. Save the second reference using `P`.
+6. Confirm the configuration with `ENTER`.
+7. Enable the Atma overlay when needed.
+
+Reference images are stored in:
+
+```text
+AtmaFlowBuff/
 ```
-[Overlay]
-Transcendence\position=@Point(...)
 
-BuffGroup\position=@Point(...)
-
-[Classes]
-BQ\A\position=@Point(...)
-```
-
-Deleting this file restores default positions.
-
-
-
+Existing references are automatically loaded when the application starts.
 
 ---
 
-# Technical Information
+# Class Buff Configuration
 
-Developed with:
+Open:
 
-* C++
-* Qt Framework
-* Windows Keyboard Hooks
-* Qt Screen Capture API
+```text
+Class Buff → Configura
+```
 
-The application is designed to remain lightweight and independent from the game client.
+From there you can create and manage class configurations.
+
+Each configuration can contain multiple buffs.
+
+The system is intended to allow different setups to be prepared for different characters or situations.
+
+---
+
+# Distance Guide Configuration
+
+Open:
+
+```text
+Distance Guides → Configura
+```
+
+From there you can create guide groups and add as many guides as required.
+
+Available guide types:
+
+- Line
+- Rectangle
+- Circle
+
+Each guide can be configured individually.
+
+Guides can also be removed from their group without deleting the entire group.
+
+The group configuration window remains open while adding multiple elements, allowing several guides to be created consecutively.
+
+---
+
+# Buff Tracker
+
+The Buff Tracker can be opened from the main window.
+
+It is implemented as a separate executable:
+
+```text
+buffoverla.exe
+```
+
+The main application launches it when the **Configura** button is pressed.
+
+---
+
+# Architecture
+
+ElsOverlay is structured around several independent components.
+
+The main components include:
+
+```text
+MainWindow
+    |
+    +-- Atma / AtmaFlowBuff
+    |
+    +-- Class Buff
+    |
+    +-- Distance Guides
+    |
+    +-- Buff Titles
+    |
+    +-- Buff Trascendenza
+    |
+    +-- Buff Tracker
+```
+
+The overlay elements are managed through a common overlay root, allowing the different visual components to coexist independently.
+
+This architecture makes it possible to enable or disable individual systems without shutting down the entire application.
+
+---
+
+# External Operation
+
+ElsOverlay is designed to operate externally to Elsword.
+
+The application uses:
+
+- Global keyboard input
+- Screen capture
+- Image comparison
+- Visual overlays
+
+It does **not**:
+
+- Modify Elsword game files
+- Read game memory
+- Inject code into the game client
+- Directly interact with the game's internal systems
+
+AtmaFlowBuff specifically relies on visual recognition rather than game-memory access.
+
+---
+
+# Requirements
+
+The project is developed using **Qt/C++** and is intended for Windows.
+
+A compiled release should include all required Qt runtime dependencies and application resources.
+
+For developers building from source, a compatible Qt development environment is required.
+
+---
+
+# Building From Source
+
+Clone the repository:
+
+```bash
+git clone https://github.com/FungYang/ElsOverlay.git
+```
+
+Open the project with Qt Creator and build it using the configured Qt kit.
+
+The project contains the source files for the main application, overlay systems, configuration managers and AtmaFlowBuff components.
+
+---
+
+# Project Structure
+
+The repository contains several major components:
+
+```text
+ElsOverlay/
+│
+├── images/
+│
+├── buffoverlay.*
+├── buffbox.*
+│
+├── skilloverlay.*
+├── skillbox.*
+│
+├── overlay.*
+├── overlayroot.*
+│
+├── buffvisioncore.*
+├── buffvisioncapture.*
+├── buffvisiondetector.*
+├── buffvisionmanager.*
+├── buffvisionoverlay.*
+├── buffvisioncapturesetup.*
+│
+├── classconfigurationmanager.*
+├── classbuffconfigwindow.*
+├── classbuffeditorwindow.*
+├── classselector.*
+│
+├── distanceguidemanager.*
+├── distanceguideoverlay.*
+├── distanceguideconfigwindow.*
+├── distanceguidegroupconfigwindow.*
+├── distanceguidegroup.*
+├── distanceguideline.*
+├── distanceguiderectangle.*
+├── distanceguidecircle.*
+│
+├── globalkeyboard.*
+│
+├── mainwindow.*
+└── main.cpp
+```
+
+---
+
+# Important Notes
+
+ElsOverlay is intended as a personal utility for Elsword players who want additional visual information while playing.
+
+Because the application relies on global keyboard hooks and screen recognition, behavior can depend on:
+
+- Windows configuration
+- Game resolution
+- Display scaling
+- Overlay positioning
+- Screen layout
+- The configured BuffVision reference images
+
+BuffVision references may need to be recreated if the visual appearance or screen layout changes significantly.
 
 ---
 
 # License
 
-License information will be specified before public release.
+See the [`LICENSE`](LICENSE) file included in the repository.
 
-The project is intended to remain open-source and transparent.
+---
+
+# Repository
+
+GitHub:
+
+https://github.com/FungYang/ElsOverlay
+
+---
+
+# Credits
+
+Developed by **FungYang**.
+
+ElsOverlay is an independent external utility created to provide customizable visual assistance for Elsword.
