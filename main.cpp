@@ -156,6 +156,22 @@ int main(int argc, char *argv[])
         new Overlay(
             overlayRoot
             );
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::buffTranscendenceToggled,
+        overlay,
+        [overlay](bool enabled)
+        {
+            if(enabled)
+            {
+                overlay->show();
+            }
+            else
+            {
+                overlay->hide();
+            }
+        }
+        );
 
 
 
@@ -164,6 +180,24 @@ int main(int argc, char *argv[])
             &keyboard,
             overlayRoot
             );
+
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::buffTitlesToggled,
+        skills,
+        [skills](bool enabled)
+        {
+            if(enabled)
+            {
+                skills->show();
+            }
+            else
+            {
+                skills->hide();
+            }
+        }
+        );
 
 
 
@@ -270,6 +304,12 @@ int main(int argc, char *argv[])
             {
                 overlay->startCooldown();
             }
+
+            if(key == '8')
+            {
+                overlay->togglePause();
+                return;
+            }
         }
         );
 
@@ -317,15 +357,6 @@ int main(int argc, char *argv[])
         }
         );
 
-
-
-    // =========================
-    // AVVIO OVERLAY
-    // =========================
-
-    overlay->show();
-
-    skills->show();
 
 
 

@@ -44,7 +44,7 @@ Overlay::Overlay(QWidget *parent)
         this,
         [this]()
         {
-            if(running)
+            if(running && !paused)
             {
                 cooldown--;
 
@@ -57,6 +57,8 @@ Overlay::Overlay(QWidget *parent)
             }
         }
         );
+
+
 
 
     timer.start(1000);
@@ -136,6 +138,7 @@ void Overlay::mouseMoveEvent(QMouseEvent *event)
 void Overlay::resetCooldown()
 {
     running = false;
+    paused = false;
     cooldown = 20;
     update();
 }
@@ -143,4 +146,12 @@ void Overlay::resetCooldown()
 void Overlay::startCooldown()
 {
     running = true;
+}
+
+void Overlay::togglePause()
+{
+    paused =
+        !paused;
+
+    update();
 }

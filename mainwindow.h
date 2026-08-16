@@ -25,6 +25,8 @@ signals:
     void distanceGuidesToggled(bool enabled);
 
     void buffTrackerConfigRequested();
+    void buffTitlesToggled(bool enabled);
+    void buffTranscendenceToggled(bool enabled);
 
 private:
 
@@ -40,6 +42,9 @@ private:
     QPushButton *buffTrackerConfigButton;
 
     QPushButton *closeButton;
+
+    QPushButton *buffTitlesToggleButton;
+    QPushButton *buffTranscendenceToggleButton;
 
     void setupToggleButton(
         QPushButton *button

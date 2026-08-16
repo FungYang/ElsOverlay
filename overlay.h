@@ -15,6 +15,7 @@ public:
 
     void resetCooldown();
     void startCooldown();
+    void togglePause();
 
 protected:
 
@@ -26,6 +27,7 @@ protected:
 private:
     bool running = false;
     int cooldown = 20;
+    bool paused = false;
 
     QPoint dragPosition;
 

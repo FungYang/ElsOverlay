@@ -430,59 +430,40 @@ BuffVisionManager::BuffVisionManager(
     // RESET
     // =========================
 
+    // =========================
+    // RESET
+    // =========================
+
     connect(
         keyboard,
         &GlobalKeyboard::resetPressed,
         this,
         [this]()
         {
-
-            enabled = false;
-
-
             visionTimer.stop();
 
-
             core->reset();
-
-
 
             lastCrop1State =
                 VisionState::Unknown;
 
-
             lastCrop2State =
                 VisionState::Unknown;
 
-
-
             if(overlay)
             {
-
                 overlay->resetOverlay();
-
-                overlay->hide();
-
             }
-
-
 
             if(captureSetup)
             {
-
                 captureSetup->hide();
-
             }
-
-
 
             referenceMode =
                 CaptureReferenceMode::None;
 
-
-
             this->overlayRoot->raiseAll();
-
         }
         );
 

@@ -21,7 +21,7 @@ MainWindow::MainWindow(
 
     setFixedSize(
         420,
-        420
+        500
         );
 
 
@@ -257,6 +257,91 @@ MainWindow::MainWindow(
 
 
 
+
+    // =========================
+    // BUFF TITLES
+    // =========================
+
+    QGroupBox *buffTitlesGroup =
+        new QGroupBox(
+            "Buff Titles",
+            central
+            );
+
+
+    QHBoxLayout *buffTitlesLayout =
+        new QHBoxLayout(
+            buffTitlesGroup
+            );
+
+
+    buffTitlesToggleButton =
+        new QPushButton(
+            "OFF",
+            buffTitlesGroup
+            );
+
+
+    setupToggleButton(
+        buffTitlesToggleButton
+        );
+
+
+    buffTitlesLayout->addStretch();
+
+
+    buffTitlesLayout->addWidget(
+        buffTitlesToggleButton
+        );
+
+
+    mainLayout->addWidget(
+        buffTitlesGroup
+        );
+
+
+
+    // =========================
+    // BUFF TRASCENDENZA
+    // =========================
+
+    QGroupBox *buffTranscendenceGroup =
+        new QGroupBox(
+            "Buff Trascendenza",
+            central
+            );
+
+
+    QHBoxLayout *buffTranscendenceLayout =
+        new QHBoxLayout(
+            buffTranscendenceGroup
+            );
+
+
+    buffTranscendenceToggleButton =
+        new QPushButton(
+            "OFF",
+            buffTranscendenceGroup
+            );
+
+
+    setupToggleButton(
+        buffTranscendenceToggleButton
+        );
+
+
+    buffTranscendenceLayout->addStretch();
+
+
+    buffTranscendenceLayout->addWidget(
+        buffTranscendenceToggleButton
+        );
+
+
+    mainLayout->addWidget(
+        buffTranscendenceGroup
+        );
+
     // =========================
     // BUFF TRACKER
     // =========================
@@ -293,8 +378,6 @@ MainWindow::MainWindow(
     mainLayout->addWidget(
         trackerGroup
         );
-
-
 
     // =========================
     // SPAZIO
@@ -384,6 +467,64 @@ MainWindow::MainWindow(
 
 
     // =========================
+    // CONNECTIONS BUFF TITLES
+    // =========================
+
+    connect(
+        buffTitlesToggleButton,
+        &QPushButton::toggled,
+        this,
+        [this](bool enabled)
+        {
+            updateToggleText(
+                buffTitlesToggleButton,
+                enabled
+                );
+
+            emit buffTitlesToggled(
+                enabled
+                );
+        }
+        );
+
+
+
+    // =========================
+    // CONNECTIONS BUFF TRASCENDENZA
+    // =========================
+
+    connect(
+        buffTranscendenceToggleButton,
+        &QPushButton::toggled,
+        this,
+        [this](bool enabled)
+        {
+            updateToggleText(
+                buffTranscendenceToggleButton,
+                enabled
+                );
+
+            emit buffTranscendenceToggled(
+                enabled
+                );
+        }
+        );
+
+
+
+    // =========================
+    // CONNECTIONS BUFF TRACKER
+    // =========================
+
+    connect(
+        buffTrackerConfigButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::buffTrackerConfigRequested
+        );
+
+
+    // =========================
     // CONNECTIONS DISTANCE
     // =========================
 
@@ -410,19 +551,6 @@ MainWindow::MainWindow(
                 enabled
                 );
         }
-        );
-
-
-
-    // =========================
-    // CONNECTIONS BUFF TRACKER
-    // =========================
-
-    connect(
-        buffTrackerConfigButton,
-        &QPushButton::clicked,
-        this,
-        &MainWindow::buffTrackerConfigRequested
         );
 
 
