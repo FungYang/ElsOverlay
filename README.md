@@ -434,6 +434,37 @@ Because the application relies on global keyboard hooks and screen recognition, 
 - The configured BuffVision reference images
 
 BuffVision references may need to be recreated if the visual appearance or screen layout changes significantly.
+## Buff Remapping
+
+The Buff Tracker configuration uses a separate companion application for buff remapping:
+
+**ElsBuffRemapping**
+
+[https://github.com/FungYang/ElsBuffRemapping](https://github.com/FungYang/ElsBuffRemapping)
+
+ElsBuffRemapping is an external Qt application launched by ElsOverlay when the **Buff Tracker → Configura** button is pressed.
+
+It is responsible for configuring and managing the buff remapping system.
+
+### Visual-only detection
+
+ElsBuffRemapping does **not** perform game data mining or access the game's internal data.
+
+It does not:
+
+- Read or modify game memory
+- Inject code into the game process
+- Inspect network packets
+- Intercept game traffic
+- Extract internal game data
+
+The system works exclusively by analyzing **visual information captured from the screen**.
+
+In other words, it observes the same visual information that is available to the user and uses that information to identify and manage buffs.
+
+For more information about the implementation and configuration of the external application, see the dedicated repository:
+
+**[ElsBuffRemapping](https://github.com/FungYang/ElsBuffRemapping)**
 
 ---
 
