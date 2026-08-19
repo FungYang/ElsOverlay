@@ -2,6 +2,8 @@
 
 #include <QPainter>
 #include <QMouseEvent>
+#include <QSettings>
+#include <QElapsedTimer>
 
 
 Overlay::Overlay(QWidget *parent)
@@ -28,15 +30,21 @@ Overlay::Overlay(QWidget *parent)
         QSettings::IniFormat
         );
 
+
     QPoint savedPosition =
         settings.value(
                     "Overlay/Transcendence/position",
                     QPoint(500,300)
                     ).toPoint();
 
+
     move(savedPosition);
 
 
+
+    // =========================
+    // TIMER DISPLAY
+    // =========================
 
     connect(
         &timer,
@@ -44,32 +52,93 @@ Overlay::Overlay(QWidget *parent)
         this,
         [this]()
         {
-            if(running && !paused)
+
+            if(!running)
+                return;
+
+
+            // =========================
+            // PAUSA
+            // =========================
+
+            if(paused)
+                return;
+
+
+
+            // =========================
+            // TEMPO TRASCORSO
+            // =========================
+
+            qint64 elapsed =
+                pausedElapsed +
+                elapsedTimer.elapsed();
+
+
+
+            // =========================
+            // SECONDI RIMANENTI
+            // =========================
+
+            int remaining =
+                20 -
+                static_cast<int>(
+                    elapsed / 1000
+                    );
+
+
+
+            // =========================
+            // RESET
+            // =========================
+
+            if(remaining <= 0)
             {
-                cooldown--;
 
-                if(cooldown <= 0)
-                {
-                    cooldown = 20;
-                }
+                cooldown = 20;
 
-                update();
+                pausedElapsed = 0;
+
+                elapsedTimer.restart();
+
             }
+
+            else
+            {
+
+                cooldown =
+                    remaining;
+
+            }
+
+
+
+            update();
+
         }
         );
 
 
 
+    // Il QTimer serve soltanto per
+    // aggiornare frequentemente il display.
+    //
+    // Il tempo reale viene misurato
+    // da QElapsedTimer.
 
-    timer.start(1000);
+    timer.start(100);
+
 }
 
 
 
-void Overlay::paintEvent(QPaintEvent *)
+void Overlay::paintEvent(
+    QPaintEvent *
+    )
 {
 
     QPainter p(this);
+
 
     p.setRenderHint(
         QPainter::Antialiasing
@@ -77,10 +146,18 @@ void Overlay::paintEvent(QPaintEvent *)
 
 
     p.setBrush(
-        QColor(0,0,0,170)
+        QColor(
+            0,
+            0,
+            0,
+            170
+            )
         );
 
-    p.setPen(Qt::NoPen);
+
+    p.setPen(
+        Qt::NoPen
+        );
 
 
     p.drawRoundedRect(
@@ -90,37 +167,57 @@ void Overlay::paintEvent(QPaintEvent *)
         );
 
 
+
     QFont font;
+
     font.setPointSize(18);
+
     font.setBold(true);
+
 
     p.setFont(font);
 
-    p.setPen(Qt::white);
+
+    p.setPen(
+        Qt::white
+        );
+
 
     p.drawText(
         rect(),
         Qt::AlignCenter,
-        QString("Trasc: %1").arg(cooldown)
+        QString(
+            "Trasc: %1"
+            ).arg(cooldown)
         );
+
 }
 
 
 
-void Overlay::mousePressEvent(QMouseEvent *event)
+void Overlay::mousePressEvent(
+    QMouseEvent *event
+    )
 {
+
     dragPosition =
         event->globalPosition().toPoint()
-        - frameGeometry().topLeft();
+        -
+        frameGeometry().topLeft();
+
 }
 
 
 
-void Overlay::mouseMoveEvent(QMouseEvent *event)
+void Overlay::mouseMoveEvent(
+    QMouseEvent *event
+    )
 {
+
     move(
         event->globalPosition().toPoint()
-        - dragPosition
+        -
+        dragPosition
         );
 
 
@@ -129,29 +226,95 @@ void Overlay::mouseMoveEvent(QMouseEvent *event)
         QSettings::IniFormat
         );
 
+
     settings.setValue(
         "Overlay/Transcendence/position",
         pos()
         );
+
 }
+
+
 
 void Overlay::resetCooldown()
 {
+
     running = false;
+
     paused = false;
+
     cooldown = 20;
+
+    pausedElapsed = 0;
+
+    elapsedTimer.invalidate();
+
     update();
+
 }
+
+
 
 void Overlay::startCooldown()
 {
+
     running = true;
+
+    paused = false;
+
+    cooldown = 20;
+
+    pausedElapsed = 0;
+
+    elapsedTimer.restart();
+
+    update();
+
 }
+
+
 
 void Overlay::togglePause()
 {
-    paused =
-        !paused;
+
+    if(!running)
+        return;
+
+
+
+    // =========================
+    // METTI IN PAUSA
+    // =========================
+
+    if(!paused)
+    {
+
+        pausedElapsed +=
+            elapsedTimer.elapsed();
+
+        elapsedTimer.invalidate();
+
+        paused = true;
+
+    }
+
+
+
+    // =========================
+    // RIPRENDI
+    // =========================
+
+    else
+    {
+
+        elapsedTimer.restart();
+
+        paused = false;
+
+    }
+
+
 
     update();
+
 }

@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <QTimer>
 #include <QSettings>
-
+#include <QElapsedTimer>
 class Overlay : public QWidget
 {
     Q_OBJECT
@@ -28,6 +28,8 @@ private:
     bool running = false;
     int cooldown = 20;
     bool paused = false;
+    QElapsedTimer elapsedTimer;
+     qint64 pausedElapsed = 0;
 
     QPoint dragPosition;
 
