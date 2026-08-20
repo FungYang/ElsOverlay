@@ -142,7 +142,7 @@ SkillOverlay::SkillOverlay(
 
                 trackingActive = true;
 
-                //artifact->startCooldown();
+                artifact->startCooldown();
 
                 concerto->startCooldown();
 
