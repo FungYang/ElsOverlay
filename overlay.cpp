@@ -257,6 +257,8 @@ void Overlay::resetCooldown()
 
 void Overlay::startCooldown()
 {
+    if(running)
+        return;
 
     running = true;
 
@@ -269,7 +271,6 @@ void Overlay::startCooldown()
     elapsedTimer.restart();
 
     update();
-
 }
 
 
