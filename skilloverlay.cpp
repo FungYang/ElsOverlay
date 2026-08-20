@@ -101,11 +101,15 @@ SkillOverlay::SkillOverlay(
             }
 
 
-            // Artifact sempre con 6
             if(key == '6' &&
                 sequenceState == SequenceState::WaitingG)
             {
                 artifact->startCooldown();
+
+                if(currentTitle == ActiveTitle::SettingSun)
+                {
+                    settingSun->startCooldown();
+                }
             }
 
 
