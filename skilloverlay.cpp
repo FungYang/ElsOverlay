@@ -224,6 +224,16 @@ SkillOverlay::SkillOverlay(
 
         }
         );
+    connect(
+        keyboard,
+        &GlobalKeyboard::transcendenceResetPressed,
+        this,
+        [this]()
+        {
+            trackingActive = false;
+
+        }
+        );
 
 
 
