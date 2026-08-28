@@ -1,5 +1,11 @@
 #include "mainwindow.h"
 
+#define NOMINMAX
+#include <windows.h>
+#include <QDialog>
+#include <QKeyEvent>
+#include <QSettings>
+#include <QCoreApplication>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -7,6 +13,88 @@
 #include <QLabel>
 #include <QFont>
 #include <QWidget>
+
+namespace
+{
+QString vkCodeToKeyName(int vkCode)
+{
+    UINT scanCode = MapVirtualKeyW(static_cast<UINT>(vkCode), MAPVK_VK_TO_VSC);
+    LONG lParam = static_cast<LONG>(scanCode << 16);
+
+    switch(vkCode)
+    {
+    case VK_LEFT:
+    case VK_RIGHT:
+    case VK_UP:
+    case VK_DOWN:
+    case VK_RCONTROL:
+    case VK_INSERT:
+    case VK_DELETE:
+    case VK_HOME:
+    case VK_END:
+    case VK_PRIOR:
+    case VK_NEXT:
+        lParam |= (1 << 24);
+        break;
+    default:
+        break;
+    }
+
+    wchar_t buffer[64] = { 0 };
+
+    if(GetKeyNameTextW(lParam, buffer, 64) > 0)
+    {
+        return QString::fromWCharArray(buffer);
+    }
+
+    return QString("0x%1").arg(vkCode, 0, 16);
+}
+
+class PauseKeyDialog : public QDialog
+{
+public:
+    explicit PauseKeyDialog(int currentKey, QWidget *parent = nullptr)
+        : QDialog(parent), m_key(currentKey)
+    {
+        setWindowTitle("Configura Tasto Pausa");
+        setFixedSize(260, 120);
+
+        QVBoxLayout *layout = new QVBoxLayout(this);
+
+        m_infoLabel = new QLabel("Premi un tasto...", this);
+        m_infoLabel->setAlignment(Qt::AlignCenter);
+
+        m_saveButton = new QPushButton("Salva", this);
+        m_saveButton->setEnabled(false);
+
+        layout->addWidget(m_infoLabel);
+        layout->addStretch();
+        layout->addWidget(m_saveButton);
+
+        connect(m_saveButton, &QPushButton::clicked, this, &QDialog::accept);
+    }
+
+    int key() const { return m_key; }
+
+protected:
+    void keyPressEvent(QKeyEvent *event) override
+    {
+        int vk = event->nativeVirtualKey();
+
+        if(vk != 0)
+        {
+            m_key = vk;
+            m_infoLabel->setText("Tasto: " + vkCodeToKeyName(vk));
+            m_saveButton->setEnabled(true);
+        }
+    }
+
+private:
+    int m_key;
+    QLabel *m_infoLabel;
+    QPushButton *m_saveButton;
+};
+}
 
 
 MainWindow::MainWindow(
@@ -21,7 +109,7 @@ MainWindow::MainWindow(
 
     setFixedSize(
         420,
-        500
+        600
         );
 
 
@@ -380,6 +468,14 @@ MainWindow::MainWindow(
         );
 
     // =========================
+    // TASTO PAUSA
+    // =========================
+    pauseKeyButton = new QPushButton(central);
+    mainLayout->addWidget(pauseKeyButton);
+
+    loadPauseKey();
+
+    // =========================
     // SPAZIO
     // =========================
 
@@ -404,6 +500,12 @@ MainWindow::MainWindow(
 
 
 
+    connect(
+        pauseKeyButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::openPauseKeyDialog
+        );
     // =========================
     // CONNECTIONS ATMA
     // =========================
@@ -616,4 +718,51 @@ void MainWindow::updateToggleText(
             ? "ON"
             : "OFF"
         );
+}
+int MainWindow::pauseKey() const
+{
+    return m_pauseKey;
+}
+
+void MainWindow::loadPauseKey()
+{
+    QSettings settings(
+        QCoreApplication::applicationDirPath() + "/ElsOverlay.ini",
+        QSettings::IniFormat
+        );
+
+    m_pauseKey = settings.value("Keys/PauseKey", VK_SPACE).toInt();
+
+    updatePauseKeyButtonText();
+}
+
+void MainWindow::savePauseKey(int vkCode)
+{
+    m_pauseKey = vkCode;
+
+    QSettings settings(
+        QCoreApplication::applicationDirPath() + "/ElsOverlay.ini",
+        QSettings::IniFormat
+        );
+
+    settings.setValue("Keys/PauseKey", vkCode);
+
+    updatePauseKeyButtonText();
+
+    emit pauseKeyChanged(vkCode);
+}
+
+void MainWindow::updatePauseKeyButtonText()
+{
+    pauseKeyButton->setText("Pausa: " + vkCodeToKeyName(m_pauseKey));
+}
+
+void MainWindow::openPauseKeyDialog()
+{
+    PauseKeyDialog dialog(m_pauseKey, this);
+
+    if(dialog.exec() == QDialog::Accepted)
+    {
+        savePauseKey(dialog.key());
+    }
 }

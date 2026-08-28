@@ -25,11 +25,15 @@ signals:
     void confirmPressed();
     void transcendenceResetPressed();
 
+public slots:
+    void setPauseKey(int vkCode);
+
 
 private:
     bool paused = false;
     static HHOOK hook;
     static GlobalKeyboard *instance;
+    int m_pauseKey = VK_SPACE;
 
 
     static LRESULT CALLBACK keyboardProc(

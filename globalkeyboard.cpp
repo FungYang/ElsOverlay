@@ -1,6 +1,8 @@
 #include "globalkeyboard.h"
 
 #include <QDebug>
+#include <QSettings>
+#include <QCoreApplication>
 
 
 HHOOK GlobalKeyboard::hook =
@@ -19,6 +21,13 @@ GlobalKeyboard::GlobalKeyboard(
 {
     instance =
         this;
+
+    QSettings settings(
+        QCoreApplication::applicationDirPath() + "/ElsOverlay.ini",
+        QSettings::IniFormat
+        );
+
+    m_pauseKey = settings.value("Keys/PauseKey", VK_SPACE).toInt();
 
 
     hook =
@@ -87,7 +96,7 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
             // SPACE
             // ==============================================
 
-            if(key->vkCode == VK_SPACE)
+            if(key->vkCode == instance->m_pauseKey)
             {
                 instance->paused =
                     !instance->paused;
@@ -229,4 +238,9 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
         wParam,
         lParam
         );
+}
+
+void GlobalKeyboard::setPauseKey(int vkCode)
+{
+    m_pauseKey = vkCode;
 }

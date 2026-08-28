@@ -27,33 +27,30 @@ signals:
     void buffTrackerConfigRequested();
     void buffTitlesToggled(bool enabled);
     void buffTranscendenceToggled(bool enabled);
+    void pauseKeyChanged(int vkCode);
 
 private:
-
     QPushButton *atmaConfigButton;
     QPushButton *atmaToggleButton;
-
     QPushButton *classBuffConfigButton;
     QPushButton *classBuffToggleButton;
-
     QPushButton *distanceGuidesConfigButton;
     QPushButton *distanceGuidesToggleButton;
-
     QPushButton *buffTrackerConfigButton;
-
     QPushButton *closeButton;
-
     QPushButton *buffTitlesToggleButton;
     QPushButton *buffTranscendenceToggleButton;
+    QPushButton *pauseKeyButton;
 
-    void setupToggleButton(
-        QPushButton *button
-        );
+    int m_pauseKey = 0x20; // VK_SPACE
 
-    void updateToggleText(
-        QPushButton *button,
-        bool enabled
-        );
+    int pauseKey() const;
+    void setupToggleButton(QPushButton *button);
+    void updateToggleText(QPushButton *button, bool enabled);
+    void loadPauseKey();
+    void savePauseKey(int vkCode);
+    void openPauseKeyDialog();
+    void updatePauseKeyButtonText();
 };
 
 #endif // MAINWINDOW_H
