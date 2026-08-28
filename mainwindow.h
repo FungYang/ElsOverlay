@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <windows.h>
 
 class QPushButton;
 
@@ -27,30 +28,52 @@ signals:
     void buffTrackerConfigRequested();
     void buffTitlesToggled(bool enabled);
     void buffTranscendenceToggled(bool enabled);
-    void pauseKeyChanged(int vkCode);
+
+    void pauseKeyChanged(int scanCode, bool extended);
+    void resetKeyChanged(int scanCode, bool extended);
 
 private:
     QPushButton *atmaConfigButton;
     QPushButton *atmaToggleButton;
+
     QPushButton *classBuffConfigButton;
     QPushButton *classBuffToggleButton;
+
     QPushButton *distanceGuidesConfigButton;
     QPushButton *distanceGuidesToggleButton;
+
     QPushButton *buffTrackerConfigButton;
+
     QPushButton *closeButton;
+
     QPushButton *buffTitlesToggleButton;
     QPushButton *buffTranscendenceToggleButton;
+
     QPushButton *pauseKeyButton;
+    QPushButton *resetKeyButton;
 
-    int m_pauseKey = 0x20; // VK_SPACE
 
-    int pauseKey() const;
+    int m_pauseScanCode = 0x01;
+    bool m_pauseExtended = false;
+
+    int m_resetScanCode = 0x1D;
+    bool m_resetExtended = true;
+
+
     void setupToggleButton(QPushButton *button);
     void updateToggleText(QPushButton *button, bool enabled);
+
+
     void loadPauseKey();
-    void savePauseKey(int vkCode);
+    void savePauseKey(int scanCode, bool extended);
     void openPauseKeyDialog();
     void updatePauseKeyButtonText();
+
+
+    void loadResetKey();
+    void saveResetKey(int scanCode, bool extended);
+    void openResetKeyDialog();
+    void updateResetKeyButtonText();
 };
 
-#endif // MAINWINDOW_H
+#endif

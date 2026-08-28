@@ -13,7 +13,6 @@ GlobalKeyboard *GlobalKeyboard::instance =
     nullptr;
 
 
-
 GlobalKeyboard::GlobalKeyboard(
     QObject *parent
     )
@@ -22,12 +21,52 @@ GlobalKeyboard::GlobalKeyboard(
     instance =
         this;
 
+
     QSettings settings(
-        QCoreApplication::applicationDirPath() + "/ElsOverlay.ini",
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
         QSettings::IniFormat
         );
 
-    m_pauseKey = settings.value("Keys/PauseKey", VK_SPACE).toInt();
+
+    m_pauseScanCode =
+        settings.value(
+                    "Keys/PauseScanCode",
+                    0x01
+                    ).toInt();
+
+
+    m_pauseExtended =
+        settings.value(
+                    "Keys/PauseExtended",
+                    false
+                    ).toBool();
+
+
+    m_resetScanCode =
+        settings.value(
+                    "Keys/ResetScanCode",
+                    0x1D
+                    ).toInt();
+
+
+    m_resetExtended =
+        settings.value(
+                    "Keys/ResetExtended",
+                    true
+                    ).toBool();
+
+
+    qDebug()
+        << "PAUSA:"
+        << "ScanCode =" << Qt::hex << m_pauseScanCode
+        << "Extended =" << m_pauseExtended;
+
+
+    qDebug()
+        << "RESET:"
+        << "ScanCode =" << Qt::hex << m_resetScanCode
+        << "Extended =" << m_resetExtended;
 
 
     hook =
@@ -38,7 +77,6 @@ GlobalKeyboard::GlobalKeyboard(
             0
             );
 }
-
 
 
 GlobalKeyboard::~GlobalKeyboard()
@@ -57,7 +95,6 @@ GlobalKeyboard::~GlobalKeyboard()
     instance =
         nullptr;
 }
-
 
 
 LRESULT CALLBACK GlobalKeyboard::keyboardProc(
@@ -85,18 +122,29 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
         }
 
 
+        const int scanCode =
+            static_cast<int>(
+                key->scanCode
+                );
+
+
+        const bool extended =
+            (key->flags & LLKHF_EXTENDED) != 0;
+
 
         // ==================================================
         // KEY DOWN
         // ==================================================
 
-        if(wParam == WM_KEYDOWN)
+        if(wParam == WM_KEYDOWN ||
+            wParam == WM_SYSKEYDOWN)
         {
             // ==============================================
-            // SPACE
+            // PAUSA
             // ==============================================
 
-            if(key->vkCode == instance->m_pauseKey)
+            if(scanCode == instance->m_pauseScanCode &&
+                extended == instance->m_pauseExtended)
             {
                 instance->paused =
                     !instance->paused;
@@ -114,7 +162,6 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                     lParam
                     );
             }
-
 
 
             // ==============================================
@@ -148,9 +195,8 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
             }
 
 
-
             // ==============================================
-            // PAUSA
+            // PAUSA ATTIVA
             // ==============================================
 
             if(instance->paused)
@@ -164,9 +210,33 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
             }
 
 
+            // ==============================================
+            // RESET GLOBALE
+            // ==============================================
+
+            if(scanCode == instance->m_resetScanCode &&
+                extended == instance->m_resetExtended)
+            {
+                qDebug()
+                << "RESET PREMUTO:"
+                << "ScanCode =" << Qt::hex << scanCode
+                << "Extended =" << extended;
+
+
+                emit instance->resetPressed();
+
+
+                return CallNextHookEx(
+                    hook,
+                    nCode,
+                    wParam,
+                    lParam
+                    );
+            }
+
 
             // ==============================================
-            // TASTI SPECIALI
+            // TRASCENDENCE RESET
             // ==============================================
 
             if(key->vkCode == '7')
@@ -175,6 +245,10 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
             }
 
 
+            // ==============================================
+            // KEY PRESSED
+            // ==============================================
+
             emit instance->keyPressed(
                 static_cast<int>(
                     key->vkCode
@@ -182,35 +256,24 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                 );
 
 
-
             // ==============================================
             // CTRL SINISTRO
             // ==============================================
 
-            if(key->vkCode == VK_LCONTROL)
+            if(key->vkCode == VK_LCONTROL &&
+                !(key->flags & LLKHF_EXTENDED))
             {
                 emit instance->ctrlPressed();
             }
-
-
-
-            // ==============================================
-            // CTRL DESTRO
-            // ==============================================
-
-            if(key->vkCode == VK_RCONTROL)
-            {
-                emit instance->resetPressed();
-            }
         }
-
 
 
         // ==================================================
         // KEY UP
         // ==================================================
 
-        else if(wParam == WM_KEYUP)
+        else if(wParam == WM_KEYUP ||
+                 wParam == WM_SYSKEYUP)
         {
             if(instance->paused)
             {
@@ -240,7 +303,40 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
         );
 }
 
-void GlobalKeyboard::setPauseKey(int vkCode)
+
+void GlobalKeyboard::setPauseKey(
+    int scanCode,
+    bool extended
+    )
 {
-    m_pauseKey = vkCode;
+    m_pauseScanCode =
+        scanCode;
+
+    m_pauseExtended =
+        extended;
+
+
+    qDebug()
+        << "PAUSE KEY CAMBIATO:"
+        << "ScanCode =" << Qt::hex << scanCode
+        << "Extended =" << extended;
+}
+
+
+void GlobalKeyboard::setResetKey(
+    int scanCode,
+    bool extended
+    )
+{
+    m_resetScanCode =
+        scanCode;
+
+    m_resetExtended =
+        extended;
+
+
+    qDebug()
+        << "RESET KEY CAMBIATO:"
+        << "ScanCode =" << Qt::hex << scanCode
+        << "Extended =" << extended;
 }

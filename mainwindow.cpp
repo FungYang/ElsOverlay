@@ -2,100 +2,234 @@
 
 #define NOMINMAX
 #include <windows.h>
-#include <QDialog>
-#include <QKeyEvent>
-#include <QSettings>
+
 #include <QCoreApplication>
-#include <QPushButton>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QLabel>
+#include <QDialog>
 #include <QFont>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QKeyEvent>
+#include <QLabel>
+#include <QPushButton>
+#include <QSettings>
+#include <QVBoxLayout>
 #include <QWidget>
+#include <QDebug>
 
-namespace
+    namespace
 {
-QString vkCodeToKeyName(int vkCode)
-{
-    UINT scanCode = MapVirtualKeyW(static_cast<UINT>(vkCode), MAPVK_VK_TO_VSC);
-    LONG lParam = static_cast<LONG>(scanCode << 16);
 
-    switch(vkCode)
+    QString scanCodeToKeyName(
+        int scanCode,
+        bool extended
+        )
     {
-    case VK_LEFT:
-    case VK_RIGHT:
-    case VK_UP:
-    case VK_DOWN:
-    case VK_RCONTROL:
-    case VK_INSERT:
-    case VK_DELETE:
-    case VK_HOME:
-    case VK_END:
-    case VK_PRIOR:
-    case VK_NEXT:
-        lParam |= (1 << 24);
-        break;
-    default:
-        break;
-    }
+        LONG lParam =
+            static_cast<LONG>(
+                static_cast<UINT>(scanCode) << 16
+                );
 
-    wchar_t buffer[64] = { 0 };
-
-    if(GetKeyNameTextW(lParam, buffer, 64) > 0)
-    {
-        return QString::fromWCharArray(buffer);
-    }
-
-    return QString("0x%1").arg(vkCode, 0, 16);
-}
-
-class PauseKeyDialog : public QDialog
-{
-public:
-    explicit PauseKeyDialog(int currentKey, QWidget *parent = nullptr)
-        : QDialog(parent), m_key(currentKey)
-    {
-        setWindowTitle("Configura Tasto Pausa");
-        setFixedSize(260, 120);
-
-        QVBoxLayout *layout = new QVBoxLayout(this);
-
-        m_infoLabel = new QLabel("Premi un tasto...", this);
-        m_infoLabel->setAlignment(Qt::AlignCenter);
-
-        m_saveButton = new QPushButton("Salva", this);
-        m_saveButton->setEnabled(false);
-
-        layout->addWidget(m_infoLabel);
-        layout->addStretch();
-        layout->addWidget(m_saveButton);
-
-        connect(m_saveButton, &QPushButton::clicked, this, &QDialog::accept);
-    }
-
-    int key() const { return m_key; }
-
-protected:
-    void keyPressEvent(QKeyEvent *event) override
-    {
-        int vk = event->nativeVirtualKey();
-
-        if(vk != 0)
+        if(extended)
         {
-            m_key = vk;
-            m_infoLabel->setText("Tasto: " + vkCodeToKeyName(vk));
-            m_saveButton->setEnabled(true);
+            lParam |= (1 << 24);
         }
+
+        wchar_t buffer[64] = { 0 };
+
+        if(GetKeyNameTextW(
+                lParam,
+                buffer,
+                64
+                ) > 0)
+        {
+            return QString::fromWCharArray(buffer);
+        }
+
+        return QString("ScanCode 0x%1")
+            .arg(
+                scanCode,
+                2,
+                16,
+                QChar('0')
+                )
+            .toUpper();
     }
 
-private:
-    int m_key;
-    QLabel *m_infoLabel;
-    QPushButton *m_saveButton;
-};
+
+    // ============================================================
+    // DIALOG CONFIGURAZIONE TASTO
+    // ============================================================
+
+    class KeyDialog : public QDialog
+    {
+    public:
+
+        explicit KeyDialog(
+            int currentScanCode,
+            bool currentExtended,
+            QWidget *parent = nullptr
+            )
+            : QDialog(parent),
+            m_scanCode(currentScanCode),
+            m_extended(currentExtended)
+        {
+            setWindowTitle(
+                "Configura Tasto"
+                );
+
+            setFixedSize(
+                260,
+                120
+                );
+
+
+            QVBoxLayout *layout =
+                new QVBoxLayout(this);
+
+
+            m_infoLabel =
+                new QLabel(
+                    "Premi un tasto...",
+                    this
+                    );
+
+            m_infoLabel->setAlignment(
+                Qt::AlignCenter
+                );
+
+
+            m_saveButton =
+                new QPushButton(
+                    "Salva",
+                    this
+                    );
+
+            m_saveButton->setEnabled(
+                false
+                );
+
+
+            layout->addWidget(
+                m_infoLabel
+                );
+
+            layout->addStretch();
+
+            layout->addWidget(
+                m_saveButton
+                );
+
+
+            connect(
+                m_saveButton,
+                &QPushButton::clicked,
+                this,
+                &QDialog::accept
+                );
+        }
+
+
+        int scanCode() const
+        {
+            return m_scanCode;
+        }
+
+
+        bool extended() const
+        {
+            return m_extended;
+        }
+
+
+    protected:
+
+        void keyPressEvent(
+            QKeyEvent *event
+            ) override
+        {
+            int scanCode =
+                event->nativeScanCode();
+
+
+            if(scanCode == 0)
+            {
+                return;
+            }
+
+
+            bool extended =
+                false;
+
+
+            /*
+         * Qt/Windows può restituire lo scan code
+         * extended con il prefisso 0xE000.
+         *
+         * Esempio:
+         *
+         * CTRL DESTRO
+         *
+         * nativeScanCode = 0xE01D
+         *
+         * diventa:
+         *
+         * scanCode = 0x1D
+         * extended = true
+         */
+
+            if((scanCode & 0xE000) == 0xE000)
+            {
+                scanCode &= 0xFF;
+                extended = true;
+            }
+
+
+            m_scanCode =
+                scanCode;
+
+            m_extended =
+                extended;
+
+
+            m_infoLabel->setText(
+                "Tasto: " +
+                scanCodeToKeyName(
+                    m_scanCode,
+                    m_extended
+                    )
+                );
+
+
+            m_saveButton->setEnabled(
+                true
+                );
+
+
+            qDebug()
+                << "TASTO CONFIG:"
+                << "VK =" << event->nativeVirtualKey()
+                << "ScanCode =" << Qt::hex
+                << event->nativeScanCode()
+                << "->" << m_scanCode
+                << "Extended =" << m_extended;
+        }
+
+
+    private:
+
+        int m_scanCode;
+        bool m_extended;
+
+        QLabel *m_infoLabel;
+        QPushButton *m_saveButton;
+    };
+
 }
 
+
+// ============================================================
+// MAINWINDOW
+// ============================================================
 
 MainWindow::MainWindow(
     QWidget *parent
@@ -106,7 +240,6 @@ MainWindow::MainWindow(
         "ElsOverlay"
         );
 
-
     setFixedSize(
         420,
         600
@@ -115,7 +248,6 @@ MainWindow::MainWindow(
 
     QWidget *central =
         new QWidget(this);
-
 
     setCentralWidget(
         central
@@ -135,16 +267,14 @@ MainWindow::MainWindow(
         20
         );
 
-
     mainLayout->setSpacing(
         10
         );
 
 
-
-    // =========================
+    // ========================================================
     // TITOLO
-    // =========================
+    // ========================================================
 
     QLabel *title =
         new QLabel(
@@ -168,7 +298,6 @@ MainWindow::MainWindow(
         titleFont
         );
 
-
     title->setAlignment(
         Qt::AlignCenter
         );
@@ -179,10 +308,9 @@ MainWindow::MainWindow(
         );
 
 
-
-    // =========================
+    // ========================================================
     // ATMA
-    // =========================
+    // ========================================================
 
     QGroupBox *atmaGroup =
         new QGroupBox(
@@ -220,9 +348,7 @@ MainWindow::MainWindow(
         atmaConfigButton
         );
 
-
     atmaLayout->addStretch();
-
 
     atmaLayout->addWidget(
         atmaToggleButton
@@ -234,10 +360,9 @@ MainWindow::MainWindow(
         );
 
 
-
-    // =========================
+    // ========================================================
     // CLASS BUFF
-    // =========================
+    // ========================================================
 
     QGroupBox *classBuffGroup =
         new QGroupBox(
@@ -275,9 +400,7 @@ MainWindow::MainWindow(
         classBuffConfigButton
         );
 
-
     classBuffLayout->addStretch();
-
 
     classBuffLayout->addWidget(
         classBuffToggleButton
@@ -289,10 +412,9 @@ MainWindow::MainWindow(
         );
 
 
-
-    // =========================
+    // ========================================================
     // DISTANCE GUIDES
-    // =========================
+    // ========================================================
 
     QGroupBox *distanceGroup =
         new QGroupBox(
@@ -330,9 +452,7 @@ MainWindow::MainWindow(
         distanceGuidesConfigButton
         );
 
-
     distanceLayout->addStretch();
-
 
     distanceLayout->addWidget(
         distanceGuidesToggleButton
@@ -344,11 +464,9 @@ MainWindow::MainWindow(
         );
 
 
-
-
-    // =========================
+    // ========================================================
     // BUFF TITLES
-    // =========================
+    // ========================================================
 
     QGroupBox *buffTitlesGroup =
         new QGroupBox(
@@ -377,7 +495,6 @@ MainWindow::MainWindow(
 
     buffTitlesLayout->addStretch();
 
-
     buffTitlesLayout->addWidget(
         buffTitlesToggleButton
         );
@@ -388,10 +505,9 @@ MainWindow::MainWindow(
         );
 
 
-
-    // =========================
+    // ========================================================
     // BUFF TRASCENDENZA
-    // =========================
+    // ========================================================
 
     QGroupBox *buffTranscendenceGroup =
         new QGroupBox(
@@ -420,7 +536,6 @@ MainWindow::MainWindow(
 
     buffTranscendenceLayout->addStretch();
 
-
     buffTranscendenceLayout->addWidget(
         buffTranscendenceToggleButton
         );
@@ -430,9 +545,10 @@ MainWindow::MainWindow(
         buffTranscendenceGroup
         );
 
-    // =========================
+
+    // ========================================================
     // BUFF TRACKER
-    // =========================
+    // ========================================================
 
     QGroupBox *trackerGroup =
         new QGroupBox(
@@ -454,38 +570,64 @@ MainWindow::MainWindow(
             );
 
 
-
-
     trackerLayout->addWidget(
         buffTrackerConfigButton
         );
-
-
 
 
     mainLayout->addWidget(
         trackerGroup
         );
 
-    // =========================
+
+    // ========================================================
     // TASTO PAUSA
-    // =========================
-    pauseKeyButton = new QPushButton(central);
-    mainLayout->addWidget(pauseKeyButton);
+    // ========================================================
+
+    pauseKeyButton =
+        new QPushButton(
+            central
+            );
+
+
+    mainLayout->addWidget(
+        pauseKeyButton
+        );
+
+
+    // ========================================================
+    // TASTO RESET GLOBALE
+    // ========================================================
+
+    resetKeyButton =
+        new QPushButton(
+            central
+            );
+
+
+    mainLayout->addWidget(
+        resetKeyButton
+        );
+
+
+    // ========================================================
+    // CARICAMENTO TASTI
+    // ========================================================
 
     loadPauseKey();
+    loadResetKey();
 
-    // =========================
+
+    // ========================================================
     // SPAZIO
-    // =========================
+    // ========================================================
 
     mainLayout->addStretch();
 
 
-
-    // =========================
+    // ========================================================
     // CHIUDI
-    // =========================
+    // ========================================================
 
     closeButton =
         new QPushButton(
@@ -499,6 +641,9 @@ MainWindow::MainWindow(
         );
 
 
+    // ========================================================
+    // CONNECTIONS TASTI
+    // ========================================================
 
     connect(
         pauseKeyButton,
@@ -506,9 +651,19 @@ MainWindow::MainWindow(
         this,
         &MainWindow::openPauseKeyDialog
         );
-    // =========================
-    // CONNECTIONS ATMA
-    // =========================
+
+
+    connect(
+        resetKeyButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::openResetKeyDialog
+        );
+
+
+    // ========================================================
+    // ATMA
+    // ========================================================
 
     connect(
         atmaConfigButton,
@@ -536,10 +691,9 @@ MainWindow::MainWindow(
         );
 
 
-
-    // =========================
-    // CONNECTIONS CLASS BUFF
-    // =========================
+    // ========================================================
+    // CLASS BUFF
+    // ========================================================
 
     connect(
         classBuffConfigButton,
@@ -567,10 +721,9 @@ MainWindow::MainWindow(
         );
 
 
-
-    // =========================
-    // CONNECTIONS BUFF TITLES
-    // =========================
+    // ========================================================
+    // BUFF TITLES
+    // ========================================================
 
     connect(
         buffTitlesToggleButton,
@@ -590,10 +743,9 @@ MainWindow::MainWindow(
         );
 
 
-
-    // =========================
-    // CONNECTIONS BUFF TRASCENDENZA
-    // =========================
+    // ========================================================
+    // BUFF TRASCENDENZA
+    // ========================================================
 
     connect(
         buffTranscendenceToggleButton,
@@ -613,10 +765,9 @@ MainWindow::MainWindow(
         );
 
 
-
-    // =========================
-    // CONNECTIONS BUFF TRACKER
-    // =========================
+    // ========================================================
+    // BUFF TRACKER
+    // ========================================================
 
     connect(
         buffTrackerConfigButton,
@@ -626,9 +777,9 @@ MainWindow::MainWindow(
         );
 
 
-    // =========================
-    // CONNECTIONS DISTANCE
-    // =========================
+    // ========================================================
+    // DISTANCE GUIDES
+    // ========================================================
 
     connect(
         distanceGuidesConfigButton,
@@ -656,12 +807,9 @@ MainWindow::MainWindow(
         );
 
 
-
-
-
-    // =========================
+    // ========================================================
     // CHIUDI
-    // =========================
+    // ========================================================
 
     connect(
         closeButton,
@@ -672,24 +820,27 @@ MainWindow::MainWindow(
 }
 
 
+// ============================================================
+// TOGGLE
+// ============================================================
 
 void MainWindow::setupToggleButton(
     QPushButton *button
     )
 {
     if(!button)
+    {
         return;
+    }
 
 
     button->setCheckable(
         true
         );
 
-
     button->setChecked(
         false
         );
-
 
     button->setMinimumWidth(
         70
@@ -703,14 +854,15 @@ void MainWindow::setupToggleButton(
 }
 
 
-
 void MainWindow::updateToggleText(
     QPushButton *button,
     bool enabled
     )
 {
     if(!button)
+    {
         return;
+    }
 
 
     button->setText(
@@ -719,50 +871,245 @@ void MainWindow::updateToggleText(
             : "OFF"
         );
 }
-int MainWindow::pauseKey() const
-{
-    return m_pauseKey;
-}
+
+
+// ============================================================
+// PAUSA - LOAD
+// ============================================================
 
 void MainWindow::loadPauseKey()
 {
     QSettings settings(
-        QCoreApplication::applicationDirPath() + "/ElsOverlay.ini",
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
         QSettings::IniFormat
         );
 
-    m_pauseKey = settings.value("Keys/PauseKey", VK_SPACE).toInt();
+
+    m_pauseScanCode =
+        settings.value(
+                    "Keys/PauseScanCode",
+                    0x01
+                    ).toInt();
+
+
+    m_pauseExtended =
+        settings.value(
+                    "Keys/PauseExtended",
+                    false
+                    ).toBool();
+
 
     updatePauseKeyButtonText();
 }
 
-void MainWindow::savePauseKey(int vkCode)
+
+// ============================================================
+// PAUSA - SAVE
+// ============================================================
+
+void MainWindow::savePauseKey(
+    int scanCode,
+    bool extended
+    )
 {
-    m_pauseKey = vkCode;
+    m_pauseScanCode =
+        scanCode;
+
+    m_pauseExtended =
+        extended;
+
 
     QSettings settings(
-        QCoreApplication::applicationDirPath() + "/ElsOverlay.ini",
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
         QSettings::IniFormat
         );
 
-    settings.setValue("Keys/PauseKey", vkCode);
+
+    settings.setValue(
+        "Keys/PauseScanCode",
+        scanCode
+        );
+
+
+    settings.setValue(
+        "Keys/PauseExtended",
+        extended
+        );
+
+
+    settings.sync();
+
 
     updatePauseKeyButtonText();
 
-    emit pauseKeyChanged(vkCode);
+
+    emit pauseKeyChanged(
+        scanCode,
+        extended
+        );
 }
+
+
+// ============================================================
+// PAUSA - LABEL
+// ============================================================
 
 void MainWindow::updatePauseKeyButtonText()
 {
-    pauseKeyButton->setText("Pausa: " + vkCodeToKeyName(m_pauseKey));
+    pauseKeyButton->setText(
+        "Pausa: " +
+        scanCodeToKeyName(
+            m_pauseScanCode,
+            m_pauseExtended
+            )
+        );
 }
+
+
+// ============================================================
+// PAUSA - DIALOG
+// ============================================================
 
 void MainWindow::openPauseKeyDialog()
 {
-    PauseKeyDialog dialog(m_pauseKey, this);
+    KeyDialog dialog(
+        m_pauseScanCode,
+        m_pauseExtended,
+        this
+        );
+
 
     if(dialog.exec() == QDialog::Accepted)
     {
-        savePauseKey(dialog.key());
+        savePauseKey(
+            dialog.scanCode(),
+            dialog.extended()
+            );
+    }
+}
+
+
+// ============================================================
+// RESET - LOAD
+// ============================================================
+
+void MainWindow::loadResetKey()
+{
+    QSettings settings(
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
+        QSettings::IniFormat
+        );
+
+
+    m_resetScanCode =
+        settings.value(
+                    "Keys/ResetScanCode",
+                    0x1D
+                    ).toInt();
+
+
+    m_resetExtended =
+        settings.value(
+                    "Keys/ResetExtended",
+                    true
+                    ).toBool();
+
+
+    updateResetKeyButtonText();
+}
+
+
+// ============================================================
+// RESET - SAVE
+// ============================================================
+
+void MainWindow::saveResetKey(
+    int scanCode,
+    bool extended
+    )
+{
+    m_resetScanCode =
+        scanCode;
+
+    m_resetExtended =
+        extended;
+
+
+    QSettings settings(
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
+        QSettings::IniFormat
+        );
+
+
+    settings.setValue(
+        "Keys/ResetScanCode",
+        scanCode
+        );
+
+
+    settings.setValue(
+        "Keys/ResetExtended",
+        extended
+        );
+
+
+    settings.sync();
+
+
+    updateResetKeyButtonText();
+
+
+    qDebug()
+        << "RESET KEY SALVATO:"
+        << "ScanCode =" << Qt::hex << scanCode
+        << "Extended =" << extended;
+
+
+    emit resetKeyChanged(
+        scanCode,
+        extended
+        );
+}
+
+
+// ============================================================
+// RESET - LABEL
+// ============================================================
+
+void MainWindow::updateResetKeyButtonText()
+{
+    resetKeyButton->setText(
+        "Reset globale: " +
+        scanCodeToKeyName(
+            m_resetScanCode,
+            m_resetExtended
+            )
+        );
+}
+
+
+// ============================================================
+// RESET - DIALOG
+// ============================================================
+
+void MainWindow::openResetKeyDialog()
+{
+    KeyDialog dialog(
+        m_resetScanCode,
+        m_resetExtended,
+        this
+        );
+
+
+    if(dialog.exec() == QDialog::Accepted)
+    {
+        saveResetKey(
+            dialog.scanCode(),
+            dialog.extended()
+            );
     }
 }

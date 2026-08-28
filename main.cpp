@@ -1,7 +1,8 @@
 #include <QApplication>
-#include <QTimer>
-#include <QProcess>
 #include <QCoreApplication>
+#include <QProcess>
+
+#include <windows.h>
 
 #include "mainwindow.h"
 
@@ -15,41 +16,43 @@
 #include "overlayroot.h"
 #include "classconfigurationmanager.h"
 #include "classbuffconfigwindow.h"
+
 #include "distanceguidemanager.h"
 #include "distanceguideconfigwindow.h"
 #include "distanceguideoverlay.h"
 
 
-
-
-int main(int argc, char *argv[])
+    int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-
-    // =========================
-    // ROOT OVERLAY CONTAINER
-    // =========================
+    // ==================================================
+    // ROOT OVERLAY
+    // ==================================================
 
     OverlayRoot *overlayRoot =
         new OverlayRoot();
 
-
     overlayRoot->show();
 
 
-    // =========================
-    // OGGETTI PRINCIPALI
-    // =========================
+    // ==================================================
+    // GLOBAL KEYBOARD
+    // ==================================================
 
     GlobalKeyboard keyboard;
 
 
-    // =========================
-    // FINESTRA CONFIGURAZIONE
-    // =========================
+    // ==================================================
+    // MAIN WINDOW
+    // ==================================================
 
     MainWindow mainWindow;
+
+
+    // ==================================================
+    // CLASS BUFF CONFIGURATION
+    // ==================================================
 
     ClassConfigurationManager classConfigManager;
 
@@ -59,6 +62,28 @@ int main(int argc, char *argv[])
         );
 
 
+    // ==================================================
+    // KEY CONFIGURATION
+    // ==================================================
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::pauseKeyChanged,
+        &keyboard,
+        &GlobalKeyboard::setPauseKey
+        );
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::resetKeyChanged,
+        &keyboard,
+        &GlobalKeyboard::setResetKey
+        );
+
+
+    // ==================================================
+    // DISTANCE GUIDES
+    // ==================================================
 
     DistanceGuideManager distanceGuideManager;
 
@@ -66,11 +91,13 @@ int main(int argc, char *argv[])
         &distanceGuideManager,
         &keyboard
         );
+
     DistanceGuideOverlay *distanceGuides =
         new DistanceGuideOverlay(
             &distanceGuideManager,
             overlayRoot
             );
+
 
     QObject::connect(
         &mainWindow,
@@ -79,21 +106,24 @@ int main(int argc, char *argv[])
         [&distanceGuideConfigWindow]()
         {
             distanceGuideConfigWindow.refresh();
-
             distanceGuideConfigWindow.show();
             distanceGuideConfigWindow.raise();
             distanceGuideConfigWindow.activateWindow();
         }
         );
+
+
     QObject::connect(
         &mainWindow,
         &MainWindow::distanceGuidesToggled,
         distanceGuides,
         &DistanceGuideOverlay::setEnabled
         );
-    // =========================
-    // DISTANCE GUIDES - MOVIMENTO
-    // =========================
+
+
+    // ==================================================
+    // DISTANCE GUIDES - MOVEMENT
+    // ==================================================
 
     QObject::connect(
         &keyboard,
@@ -132,8 +162,6 @@ int main(int argc, char *argv[])
                 distanceGuideManager.setCharacterMoving(
                     true
                     );
-
-                return;
             }
         }
         );
@@ -155,15 +183,26 @@ int main(int argc, char *argv[])
         }
         );
 
+
+    // ==================================================
+    // SHOW MAIN WINDOW
+    // ==================================================
+
     mainWindow.show();
     mainWindow.raise();
     mainWindow.activateWindow();
 
 
+    // ==================================================
+    // TRANSCENDENCE OVERLAY
+    // ==================================================
+
     Overlay *overlay =
         new Overlay(
             overlayRoot
             );
+
+
     QObject::connect(
         &mainWindow,
         &MainWindow::buffTranscendenceToggled,
@@ -182,6 +221,9 @@ int main(int argc, char *argv[])
         );
 
 
+    // ==================================================
+    // SKILL OVERLAY
+    // ==================================================
 
     SkillOverlay *skills =
         new SkillOverlay(
@@ -208,11 +250,15 @@ int main(int argc, char *argv[])
         );
 
 
+    // ==================================================
+    // CLASS BUFF OVERLAY
+    // ==================================================
 
     BuffOverlay *buffs =
         new BuffOverlay(
             overlayRoot
             );
+
 
     QObject::connect(
         &mainWindow,
@@ -235,8 +281,7 @@ int main(int argc, char *argv[])
                 return;
 
 
-            const QList<ClassConfiguration>
-                configurations =
+            const QList<ClassConfiguration> configurations =
                 classConfigManager.configurations();
 
 
@@ -257,14 +302,16 @@ int main(int argc, char *argv[])
         );
 
 
+    // ==================================================
+    // CLASS SELECTOR
+    // ==================================================
 
     ClassSelector selector;
 
 
-
-    // =========================
-    // OVERLAY SKILL PRINCIPALE
-    // =========================
+    // ==================================================
+    // MAIN SKILL OVERLAY
+    // ==================================================
 
     QObject::connect(
         &keyboard,
@@ -277,6 +324,9 @@ int main(int argc, char *argv[])
         );
 
 
+    // ==================================================
+    // GLOBAL RESET
+    // ==================================================
 
     QObject::connect(
         &keyboard,
@@ -284,10 +334,12 @@ int main(int argc, char *argv[])
         overlay,
         [overlay]()
         {
+            qDebug()
+            << "RESET ARRIVATO ALL'OVERLAY";
+
             overlay->resetCooldown();
         }
         );
-
 
 
     QObject::connect(
@@ -301,6 +353,9 @@ int main(int argc, char *argv[])
         );
 
 
+    // ==================================================
+    // KEYBOARD SHORTCUTS
+    // ==================================================
 
     QObject::connect(
         &keyboard,
@@ -313,19 +368,18 @@ int main(int argc, char *argv[])
                 overlay->startCooldown();
             }
 
+
             if(key == '8')
             {
                 overlay->togglePause();
-                return;
             }
         }
         );
 
 
-
-    // =========================
-    // SISTEMA BUFF
-    // =========================
+    // ==================================================
+    // BUFF SYSTEM
+    // ==================================================
 
     QObject::connect(
         &keyboard,
@@ -333,14 +387,6 @@ int main(int argc, char *argv[])
         buffs,
         &BuffOverlay::handleKey
         );
-
-
-
-    // =========================
-    // SELETTORE CLASSI
-    // =========================
-
-
 
 
     QObject::connect(
@@ -351,6 +397,10 @@ int main(int argc, char *argv[])
         );
 
 
+    // ==================================================
+    // CLASS BUFF CONFIGURATION WINDOW
+    // ==================================================
+
     QObject::connect(
         &mainWindow,
         &MainWindow::classBuffConfigRequested,
@@ -358,7 +408,6 @@ int main(int argc, char *argv[])
         [&classBuffConfigWindow]()
         {
             classBuffConfigWindow.refresh();
-
             classBuffConfigWindow.show();
             classBuffConfigWindow.raise();
             classBuffConfigWindow.activateWindow();
@@ -366,22 +415,15 @@ int main(int argc, char *argv[])
         );
 
 
-
-
-
-
-    // =========================
-    // BUFF VISION ATMA
-    // =========================
+    // ==================================================
+    // ATMA BUFF VISION
+    // ==================================================
 
     BuffVisionManager atma(
         &keyboard,
         overlayRoot
         );
 
-    // =========================
-    // ATMA - CONFIGURAZIONE
-    // =========================
 
     QObject::connect(
         &mainWindow,
@@ -391,16 +433,17 @@ int main(int argc, char *argv[])
         );
 
 
-    // =========================
-    // ATMA - TOGGLE
-    // =========================
-
     QObject::connect(
         &mainWindow,
         &MainWindow::atmaToggled,
         &atma,
         &BuffVisionManager::setEnabled
         );
+
+
+    // ==================================================
+    // BUFF TRACKER
+    // ==================================================
 
     QObject::connect(
         &mainWindow,
@@ -419,6 +462,9 @@ int main(int argc, char *argv[])
         );
 
 
+    // ==================================================
+    // APPLICATION LOOP
+    // ==================================================
 
     return app.exec();
 }
