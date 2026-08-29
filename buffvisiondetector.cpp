@@ -108,17 +108,17 @@ VisionState BuffVisionDetector::detect(
             );
 
 
-    qint64 s1Ns = perfTimer.nsecsElapsed();
+    // qint64 s1Ns = perfTimer.nsecsElapsed();
     double s2 =
         compareImages(
             current,
             ref2
             );
 
-    qint64 s2Ns = perfTimer.nsecsElapsed() - s1Ns;
-    qDebug() << "COMPARE TIMING:"
-             << "S1 =" << s1Ns / 1000000.0 << "ms"
-             << "S2 =" << s2Ns / 1000000.0 << "ms";
+    // qint64 s2Ns = perfTimer.nsecsElapsed() - s1Ns;
+    // qDebug() << "COMPARE TIMING:"
+    //          << "S1 =" << s1Ns / 1000000.0 << "ms"
+    //          << "S2 =" << s2Ns / 1000000.0 << "ms";
     // qDebug() << "[BuffVision] scores:"
     //          << "State1 =" << s1
     //          << "State2 =" << s2;

@@ -51,6 +51,8 @@ BuffVisionManager::BuffVisionManager(
 
     capture->loadSettings();
 
+    capture->initDuplication();
+
 
 
     // =========================
@@ -181,15 +183,16 @@ BuffVisionManager::BuffVisionManager(
             qint64 totalNs = perfTimer.nsecsElapsed();
             qint64 detectNs = totalNs - captureNs;
 
+
+
+
+
+#ifdef QT_DEBUG
             qDebug() << "VISION CYCLE:"
                      << "CAPTURE =" << captureNs / 1000000.0 << "ms"
                      << "DETECT ="  << detectNs  / 1000000.0 << "ms"
                      << "TOTAL ="   << totalNs   / 1000000.0 << "ms"
                      << "(timer interval = 50 ms)";
-
-
-
-#ifdef QT_DEBUG
 
             debugWindow->setScores(
                 detector->getCrop1State1Score(),
@@ -383,6 +386,7 @@ BuffVisionManager::BuffVisionManager(
 
 
             capture->loadSettings();
+
 
 
             detector->loadReferences();

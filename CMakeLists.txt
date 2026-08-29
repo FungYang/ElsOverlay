@@ -53,6 +53,8 @@ target_link_libraries(ElsOverlay
     PRIVATE
         Qt::Core
         Qt::Widgets
+        d3d11
+        dxgi
 )
 
 install(TARGETS ElsOverlay
