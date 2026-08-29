@@ -52,7 +52,7 @@ private:
 
 
 
-    QPixmap grabScreen();
+    QPixmap grabScreen(const QRect &rect);
     const QPixmap crop1Ref1 ;
     const QPixmap crop1Ref2;
     const QPixmap crop2Ref1;

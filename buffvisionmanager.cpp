@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QFile>
 #include <QDebug>
+#include <QElapsedTimer>
 
 
 #ifdef QT_DEBUG
@@ -145,7 +146,8 @@ BuffVisionManager::BuffVisionManager(
             if(!configured)
                 return;
 
-
+            QElapsedTimer perfTimer;
+            perfTimer.start();
 
             // =========================
             // CAPTURE
@@ -157,6 +159,8 @@ BuffVisionManager::BuffVisionManager(
 
             QPixmap current2 =
                 capture->captureCrop2();
+
+            qint64 captureNs = perfTimer.nsecsElapsed();
 
 
 
@@ -174,6 +178,14 @@ BuffVisionManager::BuffVisionManager(
                 detector->detectCrop2(
                     current2
                     );
+            qint64 totalNs = perfTimer.nsecsElapsed();
+            qint64 detectNs = totalNs - captureNs;
+
+            qDebug() << "VISION CYCLE:"
+                     << "CAPTURE =" << captureNs / 1000000.0 << "ms"
+                     << "DETECT ="  << detectNs  / 1000000.0 << "ms"
+                     << "TOTAL ="   << totalNs   / 1000000.0 << "ms"
+                     << "(timer interval = 50 ms)";
 
 
 

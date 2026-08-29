@@ -4,6 +4,7 @@
 #include <QColor>
 #include <QDebug>
 #include <QFile>
+#include <QElapsedTimer>
 
 
 
@@ -97,6 +98,8 @@ VisionState BuffVisionDetector::detect(
     }
 
 
+    QElapsedTimer perfTimer;
+    perfTimer.start();
 
     double s1 =
         compareImages(
@@ -105,11 +108,17 @@ VisionState BuffVisionDetector::detect(
             );
 
 
+    qint64 s1Ns = perfTimer.nsecsElapsed();
     double s2 =
         compareImages(
             current,
             ref2
             );
+
+    qint64 s2Ns = perfTimer.nsecsElapsed() - s1Ns;
+    qDebug() << "COMPARE TIMING:"
+             << "S1 =" << s1Ns / 1000000.0 << "ms"
+             << "S2 =" << s2Ns / 1000000.0 << "ms";
     // qDebug() << "[BuffVision] scores:"
     //          << "State1 =" << s1
     //          << "State2 =" << s2;
@@ -238,52 +247,51 @@ double BuffVisionDetector::compareImages(
 
 
 
-    int pixels =
-        imgA.width() *
-        imgA.height();
+    const int width = imgA.width();
+    const int height = imgA.height();
+    const int pixels = width * height;
 
 
 
     for(int y = 0;
-         y < imgA.height();
+         y < height;
          y++)
     {
 
+        const QRgb *rowA =
+            reinterpret_cast<const QRgb *>(
+                imgA.constScanLine(y)
+                );
+
+        const QRgb *rowB =
+            reinterpret_cast<const QRgb *>(
+                imgB.constScanLine(y)
+                );
+
         for(int x = 0;
-             x < imgA.width();
+             x < width;
              x++)
         {
 
-            QColor ca =
-                imgA.pixelColor(
-                    x,
-                    y
-                    );
-
-
-            QColor cb =
-                imgB.pixelColor(
-                    x,
-                    y
-                    );
+            const QRgb ca = rowA[x];
+            const QRgb cb = rowB[x];
 
 
 
             int redDiff =
-                abs(ca.red() -
-                    cb.red());
+                abs(qRed(ca) -
+                    qRed(cb));
 
             int greenDiff =
-                abs(ca.green() -
-                    cb.green());
+                abs(qGreen(ca) -
+                    qGreen(cb));
 
             int blueDiff =
-                abs(ca.blue() -
-                    cb.blue());
+                abs(qBlue(ca) -
+                    qBlue(cb));
 
 
 
-            // Small color variations are ignored.
             if(redDiff <= COLOR_TOLERANCE)
                 redDiff = 0;
             else

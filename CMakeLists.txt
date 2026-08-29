@@ -3,6 +3,8 @@ project(ElsOverlay LANGUAGES CXX)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
 
+
+
 qt_standard_project_setup()
 qt_add_executable(ElsOverlay
     WIN32 MACOSX_BUNDLE
@@ -70,3 +72,5 @@ add_custom_command(TARGET ElsOverlay POST_BUILD
     $<TARGET_FILE_DIR:ElsOverlay>/images
 )
 install(SCRIPT ${deploy_script})
+
+

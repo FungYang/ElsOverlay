@@ -70,71 +70,36 @@ bool BuffVisionCapture::loadSettings()
 
 
 
-QPixmap BuffVisionCapture::grabScreen()
+QPixmap BuffVisionCapture::grabScreen(const QRect &rect)
 {
-
     QScreen *screen =
         QGuiApplication::primaryScreen();
-
-
-
     if(!screen)
         return QPixmap();
-
-
-
     return screen->grabWindow(
-        0
+        0,
+        rect.x(),
+        rect.y(),
+        rect.width(),
+        rect.height()
         );
-
 }
-
-
 
 QPixmap BuffVisionCapture::captureCrop1()
 {
-
-    QPixmap screen =
-        grabScreen();
-
-    QPixmap crop = screen.copy(cropRect1);
     if(cropRect1.isNull() || cropRect1.isEmpty())
     {
         qDebug()
         << "ERROR: Crop1 invalid"
         << cropRect1;
-
         return QPixmap();
-        qDebug()
-            << "SCREEN:"
-            << screen.size()
-            << "CROP RECT:"
-            << cropRect1
-            << "RESULT:"
-            << crop.size();
     }
-
-
-    return screen.copy(
-        cropRect1
-        );
-
+    return grabScreen(cropRect1);
 }
-
-
 
 QPixmap BuffVisionCapture::captureCrop2()
 {
-
-    QPixmap screen =
-        grabScreen();
-
-
-
-    return screen.copy(
-        cropRect2
-        );
-
+    return grabScreen(cropRect2);
 }
 
 void BuffVisionCapture::saveReference1()
