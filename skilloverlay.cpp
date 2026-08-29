@@ -126,7 +126,8 @@ SkillOverlay::SkillOverlay(
 
             checkSequences(key);
 
-        }
+        },
+        Qt::QueuedConnection
         );
 
     connect(
@@ -191,7 +192,8 @@ SkillOverlay::SkillOverlay(
 
             }
 
-        }
+        },
+        Qt::QueuedConnection
         );
 
 
@@ -226,7 +228,8 @@ SkillOverlay::SkillOverlay(
             nightParade->resetCooldown();
             settingSun->resetCooldown();
 
-        }
+        },
+        Qt::QueuedConnection
         );
     connect(
         keyboard,
@@ -236,7 +239,8 @@ SkillOverlay::SkillOverlay(
         {
             trackingActive = false;
 
-        }
+        },
+        Qt::QueuedConnection
         );
 
 

@@ -163,7 +163,8 @@
                     true
                     );
             }
-        }
+        },
+        Qt::QueuedConnection
         );
 
 
@@ -180,7 +181,8 @@
                     false
                     );
             }
-        }
+        },
+        Qt::QueuedConnection
         );
 
 
@@ -320,7 +322,8 @@
         [overlay]()
         {
             overlay->startCooldown();
-        }
+        },
+        Qt::QueuedConnection
         );
 
 
@@ -334,11 +337,12 @@
         overlay,
         [overlay]()
         {
-            qDebug()
-            << "RESET ARRIVATO ALL'OVERLAY";
+            // qDebug()
+            // << "RESET ARRIVATO ALL'OVERLAY";
 
             overlay->resetCooldown();
-        }
+        },
+        Qt::QueuedConnection
         );
 
 
@@ -349,7 +353,8 @@
         [overlay]()
         {
             overlay->resetCooldown();
-        }
+        },
+        Qt::QueuedConnection
         );
 
 
@@ -373,7 +378,8 @@
             {
                 overlay->togglePause();
             }
-        }
+        },
+        Qt::QueuedConnection
         );
 
 
@@ -385,7 +391,8 @@
         &keyboard,
         &GlobalKeyboard::keyPressed,
         buffs,
-        &BuffOverlay::handleKey
+        &BuffOverlay::handleKey,
+        Qt::QueuedConnection
         );
 
 
@@ -393,7 +400,8 @@
         &keyboard,
         &GlobalKeyboard::resetPressed,
         buffs,
-        &BuffOverlay::resetAll
+        &BuffOverlay::resetAll,
+        Qt::QueuedConnection
         );
 
 

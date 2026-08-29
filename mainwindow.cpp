@@ -205,13 +205,13 @@
                 );
 
 
-            qDebug()
-                << "TASTO CONFIG:"
-                << "VK =" << event->nativeVirtualKey()
-                << "ScanCode =" << Qt::hex
-                << event->nativeScanCode()
-                << "->" << m_scanCode
-                << "Extended =" << m_extended;
+            // qDebug()
+            //     << "TASTO CONFIG:"
+            //     << "VK =" << event->nativeVirtualKey()
+            //     << "ScanCode =" << Qt::hex
+            //     << event->nativeScanCode()
+            //     << "->" << m_scanCode
+            //     << "Extended =" << m_extended;
         }
 
 
@@ -1063,10 +1063,10 @@ void MainWindow::saveResetKey(
     updateResetKeyButtonText();
 
 
-    qDebug()
-        << "RESET KEY SALVATO:"
-        << "ScanCode =" << Qt::hex << scanCode
-        << "Extended =" << extended;
+    // qDebug()
+    //     << "RESET KEY SALVATO:"
+    //     << "ScanCode =" << Qt::hex << scanCode
+    //     << "Extended =" << extended;
 
 
     emit resetKeyChanged(
