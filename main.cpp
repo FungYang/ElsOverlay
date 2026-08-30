@@ -11,6 +11,7 @@
 #include "skilloverlay.h"
 #include "buffoverlay.h"
 #include "classselector.h"
+#include "transcendencevisionmanager.h"
 
 #include "buffvisionmanager.h"
 #include "overlayroot.h"
@@ -121,6 +122,7 @@
         );
 
 
+
     // ==================================================
     // DISTANCE GUIDES - MOVEMENT
     // ==================================================
@@ -221,6 +223,33 @@
             }
         }
         );
+    // ==================================================
+    // TRANSCENDENCE VISION
+    // ==================================================
+
+    TranscendenceVisionManager transcendenceVision(
+        &keyboard,
+        overlayRoot,
+        overlay
+        );
+
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::transcendenceConfigRequested,
+        &transcendenceVision,
+        &TranscendenceVisionManager::configure
+        );
+
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::buffTranscendenceToggled,
+        &transcendenceVision,
+        &TranscendenceVisionManager::setEnabled
+        );
+
+
 
 
     // ==================================================
@@ -319,9 +348,10 @@
         &keyboard,
         &GlobalKeyboard::ctrlPressed,
         overlay,
-        [overlay]()
+        [overlay,&transcendenceVision]()
         {
             overlay->startCooldown();
+            transcendenceVision.onCooldownStarted();
         },
         Qt::QueuedConnection
         );
@@ -335,12 +365,13 @@
         &keyboard,
         &GlobalKeyboard::resetPressed,
         overlay,
-        [overlay]()
+        [overlay,&transcendenceVision]()
         {
             // qDebug()
             // << "RESET ARRIVATO ALL'OVERLAY";
 
             overlay->resetCooldown();
+            transcendenceVision.onCooldownReset();
         },
         Qt::QueuedConnection
         );
@@ -350,12 +381,14 @@
         &keyboard,
         &GlobalKeyboard::transcendenceResetPressed,
         overlay,
-        [overlay]()
+        [overlay,&transcendenceVision]()
         {
             overlay->resetCooldown();
+            transcendenceVision.onCooldownReset();
         },
         Qt::QueuedConnection
         );
+
 
 
     // ==================================================
@@ -366,11 +399,12 @@
         &keyboard,
         &GlobalKeyboard::keyPressed,
         overlay,
-        [overlay](int key)
+        [overlay,&transcendenceVision](int key)
         {
             if(key == '6')
             {
                 overlay->startCooldown();
+                transcendenceVision.onCooldownStarted();
             }
 
 

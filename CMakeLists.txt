@@ -45,6 +45,10 @@ qt_add_executable(ElsOverlay
     distanceguidecircle.h distanceguidecircle.cpp
     distanceguidegroup.h
     distanceguidegroupconfigwindow.h distanceguidegroupconfigwindow.cpp
+    TranscendenceVisionConfig.h
+    transcendencecapturesetup.h transcendencecapturesetup.cpp
+    transcendencevisionmanager.h transcendencevisionmanager.cpp
+    screencapture.h screencapture.cpp
 
 
 

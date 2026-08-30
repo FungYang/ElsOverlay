@@ -16,6 +16,7 @@ public:
     void resetCooldown();
     void startCooldown();
     void togglePause();
+    void restartCooldown();   // <-- nuovo
 
 protected:
 

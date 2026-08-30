@@ -31,6 +31,7 @@ signals:
 
     void pauseKeyChanged(int scanCode, bool extended);
     void resetKeyChanged(int scanCode, bool extended);
+    void transcendenceConfigRequested();
 
 private:
     QPushButton *atmaConfigButton;
@@ -51,6 +52,7 @@ private:
 
     QPushButton *pauseKeyButton;
     QPushButton *resetKeyButton;
+    QPushButton *transcendenceConfigButton;
 
 
     int m_pauseScanCode = 0x01;

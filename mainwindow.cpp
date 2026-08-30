@@ -505,10 +505,6 @@ MainWindow::MainWindow(
         );
 
 
-    // ========================================================
-    // BUFF TRASCENDENZA
-    // ========================================================
-
     QGroupBox *buffTranscendenceGroup =
         new QGroupBox(
             "Buff Trascendenza",
@@ -518,6 +514,13 @@ MainWindow::MainWindow(
 
     QHBoxLayout *buffTranscendenceLayout =
         new QHBoxLayout(
+            buffTranscendenceGroup
+            );
+
+
+    transcendenceConfigButton =
+        new QPushButton(
+            "Configura",
             buffTranscendenceGroup
             );
 
@@ -533,6 +536,10 @@ MainWindow::MainWindow(
         buffTranscendenceToggleButton
         );
 
+
+    buffTranscendenceLayout->addWidget(
+        transcendenceConfigButton
+        );
 
     buffTranscendenceLayout->addStretch();
 
@@ -762,6 +769,12 @@ MainWindow::MainWindow(
                 enabled
                 );
         }
+        );
+    connect(
+        transcendenceConfigButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::transcendenceConfigRequested
         );
 
 

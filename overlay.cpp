@@ -319,3 +319,21 @@ void Overlay::togglePause()
     update();
 
 }
+void Overlay::restartCooldown()
+{
+    if(!running)
+        return;
+
+    if(paused)
+        return;
+
+
+    cooldown = 20;
+
+    pausedElapsed = 0;
+
+    elapsedTimer.restart();
+
+
+    update();
+}
