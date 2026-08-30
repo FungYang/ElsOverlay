@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QElapsedTimer>
+#include <QCoreApplication>
 
 
 
@@ -21,23 +22,27 @@ BuffVisionDetector::BuffVisionDetector(
 void BuffVisionDetector::loadReferences()
 {
 
+    QString basePath =
+        QCoreApplication::applicationDirPath() +
+        "/BuffVision";
+
     crop1Ref1.load(
-        "BuffVision/Crop1_Ref1.png"
+        basePath + "/Crop1_Ref1.png"
         );
 
 
     crop1Ref2.load(
-        "BuffVision/Crop1_Ref2.png"
+        basePath + "/Crop1_Ref2.png"
         );
 
 
     crop2Ref1.load(
-        "BuffVision/Crop2_Ref1.png"
+        basePath + "/Crop2_Ref1.png"
         );
 
 
     crop2Ref2.load(
-        "BuffVision/Crop2_Ref2.png"
+        basePath + "/Crop2_Ref2.png"
         );
 
 
@@ -53,9 +58,9 @@ void BuffVisionDetector::loadReferences()
 
 
 
-    // qDebug()
-    //     << "References loaded:"
-    //     << loaded;
+    qDebug()
+        << "References loaded:"
+        << loaded;
 
 }
 
@@ -119,9 +124,9 @@ VisionState BuffVisionDetector::detect(
     // qDebug() << "COMPARE TIMING:"
     //          << "S1 =" << s1Ns / 1000000.0 << "ms"
     //          << "S2 =" << s2Ns / 1000000.0 << "ms";
-    // qDebug() << "[BuffVision] scores:"
-    //          << "State1 =" << s1
-    //          << "State2 =" << s2;
+    qDebug() << "[BuffVision] scores:"
+             << "State1 =" << s1
+             << "State2 =" << s2;
 
 
 
@@ -134,7 +139,7 @@ VisionState BuffVisionDetector::detect(
 
 
 
-    constexpr double confidence = 0.90;
+    constexpr double confidence = 0.85;
 
 
 
@@ -164,14 +169,21 @@ VisionState BuffVisionDetector::detectCrop1(
     const QPixmap &current
     )
 {
-
-    return detect(
+    VisionState state = detect(
         current,
         crop1Ref1,
         crop1Ref2,
         &lastCrop1State1Score,
         &lastCrop1State2Score
         );
+
+    qDebug()
+        << "[CROP1]"
+        << "State1 =" << lastCrop1State1Score
+        << "State2 =" << lastCrop1State2Score
+        << "Detected =" << static_cast<int>(state);
+
+    return state;
 
 }
 
@@ -182,13 +194,21 @@ VisionState BuffVisionDetector::detectCrop2(
     )
 {
 
-    return detect(
+    VisionState state = detect(
         current,
         crop2Ref1,
         crop2Ref2,
         &lastCrop2State1Score,
         &lastCrop2State2Score
         );
+
+    qDebug()
+        << "[CROP2]"
+        << "State1 =" << lastCrop2State1Score
+        << "State2 =" << lastCrop2State2Score
+        << "Detected =" << static_cast<int>(state);
+
+    return state;
 
 }
 

@@ -11,29 +11,192 @@
 
 using Microsoft::WRL::ComPtr;
 
+
 class ScreenCapture
 {
 public:
-    static QImage captureScreen(QScreen *screen);
-    static QImage captureRegion(QScreen *screen, const QRect &area);
-    static QImage crop(const QImage &image, const QRect &area);
+
+    // =====================================================
+    // INIT
+    // =====================================================
+
+    static bool ensureInit();
+
+
+    // =====================================================
+    // REGIONI
+    //
+    // Ogni consumer registra solo le regioni che gli servono.
+    //
+    // Esempio:
+    //
+    // int id = registerRegion(rect);
+    //
+    // ...
+    //
+    // unregisterRegion(id);
+    // =====================================================
+
+    static int registerRegion(
+        const QRect &rect
+        );
+
+    static void unregisterRegion(
+        int regionId
+        );
+
+
+    static bool isRegionRegistered(
+        int regionId
+        );
+
+
+    static QRect regionRect(
+        int regionId
+        );
+
+
+    // =====================================================
+    // FRAME CONDIVISO
+    //
+    // beginFrame()
+    //      ↓
+    // captureRegion(id)
+    // captureRegion(id)
+    // captureRegion(id)
+    //      ↓
+    // endFrame()
+    //
+    // AcquireNextFrame viene chiamato UNA volta.
+    // =====================================================
+
+    static bool beginFrame();
+
+    static bool hasFrame();
+
+    static QImage captureRegion(
+        int regionId
+        );
+
+    static void endFrame();
+
+
+    // =====================================================
+    // API CLASSICA / COMPATIBILITÀ
+    // =====================================================
+
+    static QImage captureScreen(
+        QScreen *screen
+        );
+
+    static QImage crop(
+        const QImage &image,
+        const QRect &area
+        );
+
+    static QImage captureRegionReliable(
+        QScreen *screen,
+        const QRect &area
+        );
+
 
 private:
-    static bool ensureInit();
-    static bool ensureStaging(const QSize &size);
+
+    // =====================================================
+    // DXGI
+    // =====================================================
+
     static bool reinit();
-    static QImage grabRegionInternal(const QRect &rect);
 
-    static ComPtr<ID3D11Device> s_device;
-    static ComPtr<ID3D11DeviceContext> s_context;
-    static ComPtr<IDXGIOutputDuplication> s_duplication;
-    static ComPtr<ID3D11Texture2D> s_staging;
 
-    static QSize s_stagingSize;
-    static QRect s_desktopRect;
-    static bool s_ready;
+    // =====================================================
+    // STAGING
+    // =====================================================
 
-    // Cache per-rect: se lo schermo non e' cambiato,
-    // riusiamo l'ultima immagine catturata per quella regione.
-    static QHash<QRect, QImage> s_cache;
+    static bool ensureStaging(
+        const QSize &size
+        );
+
+
+    // =====================================================
+    // ESTRAZIONE DAL FRAME CORRENTE
+    // =====================================================
+
+    static QImage captureRectFromCurrentFrame(
+        const QRect &rect
+        );
+
+
+    // =====================================================
+    // DXGI RESOURCES
+    // =====================================================
+
+    static ComPtr<ID3D11Device>
+        s_device;
+
+    static ComPtr<ID3D11DeviceContext>
+        s_context;
+
+    static ComPtr<IDXGIOutputDuplication>
+        s_duplication;
+
+
+    // Texture CPU-readable.
+    //
+    // Viene riutilizzata tra le catture.
+    // Se arriva una regione più grande,
+    // viene ricreata alla nuova dimensione.
+
+    static ComPtr<ID3D11Texture2D>
+        s_staging;
+
+
+    // =====================================================
+    // FRAME CORRENTE
+    // =====================================================
+
+    static ComPtr<ID3D11Texture2D>
+        s_currentFrame;
+
+
+    static bool
+        s_frameAcquired;
+
+
+    // =====================================================
+    // GEOMETRIA
+    // =====================================================
+
+    static QSize
+        s_stagingSize;
+
+
+    static QRect
+        s_desktopRect;
+
+
+    static bool
+        s_ready;
+
+
+    // =====================================================
+    // REGIONS
+    // =====================================================
+
+    static int
+        s_nextRegionId;
+
+
+    static QHash<int, QRect>
+        s_regions;
+
+
+    // =====================================================
+    // CACHE
+    //
+    // Ultima immagine valida per ogni regione.
+    // =====================================================
+
+    static QHash<int, QImage>
+        s_regionCache;
 };

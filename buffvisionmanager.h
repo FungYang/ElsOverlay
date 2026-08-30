@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QElapsedTimer>
 
 #include "buffvisioncapture.h"
 #include "buffvisiondetector.h"
@@ -79,6 +80,15 @@ private:
 
     VisionState lastCrop2State =
         VisionState::Unknown;
+    QElapsedTimer eventTimer;
+
+    qint64 visionCycle = 0;
+
+    qint64 crop1EventTime = -1;
+    qint64 crop2EventTime = -1;
+
+    qint64 crop1EventCycle = -1;
+    qint64 crop2EventCycle = -1;
 
 
     bool configured = false;

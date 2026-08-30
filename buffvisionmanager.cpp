@@ -9,7 +9,6 @@
 #include <QTimer>
 #include <QFile>
 #include <QDebug>
-#include <QElapsedTimer>
 
 
 #ifdef QT_DEBUG
@@ -38,7 +37,6 @@ BuffVisionManager::BuffVisionManager(
             );
 
 
-
     // =========================
     // CAPTURE
     // =========================
@@ -48,11 +46,19 @@ BuffVisionManager::BuffVisionManager(
             this
             );
 
-
-    capture->loadSettings();
-
-    capture->initDuplication();
-
+    if(!capture)
+    {
+        qDebug()
+        << "BUFFVISION: ERRORE - BuffVisionCapture non creato";
+    }
+    else
+    {
+        if(!capture->loadSettings())
+        {
+            qDebug()
+            << "BUFFVISION: caricamento capture settings fallito";
+        }
+    }
 
 
     // =========================
@@ -134,35 +140,59 @@ BuffVisionManager::BuffVisionManager(
         [this]()
         {
 
-            // Atma disabilitato:
-            // nessuna elaborazione.
+            // =========================
+            // ENABLED
+            // =========================
+
             if(!enabled)
             {
                 visionTimer.stop();
+
                 return;
             }
 
 
-            // Nessuna reference:
-            // nessuna elaborazione.
+            // =========================
+            // CONFIGURED
+            // =========================
+
             if(!configured)
                 return;
 
-            QElapsedTimer perfTimer;
-            perfTimer.start();
+
+            ++visionCycle;
+
+
+
 
             // =========================
             // CAPTURE
+            //
+            // UN SOLO AcquireNextFrame()
+            // per CROP1 + CROP2.
             // =========================
 
-            QPixmap current1 =
-                capture->captureCrop1();
+            QPixmap current1;
+            QPixmap current2;
 
 
-            QPixmap current2 =
-                capture->captureCrop2();
+            if(capture->beginCapture())
+            {
+                current1 =
+                    capture->captureCrop1();
 
-            qint64 captureNs = perfTimer.nsecsElapsed();
+
+                current2 =
+                    capture->captureCrop2();
+
+
+                capture->endCapture();
+            }
+            else
+            {
+                qDebug()
+                << "BUFFVISION: frame acquisition failed";
+            }
 
 
 
@@ -180,19 +210,13 @@ BuffVisionManager::BuffVisionManager(
                 detector->detectCrop2(
                     current2
                     );
-            qint64 totalNs = perfTimer.nsecsElapsed();
-            qint64 detectNs = totalNs - captureNs;
 
 
-
-
+        // =========================
+        // DEBUG
+        // =========================
 
 #ifdef QT_DEBUG
-            qDebug() << "VISION CYCLE:"
-                     << "CAPTURE =" << captureNs / 1000000.0 << "ms"
-                     << "DETECT ="  << detectNs  / 1000000.0 << "ms"
-                     << "TOTAL ="   << totalNs   / 1000000.0 << "ms"
-                     << "(timer interval = 50 ms)";
 
             debugWindow->setScores(
                 detector->getCrop1State1Score(),
@@ -203,6 +227,55 @@ BuffVisionManager::BuffVisionManager(
 
 #endif
 
+
+            // =========================
+            // STATE CHANGE DEBUG
+            // =========================
+
+            if(
+                state1 != VisionState::Unknown
+                &&
+                state1 != lastCrop1State
+                )
+            {
+                qDebug()
+                << "CROP1 STATE CHANGE"
+                << static_cast<int>(
+                       lastCrop1State
+                       )
+                << "->"
+                << static_cast<int>(
+                       state1
+                       )
+                << "| cycle ="
+                << visionCycle
+                << "| t ="
+                << eventTimer.elapsed()
+                << "ms";
+            }
+
+
+            if(
+                state2 != VisionState::Unknown
+                &&
+                state2 != lastCrop2State
+                )
+            {
+                qDebug()
+                << "CROP2 STATE CHANGE"
+                << static_cast<int>(
+                       lastCrop2State
+                       )
+                << "->"
+                << static_cast<int>(
+                       state2
+                       )
+                << "| cycle ="
+                << visionCycle
+                << "| t ="
+                << eventTimer.elapsed()
+                << "ms";
+            }
 
 
             // =========================
@@ -217,11 +290,41 @@ BuffVisionManager::BuffVisionManager(
                     VisionState::State2
                 )
             {
+                crop1EventTime =
+                    eventTimer.elapsed();
+
+                crop1EventCycle =
+                    visionCycle;
+
+
+                qDebug()
+                    << "CROP1 EVENT FIRED"
+                    << "| cycle ="
+                    << crop1EventCycle
+                    << "| t ="
+                    << crop1EventTime
+                    << "ms";
+
+
+                if(crop2EventTime >= 0)
+                {
+                    qDebug()
+                    << ">>> DISTANCE CROP1-CROP2 ="
+                    << qAbs(
+                           crop1EventTime -
+                           crop2EventTime
+                           )
+                    << "ms"
+                    << "| cycles ="
+                    << qAbs(
+                           crop1EventCycle -
+                           crop2EventCycle
+                           );
+                }
+
 
                 core->onCrop1Event();
-
             }
-
 
 
             // =========================
@@ -236,11 +339,41 @@ BuffVisionManager::BuffVisionManager(
                     VisionState::State2
                 )
             {
+                crop2EventTime =
+                    eventTimer.elapsed();
+
+                crop2EventCycle =
+                    visionCycle;
+
+
+                qDebug()
+                    << "CROP2 EVENT FIRED"
+                    << "| cycle ="
+                    << crop2EventCycle
+                    << "| t ="
+                    << crop2EventTime
+                    << "ms";
+
+
+                if(crop1EventTime >= 0)
+                {
+                    qDebug()
+                    << ">>> DISTANCE CROP1-CROP2 ="
+                    << qAbs(
+                           crop1EventTime -
+                           crop2EventTime
+                           )
+                    << "ms"
+                    << "| cycles ="
+                    << qAbs(
+                           crop1EventCycle -
+                           crop2EventCycle
+                           );
+                }
+
 
                 core->onCrop2Event();
-
             }
-
 
 
             // =========================
@@ -252,12 +385,9 @@ BuffVisionManager::BuffVisionManager(
                 VisionState::Unknown
                 )
             {
-
                 lastCrop1State =
                     state1;
-
             }
-
 
 
             if(
@@ -265,10 +395,8 @@ BuffVisionManager::BuffVisionManager(
                 VisionState::Unknown
                 )
             {
-
                 lastCrop2State =
                     state2;
-
             }
 
         }
@@ -318,9 +446,22 @@ BuffVisionManager::BuffVisionManager(
 
 
                 core->startTracking();
+                qDebug() << "TRACKING STARTED";   // <-- aggiungi temporaneamente
 
 
+                visionCycle = 0;
 
+                crop1EventTime = -1;
+                crop2EventTime = -1;
+
+                crop1EventCycle = -1;
+                crop2EventCycle = -1;
+
+                eventTimer.restart();
+
+                qDebug() << "================================";
+                qDebug() << "TRACKING STARTED - EVENT TIMER";
+                qDebug() << "================================";
                 visionTimer.start(
                     50
                     );
@@ -600,17 +741,22 @@ void BuffVisionManager::saveCurrentReference()
 
 
     // =========================
-    // NASCONDI I RETTANGOLI
+    // NASCONDI COMPLETAMENTE
+    // LA FINESTRA DI SETUP
     // =========================
+    //
+    // Nascondere solo i rettangoli disegnati
+    // (setCaptureMode) non basta: il compositor
+    // potrebbe non aver ancora ridisegnato la
+    // finestra come trasparente nel momento
+    // esatto della cattura. hide() garantisce
+    // che la finestra non sia nella cattura.
 
-    captureSetup->setCaptureMode(true);
+    captureSetup->hide();
 
-
-    // Diamo tempo a Qt di ridisegnare
-    // la finestra senza i rettangoli.
 
     QTimer::singleShot(
-        100,
+        150,
         this,
         [this]()
         {
@@ -629,11 +775,6 @@ void BuffVisionManager::saveCurrentReference()
 
 
                 detector->loadReferences();
-
-
-                captureSetup->showFeedback(
-                    "REFERENCE 1 SAVED"
-                    );
 
 
                 referenceMode =
@@ -662,11 +803,6 @@ void BuffVisionManager::saveCurrentReference()
                     detector->referencesLoaded();
 
 
-                captureSetup->showFeedback(
-                    "REFERENCE 2 SAVED"
-                    );
-
-
                 referenceMode =
                     CaptureReferenceMode::None;
 
@@ -674,10 +810,39 @@ void BuffVisionManager::saveCurrentReference()
 
 
             // =========================
-            // RIATTIVA RETTANGOLI
+            // RIMOSTRA LA FINESTRA
             // =========================
 
-            captureSetup->setCaptureMode(false);
+            captureSetup->show();
+
+            captureSetup->raise();
+
+            captureSetup->activateWindow();
+
+            captureSetup->setFocus();
+
+
+            // Feedback dopo aver rimostrato
+            // la finestra, cosi' e' visibile.
+
+            if(
+                referenceMode ==
+                CaptureReferenceMode::Reference2
+                )
+            {
+                captureSetup->showFeedback(
+                    "REFERENCE 1 SAVED"
+                    );
+            }
+            else if(
+                referenceMode ==
+                CaptureReferenceMode::None
+                )
+            {
+                captureSetup->showFeedback(
+                    "REFERENCE 2 SAVED"
+                    );
+            }
 
         }
         );
@@ -686,30 +851,30 @@ void BuffVisionManager::saveCurrentReference()
 BuffVisionManager::~BuffVisionManager()
 {
 
-    delete overlay;
-
-    delete captureSetup;
 
 }
 
 bool BuffVisionManager::hasReferences() const
 {
 
+    QString basePath =
+        QCoreApplication::applicationDirPath() +
+        "/BuffVision";
     return
         QFile::exists(
-            "BuffVision/Crop1_Ref1.png"
+            basePath + "/Crop1_Ref1.png"
             )
         &&
         QFile::exists(
-            "BuffVision/Crop1_Ref2.png"
+            basePath + "/Crop1_Ref2.png"
             )
         &&
         QFile::exists(
-            "BuffVision/Crop2_Ref1.png"
+            basePath + "/Crop2_Ref1.png"
             )
         &&
         QFile::exists(
-            "BuffVision/Crop2_Ref2.png"
+            basePath + "/Crop2_Ref2.png"
             );
 
 }

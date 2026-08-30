@@ -24,33 +24,38 @@ public:
         QObject *parent = nullptr
         );
 
+    ~TranscendenceVisionManager();
+
     void configure();
 
     void setEnabled(
         bool enabled
         );
 
+
 public slots:
 
-    // Chiamato dagli stessi eventi che avviano
-    // il cooldown sull'overlay (ctrlPressed, tasto '6').
     void onCooldownStarted();
 
-    // Chiamato dagli stessi eventi che resettano
-    // il cooldown (resetPressed, transcendenceResetPressed).
     void onCooldownReset();
+
 
 private:
 
     void loadSettings();
+
     void saveSettings();
 
     void loadIcon();
 
-    void startDelay();
-    void stopAll();
+    void registerSearchRegion();
+
+    void unregisterSearchRegion();
 
     void startScanning();
+
+    void stopAll();
+
     void stopScanning();
 
     void scanTick();
@@ -70,19 +75,47 @@ private:
         ) const;
 
 
+private:
+
     GlobalKeyboard *keyboard = nullptr;
+
     OverlayRoot *overlayRoot = nullptr;
+
     Overlay *overlay = nullptr;
 
     TranscendenceCaptureSetup *captureSetup = nullptr;
 
 
+    // =====================================================
+    // SEARCH REGION
+    // =====================================================
+
     QRect m_searchArea;
+
+    int m_searchRegionId = -1;
+
+
+    // =====================================================
+    // TEMPLATE
+    // =====================================================
+
     QImage m_templateIcon;
 
+
+    // =====================================================
+    // TIMERS
+    // =====================================================
+
     QTimer m_delayTimer;
+
     QTimer m_scanTimer;
 
+
+    // =====================================================
+    // STATE
+    // =====================================================
+
     bool m_enabled = false;
+
     bool m_configured = false;
 };
