@@ -238,20 +238,20 @@ BuffVisionManager::BuffVisionManager(
                 state1 != lastCrop1State
                 )
             {
-                qDebug()
-                << "CROP1 STATE CHANGE"
-                << static_cast<int>(
-                       lastCrop1State
-                       )
-                << "->"
-                << static_cast<int>(
-                       state1
-                       )
-                << "| cycle ="
-                << visionCycle
-                << "| t ="
-                << eventTimer.elapsed()
-                << "ms";
+                // qDebug()
+                // << "CROP1 STATE CHANGE"
+                // << static_cast<int>(
+                //        lastCrop1State
+                //        )
+                // << "->"
+                // << static_cast<int>(
+                //        state1
+                //        )
+                // << "| cycle ="
+                // << visionCycle
+                // << "| t ="
+                // << eventTimer.elapsed()
+                // << "ms";
             }
 
 
@@ -261,20 +261,20 @@ BuffVisionManager::BuffVisionManager(
                 state2 != lastCrop2State
                 )
             {
-                qDebug()
-                << "CROP2 STATE CHANGE"
-                << static_cast<int>(
-                       lastCrop2State
-                       )
-                << "->"
-                << static_cast<int>(
-                       state2
-                       )
-                << "| cycle ="
-                << visionCycle
-                << "| t ="
-                << eventTimer.elapsed()
-                << "ms";
+                // qDebug()
+                // << "CROP2 STATE CHANGE"
+                // << static_cast<int>(
+                //        lastCrop2State
+                //        )
+                // << "->"
+                // << static_cast<int>(
+                //        state2
+                //        )
+                // << "| cycle ="
+                // << visionCycle
+                // << "| t ="
+                // << eventTimer.elapsed()
+                // << "ms";
             }
 
 
@@ -297,29 +297,29 @@ BuffVisionManager::BuffVisionManager(
                     visionCycle;
 
 
-                qDebug()
-                    << "CROP1 EVENT FIRED"
-                    << "| cycle ="
-                    << crop1EventCycle
-                    << "| t ="
-                    << crop1EventTime
-                    << "ms";
+                // qDebug()
+                //     << "CROP1 EVENT FIRED"
+                //     << "| cycle ="
+                //     << crop1EventCycle
+                //     << "| t ="
+                //     << crop1EventTime
+                //     << "ms";
 
 
                 if(crop2EventTime >= 0)
                 {
-                    qDebug()
-                    << ">>> DISTANCE CROP1-CROP2 ="
-                    << qAbs(
-                           crop1EventTime -
-                           crop2EventTime
-                           )
-                    << "ms"
-                    << "| cycles ="
-                    << qAbs(
-                           crop1EventCycle -
-                           crop2EventCycle
-                           );
+                    // qDebug()
+                    // << ">>> DISTANCE CROP1-CROP2 ="
+                    // << qAbs(
+                    //        crop1EventTime -
+                    //        crop2EventTime
+                    //        )
+                    // << "ms"
+                    // << "| cycles ="
+                    // << qAbs(
+                    //        crop1EventCycle -
+                    //        crop2EventCycle
+                    //        );
                 }
 
 
@@ -346,29 +346,29 @@ BuffVisionManager::BuffVisionManager(
                     visionCycle;
 
 
-                qDebug()
-                    << "CROP2 EVENT FIRED"
-                    << "| cycle ="
-                    << crop2EventCycle
-                    << "| t ="
-                    << crop2EventTime
-                    << "ms";
+                // qDebug()
+                //     << "CROP2 EVENT FIRED"
+                //     << "| cycle ="
+                //     << crop2EventCycle
+                //     << "| t ="
+                //     << crop2EventTime
+                //     << "ms";
 
 
                 if(crop1EventTime >= 0)
                 {
-                    qDebug()
-                    << ">>> DISTANCE CROP1-CROP2 ="
-                    << qAbs(
-                           crop1EventTime -
-                           crop2EventTime
-                           )
-                    << "ms"
-                    << "| cycles ="
-                    << qAbs(
-                           crop1EventCycle -
-                           crop2EventCycle
-                           );
+                    // qDebug()
+                    // << ">>> DISTANCE CROP1-CROP2 ="
+                    // << qAbs(
+                    //        crop1EventTime -
+                    //        crop2EventTime
+                    //        )
+                    // << "ms"
+                    // << "| cycles ="
+                    // << qAbs(
+                    //        crop1EventCycle -
+                    //        crop2EventCycle
+                    //        );
                 }
 
 
@@ -446,7 +446,7 @@ BuffVisionManager::BuffVisionManager(
 
 
                 core->startTracking();
-                qDebug() << "TRACKING STARTED";   // <-- aggiungi temporaneamente
+               /* qDebug() << "TRACKING STARTED";  */ // <-- aggiungi temporaneamente
 
 
                 visionCycle = 0;
@@ -459,9 +459,9 @@ BuffVisionManager::BuffVisionManager(
 
                 eventTimer.restart();
 
-                qDebug() << "================================";
-                qDebug() << "TRACKING STARTED - EVENT TIMER";
-                qDebug() << "================================";
+                // qDebug() << "================================";
+                // qDebug() << "TRACKING STARTED - EVENT TIMER";
+                // qDebug() << "================================";
                 visionTimer.start(
                     50
                     );

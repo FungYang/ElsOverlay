@@ -111,9 +111,9 @@ bool ScreenCapture::reinit()
             : QRect();
 
 
-    qDebug()
-        << "ScreenCapture: target geometry:"
-        << targetGeometry;
+    // qDebug()
+    //     << "ScreenCapture: target geometry:"
+    //     << targetGeometry;
 
 
     ComPtr<IDXGIFactory1> factory;
@@ -395,10 +395,10 @@ void ScreenCapture::unregisterRegion(
         return;
 
 
-    qDebug()
-        << "ScreenCapture:"
-        << "region unregistered:"
-        << "id =" << regionId;
+    // qDebug()
+    //     << "ScreenCapture:"
+    //     << "region unregistered:"
+    //     << "id =" << regionId;
 
 
     s_regions.remove(

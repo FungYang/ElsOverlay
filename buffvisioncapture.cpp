@@ -84,12 +84,12 @@ bool BuffVisionCapture::loadSettings()
     registerRegions();
 
 
-    qDebug()
-        << "BuffVision settings:"
-        << "crop1 =" << cropRect1
-        << "regionId =" << m_crop1RegionId
-        << "| crop2 =" << cropRect2
-        << "regionId =" << m_crop2RegionId;
+    // qDebug()
+    //     << "BuffVision settings:"
+    //     << "crop1 =" << cropRect1
+    //     << "regionId =" << m_crop1RegionId
+    //     << "| crop2 =" << cropRect2
+    //     << "regionId =" << m_crop2RegionId;
 
 
     return
@@ -179,10 +179,10 @@ bool BuffVisionCapture::beginCapture()
 {
     if(m_frameActive)
     {
-        qDebug()
-        << "BuffVisionCapture:"
-        << "beginCapture chiamato mentre un frame"
-        << "e' gia' attivo";
+        // qDebug()
+        // << "BuffVisionCapture:"
+        // << "beginCapture chiamato mentre un frame"
+        // << "e' gia' attivo";
 
         return true;
     }
@@ -193,9 +193,9 @@ bool BuffVisionCapture::beginCapture()
         m_crop2RegionId < 0
         )
     {
-        qDebug()
-        << "BuffVisionCapture:"
-        << "regioni non valide";
+        // qDebug()
+        // << "BuffVisionCapture:"
+        // << "regioni non valide";
 
         return false;
     }
@@ -222,9 +222,9 @@ QPixmap BuffVisionCapture::captureCrop1()
 {
     if(!m_frameActive)
     {
-        qDebug()
-        << "BuffVisionCapture:"
-        << "captureCrop1 chiamata senza beginCapture()";
+        // qDebug()
+        // << "BuffVisionCapture:"
+        // << "captureCrop1 chiamata senza beginCapture()";
 
         return QPixmap();
     }
@@ -240,11 +240,11 @@ QPixmap BuffVisionCapture::captureCrop1()
             );
 
 
-    qDebug()
-        << "CROP1 CAPTURE:"
-        << "null =" << img.isNull()
-        << "size =" << img.size()
-        << "rect =" << cropRect1;
+    // qDebug()
+    //     << "CROP1 CAPTURE:"
+    //     << "null =" << img.isNull()
+    //     << "size =" << img.size()
+    //     << "rect =" << cropRect1;
 
 
     return QPixmap::fromImage(
@@ -261,9 +261,9 @@ QPixmap BuffVisionCapture::captureCrop2()
 {
     if(!m_frameActive)
     {
-        qDebug()
-        << "BuffVisionCapture:"
-        << "captureCrop2 chiamata senza beginCapture()";
+        // qDebug()
+        // << "BuffVisionCapture:"
+        // << "captureCrop2 chiamata senza beginCapture()";
 
         return QPixmap();
     }
@@ -279,11 +279,11 @@ QPixmap BuffVisionCapture::captureCrop2()
             );
 
 
-    qDebug()
-        << "CROP2 CAPTURE:"
-        << "null =" << img.isNull()
-        << "size =" << img.size()
-        << "rect =" << cropRect2;
+    // qDebug()
+    //     << "CROP2 CAPTURE:"
+    //     << "null =" << img.isNull()
+    //     << "size =" << img.size()
+    //     << "rect =" << cropRect2;
 
 
     return QPixmap::fromImage(
@@ -333,12 +333,12 @@ void BuffVisionCapture::setCropAreas(
     registerRegions();
 
 
-    qDebug()
-        << "BuffVision crop areas updated:"
-        << "crop1 =" << cropRect1
-        << "id =" << m_crop1RegionId
-        << "| crop2 =" << cropRect2
-        << "id =" << m_crop2RegionId;
+    // qDebug()
+    //     << "BuffVision crop areas updated:"
+    //     << "crop1 =" << cropRect1
+    //     << "id =" << m_crop1RegionId
+    //     << "| crop2 =" << cropRect2
+    //     << "id =" << m_crop2RegionId;
 }
 
 
@@ -387,9 +387,9 @@ void BuffVisionCapture::saveReference1()
         img2.isNull()
         )
     {
-        qDebug()
-        << "BuffVision:"
-        << "saveReference1: cattura fallita";
+        // qDebug()
+        // << "BuffVision:"
+        // << "saveReference1: cattura fallita";
 
         return;
     }
@@ -409,9 +409,9 @@ void BuffVisionCapture::saveReference1()
         );
 
 
-    qDebug()
-        << "BuffVision:"
-        << "Reference 1 salvata";
+    // qDebug()
+    //     << "BuffVision:"
+    //     << "Reference 1 salvata";
 }
 
 
@@ -460,9 +460,9 @@ void BuffVisionCapture::saveReference2()
         img2.isNull()
         )
     {
-        qDebug()
-        << "BuffVision:"
-        << "saveReference2: cattura fallita";
+        // qDebug()
+        // << "BuffVision:"
+        // << "saveReference2: cattura fallita";
 
         return;
     }
@@ -482,7 +482,7 @@ void BuffVisionCapture::saveReference2()
         );
 
 
-    qDebug()
-        << "BuffVision:"
-        << "Reference 2 salvata";
+    // qDebug()
+    //     << "BuffVision:"
+    //     << "Reference 2 salvata";
 }

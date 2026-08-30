@@ -244,8 +244,8 @@
     // TRANSCENDENCE VISION
     // ==================================================
 
-    qDebug()
-        << "MAIN: prima TranscendenceVisionManager";
+    // qDebug()
+    //     << "MAIN: prima TranscendenceVisionManager";
 
 
     TranscendenceVisionManager transcendenceVision(
@@ -255,42 +255,42 @@
         );
 
 
-    qDebug()
-        << "MAIN: dopo TranscendenceVisionManager";
+    // qDebug()
+    //     << "MAIN: dopo TranscendenceVisionManager";
 
 
-    qDebug() << "MAIN: prima connect transcendenceConfig";
+    // qDebug() << "MAIN: prima connect transcendenceConfig";
     QObject::connect(
         &mainWindow,
         &MainWindow::transcendenceConfigRequested,
         &transcendenceVision,
         &TranscendenceVisionManager::configure
         );
-    qDebug() << "MAIN: dopo connect transcendenceConfig";
+    // qDebug() << "MAIN: dopo connect transcendenceConfig";
 
-    qDebug() << "MAIN: prima connect transcendenceToggle";
+    // qDebug() << "MAIN: prima connect transcendenceToggle";
     QObject::connect(
         &mainWindow,
         &MainWindow::buffTranscendenceToggled,
         &transcendenceVision,
         &TranscendenceVisionManager::setEnabled
         );
-    qDebug() << "MAIN: dopo connect transcendenceToggle";
+    // qDebug() << "MAIN: dopo connect transcendenceToggle";
 
 
 
 
-    // ==================================================
-    // SKILL OVERLAY
-    // ==================================================
-    qDebug() << "MAIN: prima SkillOverlay";
+    // // ==================================================
+    // // SKILL OVERLAY
+    // // ==================================================
+    // qDebug() << "MAIN: prima SkillOverlay";
 
     SkillOverlay *skills =
         new SkillOverlay(
             &keyboard,
             overlayRoot
             );
-    qDebug() << "MAIN: dopo SkillOverlay";
+    // qDebug() << "MAIN: dopo SkillOverlay";
 
 
     QObject::connect(
@@ -314,13 +314,13 @@
     // ==================================================
     // CLASS BUFF OVERLAY
     // ==================================================
-    qDebug() << "MAIN: prima BuffOverlay";
+    // qDebug() << "MAIN: prima BuffOverlay";
 
     BuffOverlay *buffs =
         new BuffOverlay(
             overlayRoot
             );
-    qDebug() << "MAIN: dopo BuffOverlay";
+    // qDebug() << "MAIN: dopo BuffOverlay";
 
 
     QObject::connect(
