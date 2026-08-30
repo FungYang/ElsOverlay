@@ -17,6 +17,7 @@ public:
     void startCooldown();
     void togglePause();
     void restartCooldown();   // <-- nuovo
+    void setEnabled(bool enabled);
 
 protected:
 
@@ -25,8 +26,10 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
 
 
+
 private:
     bool running = false;
+    bool enabled = true;
     int cooldown = 20;
     bool paused = false;
     QElapsedTimer elapsedTimer;

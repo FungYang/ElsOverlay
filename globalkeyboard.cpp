@@ -3,8 +3,6 @@
 #include <QDebug>
 #include <QSettings>
 #include <QCoreApplication>
-#include <QElapsedTimer>
-
 
 
 HHOOK GlobalKeyboard::hook =
@@ -15,14 +13,21 @@ GlobalKeyboard *GlobalKeyboard::instance =
     nullptr;
 
 
+// =========================================================
+// CONSTRUCTOR
+// =========================================================
+
 GlobalKeyboard::GlobalKeyboard(
     QObject *parent
     )
     : QObject(parent)
 {
-    instance =
-        this;
+    instance = this;
 
+
+    // =====================================================
+    // SETTINGS
+    // =====================================================
 
     QSettings settings(
         QCoreApplication::applicationDirPath() +
@@ -59,17 +64,31 @@ GlobalKeyboard::GlobalKeyboard(
                     ).toBool();
 
 
-    // qDebug()
-    //     << "PAUSA:"
-    //     << "ScanCode =" << Qt::hex << m_pauseScanCode
-    //     << "Extended =" << m_pauseExtended;
+    // =====================================================
+    // QUEUE TIMER
+    // =====================================================
+    //
+    // L'hook NON chiama Qt direttamente.
+    //
+    // Il timer svuota la coda dal normale thread Qt.
+    // =====================================================
+
+    m_queueTimer.setInterval(1);
+
+    connect(
+        &m_queueTimer,
+        &QTimer::timeout,
+        this,
+        &GlobalKeyboard::processPendingEvents
+        );
 
 
-    // qDebug()
-    //     << "RESET:"
-    //     << "ScanCode =" << Qt::hex << m_resetScanCode
-    //     << "Extended =" << m_resetExtended;
+    m_queueTimer.start();
 
+
+    // =====================================================
+    // GLOBAL LOW LEVEL KEYBOARD HOOK
+    // =====================================================
 
     hook =
         SetWindowsHookEx(
@@ -78,26 +97,73 @@ GlobalKeyboard::GlobalKeyboard(
             GetModuleHandle(nullptr),
             0
             );
+
+
+    if(!hook)
+    {
+        qDebug()
+        << "GlobalKeyboard:"
+        << "SetWindowsHookEx FAILED:"
+        << GetLastError();
+    }
+    else
+    {
+        qDebug()
+        << "GlobalKeyboard:"
+        << "keyboard hook attivo";
+    }
 }
 
 
+// =========================================================
+// DESTRUCTOR
+// =========================================================
+
 GlobalKeyboard::~GlobalKeyboard()
 {
+    // Prima fermiamo il timer Qt.
+
+    m_queueTimer.stop();
+
+
+    // Poi rimuoviamo l'hook Windows.
+
     if(hook)
     {
         UnhookWindowsHookEx(
             hook
             );
 
-        hook =
-            nullptr;
+        hook = nullptr;
     }
 
 
-    instance =
-        nullptr;
+    instance = nullptr;
 }
 
+
+// =========================================================
+// WINDOWS KEYBOARD HOOK
+// =========================================================
+//
+// IMPORTANTISSIMO:
+//
+// Qui NON facciamo:
+// - QMetaObject::invokeMethod
+// - emit
+// - qDebug
+// - QSettings
+// - elaborazioni
+// - accesso allo stato Qt
+//
+// Facciamo solamente:
+//
+// 1. leggiamo i dati del tasto
+// 2. inseriamo l'evento nella ring buffer
+// 3. CallNextHookEx IMMEDIATO
+//
+// Questo riduce al minimo il tempo trascorso nell'hook.
+// =========================================================
 
 LRESULT CALLBACK GlobalKeyboard::keyboardProc(
     int nCode,
@@ -105,23 +171,6 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
     LPARAM lParam
     )
 {
-    static QElapsedTimer timer;
-    static bool timerStarted = false;
-
-    static qint64 previousEntryNs = -1;
-    static quint64 eventCounter = 0;
-
-    if(!timerStarted)
-    {
-        timer.start();
-        timerStarted = true;
-    }
-
-    // ---------------------------------------------------------
-    // L'evento non è valido per noi:
-    // passiamo immediatamente al prossimo hook.
-    // ---------------------------------------------------------
-
     if(nCode != HC_ACTION)
     {
         return CallNextHookEx(
@@ -132,29 +181,27 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
             );
     }
 
-    // ---------------------------------------------------------
-    // INGRESSO REALE NELL'HOOK
-    // ---------------------------------------------------------
 
-    const qint64 entryNs =
-        timer.nsecsElapsed();
+    GlobalKeyboard *kb =
+        instance;
 
-    ++eventCounter;
 
-    // Intervallo dall'evento precedente entrato nell'hook.
-    const qint64 intervalNs =
-        previousEntryNs >= 0
-            ? entryNs - previousEntryNs
-            : 0;
+    if(!kb)
+    {
+        return CallNextHookEx(
+            hook,
+            nCode,
+            wParam,
+            lParam
+            );
+    }
 
-    previousEntryNs = entryNs;
-
-    // ---------------------------------------------------------
-    // DATI TASTO
-    // ---------------------------------------------------------
 
     const KBDLLHOOKSTRUCT *key =
-        reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
+        reinterpret_cast<const KBDLLHOOKSTRUCT *>(
+            lParam
+            );
+
 
     if(!key)
     {
@@ -166,199 +213,348 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
             );
     }
 
-    const int vkCode =
-        static_cast<int>(key->vkCode);
 
-    const int scanCode =
-        static_cast<int>(key->scanCode);
+    const bool isKeyDown =
+        wParam == WM_KEYDOWN ||
+        wParam == WM_SYSKEYDOWN;
 
-    const bool extended =
-        (key->flags & LLKHF_EXTENDED) != 0;
 
-    // ---------------------------------------------------------
-    // PROCESSING DELL'HOOK
-    // ---------------------------------------------------------
+    const bool isKeyUp =
+        wParam == WM_KEYUP ||
+        wParam == WM_SYSKEYUP;
 
-    if(wParam == WM_KEYDOWN)
+
+    if(isKeyDown || isKeyUp)
     {
-        // =====================================================
-        // PAUSA
-        // =====================================================
+        KeyEvent event;
 
-        if(scanCode == instance->m_pauseScanCode &&
-            extended == instance->m_pauseExtended)
-        {
-            instance->paused =
-                !instance->paused;
-
-            emit instance->pauseChanged(
-                instance->paused
+        event.vkCode =
+            static_cast<int>(
+                key->vkCode
                 );
 
-            goto call_next;
-        }
+        event.scanCode =
+            static_cast<int>(
+                key->scanCode
+                );
 
-        // =====================================================
-        // ENTER
-        // =====================================================
+        event.extended =
+            (key->flags & LLKHF_EXTENDED) != 0;
 
-        if(scanCode == 0x1C &&
-            !extended)
-        {
-            if(instance->paused)
-            {
-                instance->paused = false;
+        event.keyDown =
+            isKeyDown;
 
-                emit instance->pauseChanged(
-                    false
-                    );
-            }
-            else
-            {
-                emit instance->confirmPressed();
-            }
 
-            goto call_next;
-        }
+        // =================================================
+        // INSERIMENTO RAPIDO NELLA CODA
+        // =================================================
+        //
+        // Se la coda fosse piena, non blocchiamo Windows.
+        // CallNextHookEx viene comunque eseguito.
+        // =================================================
 
-        // =====================================================
-        // PAUSA ATTIVA
-        // =====================================================
-
-        if(instance->paused)
-        {
-            goto call_next;
-        }
-
-        // =====================================================
-        // TASTO 7
-        // =====================================================
-
-        if(vkCode == '7')
-        {
-            emit instance->transcendenceResetPressed();
-        }
-
-        // =====================================================
-        // TASTO GENERICO
-        // =====================================================
-
-        emit instance->keyPressed(
-            vkCode
-            );
-
-        // =====================================================
-        // CTRL SINISTRO
-        // =====================================================
-
-        if(scanCode == 0x1D &&
-            !extended)
-        {
-            emit instance->ctrlPressed();
-        }
-
-        // =====================================================
-        // RESET GLOBALE
-        // =====================================================
-
-        if(scanCode == instance->m_resetScanCode &&
-            extended == instance->m_resetExtended)
-        {
-            emit instance->resetPressed();
-        }
-    }
-
-    // ---------------------------------------------------------
-    // KEY UP
-    // ---------------------------------------------------------
-
-    else if(wParam == WM_KEYUP)
-    {
-        if(instance->paused)
-        {
-            goto call_next;
-        }
-
-        emit instance->keyReleased(
-            vkCode
+        kb->enqueueEvent(
+            event
             );
     }
 
-    // ---------------------------------------------------------
-    // CALL NEXT HOOK
-    // ---------------------------------------------------------
 
-call_next:
-
-    const qint64 beforeCallNextNs =
-        timer.nsecsElapsed();
-
-    const LRESULT result =
-        CallNextHookEx(
-            hook,
-            nCode,
-            wParam,
-            lParam
-            );
-
-    const qint64 afterCallNextNs =
-        timer.nsecsElapsed();
-
-    // ---------------------------------------------------------
-    // MISURAZIONI
-    // ---------------------------------------------------------
-
-    const qint64 processingNs =
-        beforeCallNextNs - entryNs;
-
-    const qint64 callNextNs =
-        afterCallNextNs - beforeCallNextNs;
-
-    const qint64 totalNs =
-        afterCallNextNs - entryNs;
-
-    // ---------------------------------------------------------
-    // LOG
+    // =====================================================
+    // FONDAMENTALE
+    // =====================================================
     //
-    // PROCESS  = tempo impiegato dal nostro codice
-    // CALLNEXT = tempo passato dentro CallNextHookEx
-    // TOTAL    = ingresso hook -> ritorno da CallNextHookEx
-    //
-    // ---------------------------------------------------------
+    // Il gioco riceve SEMPRE il normale evento Windows.
+    // =====================================================
 
-    // qDebug()
-    //     << "HOOK:"
-    //     << "#"
-    //     << eventCounter
-    //     << "VK ="
-    //     << QString("0x%1").arg(vkCode, 2, 16, QChar('0')).toUpper()
-    //     << "SCAN ="
-    //     << QString("0x%1").arg(scanCode, 2, 16, QChar('0')).toUpper()
-    //     << "EXT ="
-    //     << extended
-    //     << "MSG ="
-    //     << QString("0x%1").arg(
-    //                           static_cast<quint64>(wParam),
-    //                           2,
-    //                           16,
-    //                           QChar('0')
-    //                           ).toUpper()
-    //     << "INTERVAL ="
-    //     << intervalNs / 1000000.0
-    //     << "ms"
-    //     << "PROCESS ="
-    //     << processingNs / 1000000.0
-    //     << "ms"
-    //     << "CALLNEXT ="
-    //     << callNextNs / 1000000.0
-    //     << "ms"
-    //     << "TOTAL ="
-    //     << totalNs / 1000000.0
-    //     << "ms";
-
-    return result;
+    return CallNextHookEx(
+        hook,
+        nCode,
+        wParam,
+        lParam
+        );
 }
 
+
+// =========================================================
+// ENQUEUE
+// =========================================================
+//
+// Producer:
+//     Windows keyboard hook
+//
+// Consumer:
+//     Qt timer
+//
+// Single producer / single consumer.
+// =========================================================
+
+bool GlobalKeyboard::enqueueEvent(
+    const KeyEvent &event
+    )
+{
+    const uint32_t write =
+        m_writeIndex.load(
+            std::memory_order_relaxed
+            );
+
+
+    const uint32_t next =
+        (write + 1) % QUEUE_SIZE;
+
+
+    const uint32_t read =
+        m_readIndex.load(
+            std::memory_order_acquire
+            );
+
+
+    // =====================================================
+    // CODA PIENA
+    // =====================================================
+
+    if(next == read)
+    {
+        // Non aspettiamo.
+        //
+        // Non blocchiamo mai il gioco.
+        //
+        // In condizioni normali con 8192 elementi
+        // questo non dovrebbe praticamente mai accadere.
+
+        return false;
+    }
+
+
+    m_queue[write] =
+        event;
+
+
+    m_writeIndex.store(
+        next,
+        std::memory_order_release
+        );
+
+
+    return true;
+}
+
+
+// =========================================================
+// DEQUEUE
+// =========================================================
+
+bool GlobalKeyboard::dequeueEvent(
+    KeyEvent &event
+    )
+{
+    const uint32_t read =
+        m_readIndex.load(
+            std::memory_order_relaxed
+            );
+
+
+    const uint32_t write =
+        m_writeIndex.load(
+            std::memory_order_acquire
+            );
+
+
+    if(read == write)
+        return false;
+
+
+    event =
+        m_queue[read];
+
+
+    const uint32_t next =
+        (read + 1) % QUEUE_SIZE;
+
+
+    m_readIndex.store(
+        next,
+        std::memory_order_release
+        );
+
+
+    return true;
+}
+
+
+// =========================================================
+// PROCESS PENDING EVENTS
+// =========================================================
+//
+// Questa funzione gira nel normale thread Qt.
+//
+// Qui possiamo usare tranquillamente:
+// - emit
+// - stato paused
+// - configurazione tasti
+// - altri oggetti Qt
+// =========================================================
+
+void GlobalKeyboard::processPendingEvents()
+{
+    KeyEvent event;
+
+
+    // Svuota completamente la coda disponibile.
+
+    while(dequeueEvent(event))
+    {
+        if(event.keyDown)
+        {
+            processKeyDown(
+                event
+                );
+        }
+        else
+        {
+            processKeyUp(
+                event
+                );
+        }
+    }
+}
+
+
+// =========================================================
+// KEY DOWN
+// =========================================================
+
+void GlobalKeyboard::processKeyDown(
+    const KeyEvent &event
+    )
+{
+    const int vkCode =
+        event.vkCode;
+
+
+    const int scanCode =
+        event.scanCode;
+
+
+    const bool extended =
+        event.extended;
+
+
+    // =====================================================
+    // PAUSA
+    // =====================================================
+
+    if(scanCode == m_pauseScanCode &&
+        extended == m_pauseExtended)
+    {
+        paused =
+            !paused;
+
+
+        emit pauseChanged(
+            paused
+            );
+
+
+        return;
+    }
+
+
+    // =====================================================
+    // ENTER
+    // =====================================================
+
+    if(scanCode == 0x1C &&
+        !extended)
+    {
+        if(paused)
+        {
+            paused = false;
+
+            emit pauseChanged(
+                false
+                );
+        }
+        else
+        {
+            emit confirmPressed();
+        }
+
+
+        return;
+    }
+
+
+    // =====================================================
+    // PAUSA ATTIVA
+    // =====================================================
+
+    if(paused)
+        return;
+
+
+    // =====================================================
+    // TASTO 7
+    // =====================================================
+
+    if(vkCode == '7')
+    {
+        emit transcendenceResetPressed();
+    }
+
+
+    // =====================================================
+    // TASTO GENERICO
+    // =====================================================
+
+    emit keyPressed(
+        vkCode
+        );
+
+
+    // =====================================================
+    // CTRL SINISTRO
+    // =====================================================
+
+    if(scanCode == 0x1D &&
+        !extended)
+    {
+        emit ctrlPressed();
+    }
+
+
+    // =====================================================
+    // RESET GLOBALE
+    // =====================================================
+
+    if(scanCode == m_resetScanCode &&
+        extended == m_resetExtended)
+    {
+        emit resetPressed();
+    }
+}
+
+
+// =========================================================
+// KEY UP
+// =========================================================
+
+void GlobalKeyboard::processKeyUp(
+    const KeyEvent &event
+    )
+{
+    if(paused)
+        return;
+
+
+    emit keyReleased(
+        event.vkCode
+        );
+}
+
+
+// =========================================================
+// PAUSE KEY
+// =========================================================
 
 void GlobalKeyboard::setPauseKey(
     int scanCode,
@@ -370,14 +566,12 @@ void GlobalKeyboard::setPauseKey(
 
     m_pauseExtended =
         extended;
-
-
-    // qDebug()
-    //     << "PAUSE KEY CAMBIATO:"
-    //     << "ScanCode =" << Qt::hex << scanCode
-    //     << "Extended =" << extended;
 }
 
+
+// =========================================================
+// RESET KEY
+// =========================================================
 
 void GlobalKeyboard::setResetKey(
     int scanCode,
@@ -389,10 +583,4 @@ void GlobalKeyboard::setResetKey(
 
     m_resetExtended =
         extended;
-
-
-    // qDebug()
-    //     << "RESET KEY CAMBIATO:"
-    //     << "ScanCode =" << Qt::hex << scanCode
-    //     << "Extended =" << extended;
 }

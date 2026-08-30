@@ -92,77 +92,78 @@ TranscendenceVisionManager::TranscendenceVisionManager(
             this,
             [this]()
             {
-                if (!captureSetup)
+                if(!captureSetup)
                     return;
 
-                if (!captureSetup->isVisible())
+                if(!captureSetup->isVisible())
                     return;
 
-                // =========================================
+                // =================================================
                 // SALVA NUOVA AREA
-                // =========================================
-                m_searchArea = captureSetup->searchArea();
+                // =================================================
+
+                const QRect newArea =
+                    captureSetup->searchArea();
+
+                if(newArea.isNull() || newArea.isEmpty())
+                    return;
+
+                m_searchArea = newArea;
+
                 saveSettings();
 
-                // =========================================
-                // AGGIORNA REGION ID
-                // =========================================
-                // =========================================
-                // AGGIORNA REGIONE DI RICERCA
-                // =========================================
 
-                if (m_searchArea.isValid() && !m_searchArea.isEmpty())
+                // =================================================
+                // RICREA LA REGIONE
+                // =================================================
+
+                if(m_searchRegionId >= 0)
                 {
-                    if (m_searchRegionId >= 0 &&
-                        ScreenCapture::isRegionRegistered(m_searchRegionId))
-                    {
-                        // Manteniamo lo stesso ID e cambiamo
-                        // direttamente il rettangolo.
-                        if (!ScreenCapture::updateRegion(
-                                m_searchRegionId,
-                                m_searchArea))
-                        {
-                            qDebug()
-                            << "TRANSCENDENCE:"
-                            << "updateRegion fallito, registro nuova regione";
+                    ScreenCapture::unregisterRegion(
+                        m_searchRegionId
+                        );
 
-                            m_searchRegionId =
-                                ScreenCapture::registerRegion(
-                                    m_searchArea);
-                        }
-                    }
-                    else
-                    {
-                        m_searchRegionId =
-                            ScreenCapture::registerRegion(
-                                m_searchArea);
-                    }
-                }
-                else
-                {
-                    if (m_searchRegionId >= 0)
-                    {
-                        ScreenCapture::unregisterRegion(
-                            m_searchRegionId);
-
-                        m_searchRegionId = -1;
-                    }
+                    m_searchRegionId = -1;
                 }
 
-                // =========================================
+
+                m_searchRegionId =
+                    ScreenCapture::registerRegion(
+                        m_searchArea
+                        );
+
+
+                // =================================================
                 // RICARICA CONFIGURAZIONE
-                // =========================================
+                // =================================================
+
                 loadIcon();
 
-                // =========================================
+
+                // =================================================
+                // DEBUG
+                // =================================================
+
+                qDebug()
+                    << "TRANSCENDENCE:"
+                    << "search area aggiornata:"
+                    << m_searchArea
+                    << "regionId ="
+                    << m_searchRegionId;
+
+
+                // =================================================
                 // CHIUDI SETUP
-                // =========================================
+                // =================================================
+
                 captureSetup->hide();
 
-                // =========================================
-                // RIPORTA GLI OVERLAY IN PRIMO PIANO
-                // =========================================
-                if (this->overlayRoot)
+
+                // =================================================
+                // RIPORTA OVERLAY IN PRIMO PIANO
+                // =================================================
+
+                if(this->overlayRoot)
                 {
                     this->overlayRoot->raiseAll();
                 }
@@ -377,14 +378,21 @@ void TranscendenceVisionManager::setEnabled(bool enabled)
 {
     m_enabled = enabled;
 
-    if (!enabled)
+    if(!enabled)
     {
         stopAll();
 
-        if (overlay)
-            overlay->resetCooldown();
+        if(overlay)
+        {
+            overlay->setEnabled(false);
+        }
 
         return;
+    }
+
+    if(overlay)
+    {
+        overlay->setEnabled(true);
     }
 }
 

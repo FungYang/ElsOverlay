@@ -257,6 +257,9 @@ void Overlay::resetCooldown()
 
 void Overlay::startCooldown()
 {
+    if(!enabled)
+        return;
+
     if(running)
         return;
 
@@ -277,56 +280,40 @@ void Overlay::startCooldown()
 
 void Overlay::togglePause()
 {
+    if(!enabled)
+        return;
 
     if(!running)
         return;
 
-
-
-    // =========================
-    // METTI IN PAUSA
-    // =========================
-
     if(!paused)
     {
-
         pausedElapsed +=
             elapsedTimer.elapsed();
 
         elapsedTimer.invalidate();
 
         paused = true;
-
     }
-
-
-
-    // =========================
-    // RIPRENDI
-    // =========================
-
     else
     {
-
         elapsedTimer.restart();
 
         paused = false;
-
     }
 
-
-
     update();
-
 }
 void Overlay::restartCooldown()
 {
+    if(!enabled)
+        return;
+
     if(!running)
         return;
 
     if(paused)
         return;
-
 
     cooldown = 20;
 
@@ -334,6 +321,40 @@ void Overlay::restartCooldown()
 
     elapsedTimer.restart();
 
+    update();
+}
+
+void Overlay::setEnabled(bool value)
+{
+    enabled = value;
+
+    if(!enabled)
+    {
+        running = false;
+        paused = false;
+
+        cooldown = 0;
+
+        pausedElapsed = 0;
+
+        elapsedTimer.invalidate();
+
+        update();
+
+        return;
+    }
+
+    // Quando viene riattivato NON parte automaticamente.
+    // Rimane semplicemente pronto per una nuova attivazione.
+
+    running = false;
+    paused = false;
+
+    cooldown = 0;
+
+    pausedElapsed = 0;
+
+    elapsedTimer.invalidate();
 
     update();
 }
