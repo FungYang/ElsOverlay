@@ -1076,3 +1076,51 @@ QImage ScreenCapture::captureRegionReliable(
             QImage::Format_ARGB32
             );
 }
+
+// =========================================================
+// REGION UPDATE
+// =========================================================
+
+bool ScreenCapture::updateRegion(
+    int regionId,
+    const QRect &rect
+    )
+{
+    if (rect.isNull() || rect.isEmpty())
+    {
+        qDebug()
+        << "ScreenCapture:"
+        << "tentativo di aggiornare con rect invalido:"
+        << rect;
+
+        return false;
+    }
+
+    if (!s_regions.contains(regionId))
+    {
+        qDebug()
+        << "ScreenCapture:"
+        << "updateRegion: ID non registrato:"
+        << regionId;
+
+        return false;
+    }
+
+    const QRect oldRect =
+        s_regions.value(regionId);
+
+    s_regions[regionId] = rect;
+
+    // La cache appartiene alla vecchia posizione.
+    // Va quindi eliminata.
+    s_regionCache.remove(regionId);
+
+    qDebug()
+        << "ScreenCapture:"
+        << "region updated:"
+        << "id =" << regionId
+        << "old =" << oldRect
+        << "new =" << rect;
+
+    return true;
+}

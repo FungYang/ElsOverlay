@@ -33,7 +33,7 @@ TranscendenceVisionManager::TranscendenceVisionManager(
     // =====================================================
     loadSettings();
     loadIcon();
-    qDebug() << "TRANSCENDENCE: constructor - after loadIcon";
+    // qDebug() << "TRANSCENDENCE: constructor - after loadIcon";
 
     // =====================================================
     // DELAY TIMER
@@ -47,7 +47,7 @@ TranscendenceVisionManager::TranscendenceVisionManager(
         this,
         &TranscendenceVisionManager::startScanning
         );
-    qDebug() << "TRANSCENDENCE: constructor - before delay timer";
+    // qDebug() << "TRANSCENDENCE: constructor - before delay timer";
 
     // =====================================================
     // SCAN TIMER
@@ -107,15 +107,46 @@ TranscendenceVisionManager::TranscendenceVisionManager(
                 // =========================================
                 // AGGIORNA REGION ID
                 // =========================================
-                if (m_searchRegionId >= 0)
-                {
-                    ScreenCapture::unregisterRegion(m_searchRegionId);
-                    m_searchRegionId = -1;
-                }
+                // =========================================
+                // AGGIORNA REGIONE DI RICERCA
+                // =========================================
 
                 if (m_searchArea.isValid() && !m_searchArea.isEmpty())
                 {
-                    m_searchRegionId = ScreenCapture::registerRegion(m_searchArea);
+                    if (m_searchRegionId >= 0 &&
+                        ScreenCapture::isRegionRegistered(m_searchRegionId))
+                    {
+                        // Manteniamo lo stesso ID e cambiamo
+                        // direttamente il rettangolo.
+                        if (!ScreenCapture::updateRegion(
+                                m_searchRegionId,
+                                m_searchArea))
+                        {
+                            qDebug()
+                            << "TRANSCENDENCE:"
+                            << "updateRegion fallito, registro nuova regione";
+
+                            m_searchRegionId =
+                                ScreenCapture::registerRegion(
+                                    m_searchArea);
+                        }
+                    }
+                    else
+                    {
+                        m_searchRegionId =
+                            ScreenCapture::registerRegion(
+                                m_searchArea);
+                    }
+                }
+                else
+                {
+                    if (m_searchRegionId >= 0)
+                    {
+                        ScreenCapture::unregisterRegion(
+                            m_searchRegionId);
+
+                        m_searchRegionId = -1;
+                    }
                 }
 
                 // =========================================
@@ -137,7 +168,7 @@ TranscendenceVisionManager::TranscendenceVisionManager(
                 }
             }
             );
-        qDebug() << "TRANSCENDENCE: constructor COMPLETE";
+        // qDebug() << "TRANSCENDENCE: constructor COMPLETE";
     }
 }
 // =========================================================
@@ -191,9 +222,9 @@ void TranscendenceVisionManager::loadSettings()
         m_searchRegionId = ScreenCapture::registerRegion(m_searchArea);
     }
 
-    qDebug() << "TRANSCENDENCE SETTINGS:"
-             << "area =" << m_searchArea
-             << "regionId =" << m_searchRegionId;
+    // qDebug() << "TRANSCENDENCE SETTINGS:"
+    //          << "area =" << m_searchArea
+    //          << "regionId =" << m_searchRegionId;
 }
 
 void TranscendenceVisionManager::saveSettings()
@@ -238,10 +269,10 @@ void TranscendenceVisionManager::loadIcon()
         !m_searchArea.isEmpty() &&
         m_searchRegionId >= 0;
 
-    qDebug() << "TRANSCENDENCE CONFIGURED:" << m_configured
-             << "icon =" << m_templateIcon.size()
-             << "area =" << m_searchArea
-             << "regionId =" << m_searchRegionId;
+    // qDebug() << "TRANSCENDENCE CONFIGURED:" << m_configured
+    //          << "icon =" << m_templateIcon.size()
+    //          << "area =" << m_searchArea
+    //          << "regionId =" << m_searchRegionId;
 }
 
 // =========================================================
@@ -349,6 +380,11 @@ void TranscendenceVisionManager::setEnabled(bool enabled)
     if (!enabled)
     {
         stopAll();
+
+        if (overlay)
+            overlay->resetCooldown();
+
+        return;
     }
 }
 
@@ -455,17 +491,17 @@ void TranscendenceVisionManager::scanTick()
 
     const bool found = findIcon(area, foundRect, score);
 
-    qDebug() << "TRANSCENDENCE SCAN:"
-             << "area =" << area.size()
-             << "score =" << score
-             << "found =" << found;
+    // qDebug() << "TRANSCENDENCE SCAN:"
+    //          << "area =" << area.size()
+    //          << "score =" << score
+    //          << "found =" << found;
 
     if (!found)
         return;
 
-    qDebug() << "TRANSCENDENCE MATCH FOUND:"
-             << "rect =" << foundRect
-             << "score =" << score;
+    // qDebug() << "TRANSCENDENCE MATCH FOUND:"
+    //          << "rect =" << foundRect
+    //          << "score =" << score;
 
     stopScanning();
 
@@ -474,7 +510,7 @@ void TranscendenceVisionManager::scanTick()
         overlay->restartCooldown();
     }
 
-    qDebug() << "TRANSCENDENCE: cooldown riavviato";
+    // qDebug() << "TRANSCENDENCE: cooldown riavviato";
 
     m_delayTimer.stop();
     m_delayTimer.start();

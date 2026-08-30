@@ -54,6 +54,10 @@ public:
     static QRect regionRect(
         int regionId
         );
+    static bool updateRegion(
+        int regionId,
+        const QRect &rect
+        );
 
 
     // =====================================================
