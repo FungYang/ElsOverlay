@@ -481,6 +481,13 @@ MainWindow::MainWindow(
             );
 
 
+    buffTitlesConfigButton =
+        new QPushButton(
+            "Configura",
+            buffTitlesGroup
+            );
+
+
     buffTitlesToggleButton =
         new QPushButton(
             "OFF",
@@ -493,7 +500,13 @@ MainWindow::MainWindow(
         );
 
 
+    buffTitlesLayout->addWidget(
+        buffTitlesConfigButton
+        );
+
+
     buffTitlesLayout->addStretch();
+
 
     buffTitlesLayout->addWidget(
         buffTitlesToggleButton
@@ -731,6 +744,13 @@ MainWindow::MainWindow(
     // ========================================================
     // BUFF TITLES
     // ========================================================
+
+    connect(
+        buffTitlesConfigButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::buffTitlesConfigRequested
+        );
 
     connect(
         buffTitlesToggleButton,

@@ -1,18 +1,14 @@
 #include "transcendencecapturesetup.h"
 #include "transcendencevisionconfig.h"
+#include "overlayroot.h"
 
 #include <QPainter>
 #include <QMouseEvent>
 #include <QGuiApplication>
 #include <QScreen>
 
-
-TranscendenceCaptureSetup::TranscendenceCaptureSetup(
-    OverlayRoot *parent
-    )
-    : QWidget(
-          reinterpret_cast<QWidget *>(parent)
-          )
+TranscendenceCaptureSetup::TranscendenceCaptureSetup(OverlayRoot *parent)
+    : QWidget(reinterpret_cast<QWidget *>(parent))
 {
     setWindowFlags(
         Qt::Tool |
@@ -20,179 +16,139 @@ TranscendenceCaptureSetup::TranscendenceCaptureSetup(
         Qt::WindowStaysOnTopHint
         );
 
-    setAttribute(
-        Qt::WA_TranslucentBackground
-        );
+    setAttribute(Qt::WA_TranslucentBackground);
+    setMouseTracking(true);
 
-    setMouseTracking(
-        true
-        );
-
-
-    QScreen *screen =
-        QGuiApplication::primaryScreen();
+    QScreen *screen = QGuiApplication::primaryScreen();
 
     QRect screenGeometry =
         screen
             ? screen->geometry()
             : QRect(0, 0, 1920, 1080);
 
-    setGeometry(
-        screenGeometry
-        );
+    setGeometry(screenGeometry);
 
-
-    m_searchArea =
-        QRect(
-            700,
-            600,
-            300,
-            150
-            );
+    m_searchArea = QRect(700, 600, 300, 150);
 
     m_iconRect =
         QRect(
             m_searchArea.center().x() -
-                TranscendenceVisionConfig::ICON_WIDTH / 2,
+                TranscendenceVisionConfig::ICON_BOX_WIDTH / 2,
             m_searchArea.center().y() -
-                TranscendenceVisionConfig::ICON_HEIGHT / 2,
-            TranscendenceVisionConfig::ICON_WIDTH,
-            TranscendenceVisionConfig::ICON_HEIGHT
+                TranscendenceVisionConfig::ICON_BOX_HEIGHT / 2,
+            TranscendenceVisionConfig::ICON_BOX_WIDTH,
+            TranscendenceVisionConfig::ICON_BOX_HEIGHT
             );
 }
-
 
 QRect TranscendenceCaptureSetup::searchArea() const
 {
     return m_searchArea;
 }
 
-
 QRect TranscendenceCaptureSetup::iconRect() const
 {
     return m_iconRect;
 }
 
-
-void TranscendenceCaptureSetup::setSearchArea(
-    const QRect &area
-    )
+void TranscendenceCaptureSetup::setSearchArea(const QRect &area)
 {
     m_searchArea = area;
 
-    update();
-}
-
-
-void TranscendenceCaptureSetup::setIconRect(
-    const QRect &rect
-    )
-{
-    m_iconRect = rect;
-
-    update();
-}
-
-
-void TranscendenceCaptureSetup::setCaptureMode(
-    bool capturing
-    )
-{
-    m_hideRectangles = capturing;
-
-    update();
-}
-
-
-void TranscendenceCaptureSetup::showFeedback(
-    const QString &text
-    )
-{
-    m_feedback = text;
-
-    update();
-}
-
-
-// =========================================================
-// HIT TEST
-// =========================================================
-
-TranscendenceCaptureSetup::Handle
-TranscendenceCaptureSetup::hitTest(
-    const QPoint &pos
-    ) const
-{
-    if(m_iconRect.contains(pos))
+    // Mantieni il riquadro giallo centrato se non è ancora stato
+    // spostato dall'utente.
+    if (m_iconRect.isNull())
     {
-        return Handle::MoveIcon;
+        m_iconRect =
+            QRect(
+                m_searchArea.center().x() -
+                    TranscendenceVisionConfig::ICON_BOX_WIDTH / 2,
+                m_searchArea.center().y() -
+                    TranscendenceVisionConfig::ICON_BOX_HEIGHT / 2,
+                TranscendenceVisionConfig::ICON_BOX_WIDTH,
+                TranscendenceVisionConfig::ICON_BOX_HEIGHT
+                );
     }
 
+    update();
+}
 
-    const QRect &r =
-        m_searchArea;
+void TranscendenceCaptureSetup::setIconRect(const QRect &rect)
+{
+    m_iconRect = rect;
+    update();
+}
 
-    const int h =
-        HANDLE_SIZE;
+void TranscendenceCaptureSetup::setCaptureMode(bool capturing)
+{
+    m_hideRectangles = capturing;
+    update();
+}
 
+void TranscendenceCaptureSetup::showFeedback(const QString &text)
+{
+    m_feedback = text;
+    update();
+}
 
-    QRect topLeft(
-        r.left() - h/2, r.top() - h/2, h, h
-        );
+TranscendenceCaptureSetup::Handle
+TranscendenceCaptureSetup::hitTest(const QPoint &pos) const
+{
+    if (m_iconRect.contains(pos))
+        return Handle::MoveIcon;
 
-    QRect topRight(
-        r.right() - h/2, r.top() - h/2, h, h
-        );
+    const QRect &r = m_searchArea;
+    const int h = HANDLE_SIZE;
 
-    QRect bottomLeft(
-        r.left() - h/2, r.bottom() - h/2, h, h
-        );
-
-    QRect bottomRight(
-        r.right() - h/2, r.bottom() - h/2, h, h
-        );
+    QRect topLeft(r.left() - h/2, r.top() - h/2, h, h);
+    QRect topRight(r.right() - h/2, r.top() - h/2, h, h);
+    QRect bottomLeft(r.left() - h/2, r.bottom() - h/2, h, h);
+    QRect bottomRight(r.right() - h/2, r.bottom() - h/2, h, h);
 
     QRect top(
-        r.left() + h, r.top() - h/2,
-        r.width() - 2*h, h
+        r.left() + h,
+        r.top() - h/2,
+        r.width() - 2*h,
+        h
         );
 
     QRect bottom(
-        r.left() + h, r.bottom() - h/2,
-        r.width() - 2*h, h
+        r.left() + h,
+        r.bottom() - h/2,
+        r.width() - 2*h,
+        h
         );
 
     QRect left(
-        r.left() - h/2, r.top() + h,
-        h, r.height() - 2*h
+        r.left() - h/2,
+        r.top() + h,
+        h,
+        r.height() - 2*h
         );
 
     QRect right(
-        r.right() - h/2, r.top() + h,
-        h, r.height() - 2*h
+        r.right() - h/2,
+        r.top() + h,
+        h,
+        r.height() - 2*h
         );
 
-
-    if(topLeft.contains(pos))     return Handle::TopLeft;
-    if(topRight.contains(pos))    return Handle::TopRight;
-    if(bottomLeft.contains(pos))  return Handle::BottomLeft;
-    if(bottomRight.contains(pos)) return Handle::BottomRight;
-    if(top.contains(pos))         return Handle::Top;
-    if(bottom.contains(pos))      return Handle::Bottom;
-    if(left.contains(pos))        return Handle::Left;
-    if(right.contains(pos))       return Handle::Right;
-
-    if(r.contains(pos))           return Handle::Move;
+    if (topLeft.contains(pos))     return Handle::TopLeft;
+    if (topRight.contains(pos))    return Handle::TopRight;
+    if (bottomLeft.contains(pos))  return Handle::BottomLeft;
+    if (bottomRight.contains(pos)) return Handle::BottomRight;
+    if (top.contains(pos))          return Handle::Top;
+    if (bottom.contains(pos))       return Handle::Bottom;
+    if (left.contains(pos))         return Handle::Left;
+    if (right.contains(pos))        return Handle::Right;
+    if (r.contains(pos))            return Handle::Move;
 
     return Handle::None;
 }
 
-
-void TranscendenceCaptureSetup::updateCursor(
-    Handle handle
-    )
+void TranscendenceCaptureSetup::updateCursor(Handle handle)
 {
-    switch(handle)
+    switch (handle)
     {
     case Handle::TopLeft:
     case Handle::BottomRight:
@@ -225,60 +181,24 @@ void TranscendenceCaptureSetup::updateCursor(
     }
 }
 
-
-// =========================================================
-// PAINT
-// =========================================================
-
-void TranscendenceCaptureSetup::paintEvent(
-    QPaintEvent *
-    )
+void TranscendenceCaptureSetup::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
 
-    p.setRenderHint(
-        QPainter::Antialiasing
-        );
-
-
-    if(m_hideRectangles)
-    {
+    if (m_hideRectangles)
         return;
-    }
 
-
-    // =========================
     // AREA DI RICERCA
-    // =========================
+    p.setPen(QPen(QColor(0, 200, 255), 2));
+    p.setBrush(QColor(0, 200, 255, 18));
+    p.drawRect(m_searchArea);
 
-    p.setPen(
-        QPen(
-            QColor(0, 200, 255),
-            2
-            )
-        );
+    // Maniglie.
+    p.setBrush(QColor(0, 200, 255));
+    p.setPen(Qt::NoPen);
 
-    p.setBrush(
-        QColor(0, 200, 255, 18)
-        );
-
-    p.drawRect(
-        m_searchArea
-        );
-
-
-    // Maniglie agli angoli/bordi.
-
-    p.setBrush(
-        QColor(0, 200, 255)
-        );
-
-    p.setPen(
-        Qt::NoPen
-        );
-
-    auto drawHandle =
-        [&p](const QPoint &center)
+    auto drawHandle = [&p](const QPoint &center)
     {
         p.drawRect(
             QRect(
@@ -323,268 +243,170 @@ void TranscendenceCaptureSetup::paintEvent(
             )
         );
 
+    // RIQUADRO GIALLO GROSSO: 84x84.
+    p.setPen(QPen(QColor(255, 200, 0), 3));
+    p.setBrush(QColor(255, 200, 0, 45));
+    p.drawRect(m_iconRect);
 
-    // =========================
-    // ICONA (28x28)
-    // =========================
-
-    p.setPen(
-        QPen(
-            QColor(255, 200, 0),
-            2
-            )
+    // Evidenzia il centro 28x28, cioè la dimensione reale del template.
+    const QRect preciseRect(
+        m_iconRect.center().x() -
+            TranscendenceVisionConfig::ICON_WIDTH / 2,
+        m_iconRect.center().y() -
+            TranscendenceVisionConfig::ICON_HEIGHT / 2,
+        TranscendenceVisionConfig::ICON_WIDTH,
+        TranscendenceVisionConfig::ICON_HEIGHT
         );
 
-    p.setBrush(
-        QColor(255, 200, 0, 50)
-        );
+    p.setPen(QPen(QColor(255, 255, 0), 2, Qt::DashLine));
+    p.setBrush(Qt::NoBrush);
+    p.drawRect(preciseRect);
 
-    p.drawRect(
-        m_iconRect
-        );
-
-
-    // =========================
     // ISTRUZIONI
-    // =========================
+    p.setPen(Qt::white);
 
-    p.setPen(
-        Qt::white
-        );
-
-    QFont font =
-        p.font();
-
+    QFont font = p.font();
     font.setPointSize(11);
-
     p.setFont(font);
 
-
-    QString instructions =
+    const QString instructions =
         "Trascina il bordo/angoli per ridimensionare l'area (azzurro)\n"
         "Trascina dentro l'area per spostarla\n"
-        "Trascina il riquadro giallo (28x28) sull'icona da salvare\n"
-        "P = salva icona    Invio = conferma e chiudi";
-
+        "Trascina il riquadro giallo (84x84) sopra l'icona\n"
+        "P = ritaglio preciso 28x28 al 300%    Invio = conferma e chiudi";
 
     p.drawText(
-        QRect(
-            20,
-            20,
-            600,
-            90
-            ),
+        QRect(20, 20, 760, 110),
         Qt::AlignLeft | Qt::TextWordWrap,
         instructions
         );
 
-
-    if(!m_feedback.isEmpty())
+    if (!m_feedback.isEmpty())
     {
-        p.setPen(
-            Qt::green
-            );
+        p.setPen(Qt::green);
 
-        QFont feedbackFont =
-            p.font();
-
+        QFont feedbackFont = p.font();
         feedbackFont.setPointSize(14);
-
         feedbackFont.setBold(true);
-
         p.setFont(feedbackFont);
 
         p.drawText(
-            QRect(
-                20,
-                120,
-                600,
-                40
-                ),
+            QRect(20, 135, 760, 40),
             Qt::AlignLeft,
             m_feedback
             );
     }
 }
 
-
-// =========================================================
-// MOUSE
-// =========================================================
-
-void TranscendenceCaptureSetup::mousePressEvent(
-    QMouseEvent *event
-    )
+void TranscendenceCaptureSetup::mousePressEvent(QMouseEvent *event)
 {
     m_feedback.clear();
 
+    const QPoint pos = event->pos();
 
-    QPoint pos =
-        event->pos();
+    m_activeHandle = hitTest(pos);
+    m_dragStart = pos;
+    m_areaAtDragStart = m_searchArea;
 
-
-    m_activeHandle =
-        hitTest(pos);
-
-    m_dragStart =
-        pos;
-
-    m_areaAtDragStart =
-        m_searchArea;
-
-
-    if(m_activeHandle == Handle::MoveIcon)
-    {
-        m_iconDragOffset =
-            pos - m_iconRect.topLeft();
-    }
-
+    if (m_activeHandle == Handle::MoveIcon)
+        m_iconDragOffset = pos - m_iconRect.topLeft();
 
     update();
 }
 
-
-void TranscendenceCaptureSetup::mouseMoveEvent(
-    QMouseEvent *event
-    )
+void TranscendenceCaptureSetup::mouseMoveEvent(QMouseEvent *event)
 {
-    QPoint pos =
-        event->pos();
+    const QPoint pos = event->pos();
 
-
-    if(m_activeHandle == Handle::None)
+    if (m_activeHandle == Handle::None)
     {
-        updateCursor(
-            hitTest(pos)
-            );
-
+        updateCursor(hitTest(pos));
         return;
     }
 
-
-    if(m_activeHandle == Handle::MoveIcon)
+    if (m_activeHandle == Handle::MoveIcon)
     {
-        QPoint topLeft =
-            pos - m_iconDragOffset;
+        const QPoint topLeft = pos - m_iconDragOffset;
 
         m_iconRect =
             QRect(
                 topLeft,
                 QSize(
-                    TranscendenceVisionConfig::ICON_WIDTH,
-                    TranscendenceVisionConfig::ICON_HEIGHT
+                    TranscendenceVisionConfig::ICON_BOX_WIDTH,
+                    TranscendenceVisionConfig::ICON_BOX_HEIGHT
                     )
                 );
 
         update();
-
         return;
     }
 
-
-    if(m_activeHandle == Handle::Move)
+    if (m_activeHandle == Handle::Move)
     {
-        QPoint delta =
-            pos - m_dragStart;
+        const QPoint delta = pos - m_dragStart;
 
         m_searchArea =
-            m_areaAtDragStart.translated(
-                delta
-                );
+            m_areaAtDragStart.translated(delta);
 
         update();
-
         return;
     }
 
-
-    applyResize(
-        m_activeHandle,
-        pos
-        );
-
+    applyResize(m_activeHandle, pos);
     update();
 }
 
-
-void TranscendenceCaptureSetup::mouseReleaseEvent(
-    QMouseEvent *
-    )
+void TranscendenceCaptureSetup::mouseReleaseEvent(QMouseEvent *)
 {
-    m_activeHandle =
-        Handle::None;
-
-    m_searchArea =
-        m_searchArea.normalized();
+    m_activeHandle = Handle::None;
+    m_searchArea = m_searchArea.normalized();
 }
-
 
 void TranscendenceCaptureSetup::applyResize(
     Handle handle,
     const QPoint &pos
     )
 {
-    QRect r =
-        m_areaAtDragStart;
+    QRect r = m_areaAtDragStart;
+    const QPoint delta = pos - m_dragStart;
 
-    QPoint delta =
-        pos - m_dragStart;
-
-
-    switch(handle)
+    switch (handle)
     {
     case Handle::TopLeft:
-        r.setTopLeft(
-            r.topLeft() + delta
-            );
+        r.setTopLeft(r.topLeft() + delta);
         break;
 
     case Handle::TopRight:
-        r.setTopRight(
-            r.topRight() + delta
-            );
+        r.setTopRight(r.topRight() + delta);
         break;
 
     case Handle::BottomLeft:
-        r.setBottomLeft(
-            r.bottomLeft() + delta
-            );
+        r.setBottomLeft(r.bottomLeft() + delta);
         break;
 
     case Handle::BottomRight:
-        r.setBottomRight(
-            r.bottomRight() + delta
-            );
+        r.setBottomRight(r.bottomRight() + delta);
         break;
 
     case Handle::Top:
-        r.setTop(
-            r.top() + delta.y()
-            );
+        r.setTop(r.top() + delta.y());
         break;
 
     case Handle::Bottom:
-        r.setBottom(
-            r.bottom() + delta.y()
-            );
+        r.setBottom(r.bottom() + delta.y());
         break;
 
     case Handle::Left:
-        r.setLeft(
-            r.left() + delta.x()
-            );
+        r.setLeft(r.left() + delta.x());
         break;
 
     case Handle::Right:
-        r.setRight(
-            r.right() + delta.x()
-            );
+        r.setRight(r.right() + delta.x());
         break;
 
     default:
         break;
     }
-
 
     m_searchArea = r;
 }

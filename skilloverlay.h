@@ -3,9 +3,12 @@
 
 #include <QWidget>
 #include <QTimer>
+#include <QSettings>
+#include <QPoint>
+
 #include "skillbox.h"
 #include "globalkeyboard.h"
-#include <QSettings>
+#include "skillconfig.h"
 
 
 class SkillOverlay : public QWidget
@@ -19,60 +22,129 @@ public:
         QWidget *parent = nullptr
         );
 
+
     void resetAllCooldowns();
-    void checkSequences(int key);
+
+
+    void checkSequences(
+        int key
+        );
+
+
+public slots:
+
+    void applyConfig(
+        const SkillOverlayConfig &config
+        );
 
 
 protected:
 
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
+    void mousePressEvent(
+        QMouseEvent *event
+        ) override;
+
+
+    void mouseMoveEvent(
+        QMouseEvent *event
+        ) override;
 
 
 private:
 
-    SkillBox *concerto;
-    SkillBox *artifact;
-    SkillBox *nightParade;
-    SkillBox *settingSun;
+    // --------------------------------------------------------
+    // SKILL BOX
+    // --------------------------------------------------------
+
+    SkillBox *upSkill;
+    SkillBox *leftSkill;
+    SkillBox *downSkill;
+    SkillBox *rightSkill;
+
+
+
+    // --------------------------------------------------------
+    // TIMER
+    // --------------------------------------------------------
 
     QTimer *timer;
 
+
+    // --------------------------------------------------------
+    // DRAG
+    // --------------------------------------------------------
+
     QPoint dragPosition;
+
+
+    // --------------------------------------------------------
+    // KEYBOARD
+    // --------------------------------------------------------
 
     GlobalKeyboard *keyboard;
 
 
-    bool trackingActive = false;
+    // --------------------------------------------------------
+    // CONFIG
+    // --------------------------------------------------------
+
+    SkillOverlayConfig config;
+
+
+    // --------------------------------------------------------
+    // STATE
+    // --------------------------------------------------------
+
+    bool trackingActive = true;
 
 
     enum class SequenceState
     {
-        WaitingG,
+        WaitingStateKey,
         WaitingDirection
     };
 
 
-    enum class ActiveTitle
+    SequenceState sequenceState =
+        SequenceState::WaitingStateKey;
+
+
+    enum class Direction
     {
         None,
-        Concerto,
-        NightParade,
-        SettingSun,
-        Other
+        Up,
+        Left,
+        Down,
+        Right
     };
 
 
-    ActiveTitle currentTitle = ActiveTitle::None;
+    Direction currentDirection =
+        Direction::None;
 
 
-    SequenceState sequenceState =
-        SequenceState::WaitingG;
+    // --------------------------------------------------------
+    // METHODS
+    // --------------------------------------------------------
+
+    SkillConfig *currentSkill();
 
 
-    int selectedDirection = 0;
+    void activateCtrlSkill();
 
+
+    void activateCipollaSkill();
+
+
+    void activateComboSkill(
+        int key
+        );
+
+
+    void updateSkillBoxes();
+
+
+    void loadDefaultConfig();
 };
-
 
 #endif

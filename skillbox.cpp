@@ -1,10 +1,7 @@
 #include "skillbox.h"
 
 #include <QPainter>
-#include <QMouseEvent>
 #include <QImage>
-#include <QDebug>
-
 
 
 SkillBox::SkillBox(
@@ -14,43 +11,64 @@ SkillBox::SkillBox(
     QWidget *parent
     )
     : QWidget(parent),
-    skillName(skillName)
+    skillName(skillName),
+    imagePath(imagePath)
 {
-
     image.load(imagePath);
-    QImage gray = image.toImage().convertToFormat(QImage::Format_Grayscale8);
 
-    grayImage = QPixmap::fromImage(gray);
+    QImage gray =
+        image.toImage().convertToFormat(
+            QImage::Format_Grayscale8
+            );
+
+    grayImage =
+        QPixmap::fromImage(gray);
+
 
     setFixedSize(60,55);
-    cooldown = cooldownTime;
-    currentCooldown = 0;
-    setAttribute(Qt::WA_TranslucentBackground);
-    setAttribute(Qt::WA_TransparentForMouseEvents);
 
+    cooldown =
+        cooldownTime;
+
+    currentCooldown =
+        0;
+
+
+    setAttribute(
+        Qt::WA_TranslucentBackground
+        );
+
+    setAttribute(
+        Qt::WA_TransparentForMouseEvents
+        );
 }
 
 
+// =========================================================
+// PAINT
+// =========================================================
 
-void SkillBox::paintEvent(QPaintEvent *)
+void SkillBox::paintEvent(
+    QPaintEvent *
+    )
 {
-
     QPainter painter(this);
 
 
-    // sfondo rettangolo
     painter.fillRect(
         rect(),
         QColor(30,30,30,180)
         );
 
 
-    // immagine skill
-    QPixmap drawImage = image;
+    QPixmap drawImage =
+        image;
+
 
     if(activeCooldown)
     {
-        drawImage = grayImage;
+        drawImage =
+            grayImage;
     }
 
 
@@ -66,10 +84,13 @@ void SkillBox::paintEvent(QPaintEvent *)
     }
 
 
-    // numero cooldown
-    painter.setPen(Qt::white);
+    painter.setPen(
+        Qt::white
+        );
+
 
     QFont font;
+
     font.setPointSize(16);
     font.setBold(true);
 
@@ -79,21 +100,29 @@ void SkillBox::paintEvent(QPaintEvent *)
     painter.drawText(
         rect(),
         Qt::AlignCenter,
-        activeCooldown ? QString::number(currentCooldown) : "Ready"
+        activeCooldown
+            ? QString::number(currentCooldown)
+            : "Ready"
         );
-
 }
+
+
+// =========================================================
+// COOLDOWN
+// =========================================================
 
 void SkillBox::startCooldown()
 {
     if(activeCooldown)
-    {
         return;
-    }
 
 
-    currentCooldown = cooldown;
-    activeCooldown = true;
+    currentCooldown =
+        cooldown;
+
+    activeCooldown =
+        true;
+
 
     update();
 }
@@ -101,12 +130,14 @@ void SkillBox::startCooldown()
 
 void SkillBox::resetCooldown()
 {
-    activeCooldown = false;
-    currentCooldown = 0;
+    activeCooldown =
+        false;
+
+    currentCooldown =
+        0;
 
     update();
 }
-
 
 
 void SkillBox::tick()
@@ -128,3 +159,76 @@ void SkillBox::tick()
     update();
 }
 
+
+// =========================================================
+// CONFIGURATION
+// =========================================================
+
+void SkillBox::setImage(
+    const QString &newImagePath
+    )
+{
+    imagePath =
+        newImagePath;
+
+
+    image.load(
+        imagePath
+        );
+
+
+    QImage gray =
+        image.toImage().convertToFormat(
+            QImage::Format_Grayscale8
+            );
+
+
+    grayImage =
+        QPixmap::fromImage(
+            gray
+            );
+
+
+    update();
+}
+
+
+void SkillBox::setSkillName(
+    const QString &name
+    )
+{
+    skillName =
+        name;
+
+    update();
+}
+
+
+void SkillBox::setCooldown(
+    int cooldownTime
+    )
+{
+    cooldown =
+        qMax(
+            1,
+            cooldownTime
+            );
+}
+
+
+QString SkillBox::getSkillName() const
+{
+    return skillName;
+}
+
+
+QString SkillBox::getImagePath() const
+{
+    return imagePath;
+}
+
+
+int SkillBox::getCooldown() const
+{
+    return cooldown;
+}

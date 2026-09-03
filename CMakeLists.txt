@@ -49,6 +49,10 @@ qt_add_executable(ElsOverlay
     transcendencecapturesetup.h transcendencecapturesetup.cpp
     transcendencevisionmanager.h transcendencevisionmanager.cpp
     screencapture.h screencapture.cpp
+    transcendenceprecisioncrop.h transcendenceprecisioncrop.cpp
+    skillconfigwindow.h skillconfigwindow.cpp
+    SkillConfig.h
+    keyedit.h keyedit.cpp
 
 
 

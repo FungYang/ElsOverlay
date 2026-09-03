@@ -21,6 +21,7 @@
 #include "distanceguidemanager.h"
 #include "distanceguideconfigwindow.h"
 #include "distanceguideoverlay.h"
+#include "skillconfigwindow.h"
 
 
     int main(int argc, char *argv[])
@@ -291,6 +292,27 @@
             overlayRoot
             );
     // qDebug() << "MAIN: dopo SkillOverlay";
+    SkillConfigWindow *skillConfigWindow =
+        new SkillConfigWindow(&mainWindow);
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::buffTitlesConfigRequested,
+        skillConfigWindow,
+        [skillConfigWindow]()
+        {
+            skillConfigWindow->show();
+            skillConfigWindow->raise();
+            skillConfigWindow->activateWindow();
+        }
+        );
+    QObject::connect(
+        skillConfigWindow,
+        &SkillConfigWindow::configurationChanged,
+        skills,
+        &SkillOverlay::applyConfig
+        );
+
 
 
     QObject::connect(
@@ -493,12 +515,12 @@
     // ATMA BUFF VISION
     // ==================================================
 
-    qDebug() << "MAIN: prima BuffVisionManager";
+    //qDebug() << "MAIN: prima BuffVisionManager";
     BuffVisionManager atma(
         &keyboard,
         overlayRoot
         );
-    qDebug() << "MAIN: dopo BuffVisionManager";
+    //qDebug() << "MAIN: dopo BuffVisionManager";
 
 
     QObject::connect(

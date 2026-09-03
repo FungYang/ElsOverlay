@@ -3,9 +3,6 @@
 
 #include <QWidget>
 #include <QPixmap>
-#include <QPoint>
-
-
 
 
 class SkillBox : public QWidget
@@ -20,30 +17,52 @@ public:
         int cooldownTime,
         QWidget *parent = nullptr
         );
+
+
     void startCooldown();
-
     void resetCooldown();
-
     void tick();
+
+
+    void setImage(
+        const QString &imagePath
+        );
+
+
+    void setSkillName(
+        const QString &name
+        );
+
+
+    void setCooldown(
+        int cooldownTime
+        );
+
+
+    QString getSkillName() const;
+    QString getImagePath() const;
+    int getCooldown() const;
 
 
 protected:
 
-    void paintEvent(QPaintEvent *event) override;
+    void paintEvent(
+        QPaintEvent *event
+        ) override;
 
 
 private:
 
     QString skillName;
+    QString imagePath;
 
     QPixmap image;
     QPixmap grayImage;
 
-    int cooldown;
-    int currentCooldown;
+    int cooldown = 0;
+    int currentCooldown = 0;
 
     bool activeCooldown = false;
 };
-
 
 #endif

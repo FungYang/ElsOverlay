@@ -1,6 +1,8 @@
 #include "skilloverlay.h"
-#include <QPoint>
+
+#include <QCoreApplication>
 #include <QMouseEvent>
+#include <QSettings>
 
 
 SkillOverlay::SkillOverlay(
@@ -10,13 +12,15 @@ SkillOverlay::SkillOverlay(
     : QWidget(parent),
     keyboard(keyboard)
 {
-
-    setFixedSize(180,165);
+    setFixedSize(
+        180,
+        165
+        );
 
 
     setWindowFlags(
-        Qt::Tool |
         Qt::FramelessWindowHint |
+        Qt::Tool |
         Qt::WindowStaysOnTopHint
         );
 
@@ -26,239 +30,110 @@ SkillOverlay::SkillOverlay(
         );
 
 
-    setStyleSheet(
-        "background: transparent;"
-        );
-
+    // ========================================================
+    // POSIZIONE
+    // ========================================================
 
     QSettings settings(
-        "ElsOverlay.ini",
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
         QSettings::IniFormat
         );
 
 
-    move(
+    QPoint savedPosition =
         settings.value(
                     "Overlay/BuffGroup/position",
-                    QPoint(500,300)
-                    ).toPoint()
+                    QPoint(100, 100)
+                    ).toPoint();
+
+
+    move(
+        savedPosition
         );
 
 
+    // ========================================================
+    // CONFIGURAZIONE
+    // ========================================================
 
-    concerto =
+    loadDefaultConfig();
+
+
+    // ========================================================
+    // SKILL
+    // ========================================================
+
+    upSkill =
         new SkillBox(
-            "images/concerto.png",
-            "Concerto",
-            60,
+            config.up.imagePath,
+            config.up.name,
+            config.up.cooldown,
             this
             );
 
 
-    artifact =
+    leftSkill =
         new SkillBox(
-            "images/artifact.png",
-            "Artifact",
-            20,
+            config.left.imagePath,
+            config.left.name,
+            config.left.cooldown,
             this
             );
 
 
-    nightParade =
+    downSkill =
         new SkillBox(
-            "images/nightparade.png",
-            "NightParade",
-            25,
+            config.down.imagePath,
+            config.down.name,
+            config.down.cooldown,
             this
             );
 
 
-    settingSun =
+    rightSkill =
         new SkillBox(
-            "images/settingsun.png",
-            "SettingSun",
-            30,
+            config.right.imagePath,
+            config.right.name,
+            config.right.cooldown,
             this
             );
 
 
+    // ========================================================
+    // POSIZIONAMENTO
+    // ========================================================
 
-    // =========================
-    // CONTROLLO CTRL
-    // =========================
-
-    connect(
-        keyboard,
-        &GlobalKeyboard::keyPressed,
-        this,
-        [this](int key)
-        {
-
-            if(!trackingActive)
-            {
-                checkSequences(key);
-                return;
-            }
-
-
-            if(key == '6' &&
-                sequenceState == SequenceState::WaitingG)
-            {
-                artifact->startCooldown();
-
-                if(currentTitle == ActiveTitle::SettingSun)
-                {
-                    settingSun->startCooldown();
-                }
-            }
-
-
-            // Night Parade con F/T
-            if(sequenceState == SequenceState::WaitingG &&
-                currentTitle == ActiveTitle::NightParade)
-            {
-                if(key == 'F' || key == 'T')
-                {
-                    nightParade->startCooldown();
-                }
-            }
-
-
-            checkSequences(key);
-
-        },
-        Qt::QueuedConnection
-        );
-
-    connect(
-        keyboard,
-        &GlobalKeyboard::ctrlPressed,
-        this,
-        [this]()
-        {
-
-            // Primo awakening
-            if(!trackingActive)
-            {
-
-                trackingActive = true;
-
-                artifact->startCooldown();
-
-                concerto->startCooldown();
-
-                return;
-
-            }
-
-
-
-            // Artifact sempre con CTRL
-
-            artifact->startCooldown();
-
-
-
-            // Titolo selezionato
-
-            switch(currentTitle)
-            {
-
-            case ActiveTitle::Concerto:
-
-                concerto->startCooldown();
-
-                break;
-
-
-            case ActiveTitle::SettingSun:
-                settingSun->startCooldown();
-
-                break;
-
-
-            case ActiveTitle::NightParade:
-
-                // Night Parade non parte con CTRL.
-                // Si attiva esclusivamente con F/T.
-
-                break;
-
-
-            case ActiveTitle::Other:
-            case ActiveTitle::None:
-
-                break;
-
-            }
-
-        },
-        Qt::QueuedConnection
+    upSkill->move(
+        60,
+        0
         );
 
 
-
-
-    // =========================
-    // RESET CTRL DESTRO
-    // =========================
-
-    connect(
-        keyboard,
-        &GlobalKeyboard::resetPressed,
-        this,
-        [this]()
-        {
-
-            trackingActive = false;
-
-            sequenceState =
-                SequenceState::WaitingG;
-
-
-            selectedDirection = 0;
-
-
-            currentTitle =
-                ActiveTitle::None;
-
-
-            concerto->resetCooldown();
-            artifact->resetCooldown();
-            nightParade->resetCooldown();
-            settingSun->resetCooldown();
-
-        },
-        Qt::QueuedConnection
-        );
-    connect(
-        keyboard,
-        &GlobalKeyboard::transcendenceResetPressed,
-        this,
-        [this]()
-        {
-            trackingActive = false;
-
-        },
-        Qt::QueuedConnection
+    leftSkill->move(
+        20,
+        50
         );
 
 
+    downSkill->move(
+        60,
+        100
+        );
 
 
-    // posizione croce
-
-    concerto->move(60,0);
-
-    nightParade->move(20,50);
-
-    artifact->move(100,50);
-
-    settingSun->move(60,100);
+    rightSkill->move(
+        100,
+        50
+        );
 
 
+    // ========================================================
+    // TIMER
+    // ========================================================
 
-    timer = new QTimer(this);
+    timer =
+        new QTimer(this);
 
 
     connect(
@@ -267,181 +142,923 @@ SkillOverlay::SkillOverlay(
         this,
         [this]()
         {
+            upSkill->tick();
 
-            concerto->tick();
-            artifact->tick();
-            nightParade->tick();
-            settingSun->tick();
+            leftSkill->tick();
 
+            downSkill->tick();
+
+            rightSkill->tick();
         }
         );
 
 
-    timer->start(1000);
-
-}
-
-
-
-
-void SkillOverlay::mousePressEvent(QMouseEvent *event)
-{
-
-    dragPosition =
-        event->globalPosition().toPoint()
-        - frameGeometry().topLeft();
-
-}
-
-
-
-
-void SkillOverlay::mouseMoveEvent(QMouseEvent *event)
-{
-
-    move(
-        event->globalPosition().toPoint()
-        - dragPosition
+    timer->start(
+        1000
         );
 
 
+    // ========================================================
+    // KEYBOARD
+    // ========================================================
+
+    connect(
+        keyboard,
+        &GlobalKeyboard::keyPressed,
+        this,
+        [this](int key)
+        {
+            if(!trackingActive)
+            {
+                checkSequences(key);
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // CIPOLLA
+            // ------------------------------------------------
+
+            if(
+                key == config.cipollaKey &&
+                sequenceState ==
+                    SequenceState::WaitingStateKey
+                )
+            {
+                activateCipollaSkill();
+            }
+
+
+            // ------------------------------------------------
+            // COMBO
+            // ------------------------------------------------
+
+            activateComboSkill(
+                key
+                );
+
+
+            // ------------------------------------------------
+            // SEQUENZA STATO
+            // ------------------------------------------------
+
+            checkSequences(
+                key
+                );
+        },
+        Qt::QueuedConnection
+        );
+
+
+    // ========================================================
+    // CTRL SINISTRO
+    // ========================================================
+
+    connect(
+        keyboard,
+        &GlobalKeyboard::ctrlPressed,
+        this,
+        [this]()
+        {
+            activateCtrlSkill();
+        },
+        Qt::QueuedConnection
+        );
+
+
+    // ========================================================
+    // CTRL DESTRO / RESET
+    // ========================================================
+
+    connect(
+        keyboard,
+        &GlobalKeyboard::resetPressed,
+        this,
+        [this]()
+        {
+            trackingActive = true;
+
+
+            sequenceState =
+                SequenceState::WaitingStateKey;
+
+
+            currentDirection =
+                Direction::None;
+
+
+            resetAllCooldowns();
+
+        },
+        Qt::QueuedConnection
+        );
+
+
+    // ========================================================
+    // RESET TRASCENDENZA
+    // ========================================================
+
+    connect(
+        keyboard,
+        &GlobalKeyboard::transcendenceResetPressed,
+        this,
+        [this]()
+        {
+            trackingActive = true;
+        }
+        );
+}
+
+
+// ============================================================
+// DEFAULT CONFIG
+// ============================================================
+
+void SkillOverlay::loadDefaultConfig()
+{
     QSettings settings(
-        "ElsOverlay.ini",
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
         QSettings::IniFormat
         );
 
 
-    settings.setValue(
-        "Overlay/BuffGroup/position",
-        pos()
+    // --------------------------------------------------------
+    // TASTI PRINCIPALI
+    // --------------------------------------------------------
+
+    config.stateKey =
+        settings.value(
+                    "BuffTitles/StateKey",
+                    'G'
+                    ).toInt();
+
+
+    config.cipollaKey =
+        settings.value(
+                    "BuffTitles/CipollaKey",
+                    '6'
+                    ).toInt();
+
+
+    // --------------------------------------------------------
+    // UP
+    // --------------------------------------------------------
+
+    config.up.name =
+        settings.value(
+                    "BuffTitles/Up/Name",
+                    "Concerto"
+                    ).toString();
+
+
+    config.up.imagePath =
+        settings.value(
+                    "BuffTitles/Up/Image",
+                    "images/concerto.png"
+                    ).toString();
+
+
+    config.up.cooldown =
+        settings.value(
+                    "BuffTitles/Up/Cooldown",
+                    60
+                    ).toInt();
+
+
+    config.up.activation =
+        static_cast<SkillActivation>(
+            settings.value(
+                        "BuffTitles/Up/Activation",
+                        static_cast<int>(
+                            SkillActivation::CtrlCipolla
+                            )
+                        ).toInt()
+            );
+
+
+    // --------------------------------------------------------
+    // LEFT
+    // --------------------------------------------------------
+
+    config.left.name =
+        settings.value(
+                    "BuffTitles/Left/Name",
+                    "Night Parade"
+                    ).toString();
+
+
+    config.left.imagePath =
+        settings.value(
+                    "BuffTitles/Left/Image",
+                    "images/nightparade.png"
+                    ).toString();
+
+
+    config.left.cooldown =
+        settings.value(
+                    "BuffTitles/Left/Cooldown",
+                    25
+                    ).toInt();
+
+
+    config.left.activation =
+        static_cast<SkillActivation>(
+            settings.value(
+                        "BuffTitles/Left/Activation",
+                        static_cast<int>(
+                            SkillActivation::Combo
+                            )
+                        ).toInt()
+            );
+
+
+    // --------------------------------------------------------
+    // DOWN
+    // --------------------------------------------------------
+
+    config.down.name =
+        settings.value(
+                    "BuffTitles/Down/Name",
+                    "Setting Sun"
+                    ).toString();
+
+
+    config.down.imagePath =
+        settings.value(
+                    "BuffTitles/Down/Image",
+                    "images/settingsun.png"
+                    ).toString();
+
+
+    config.down.cooldown =
+        settings.value(
+                    "BuffTitles/Down/Cooldown",
+                    30
+                    ).toInt();
+
+
+    config.down.activation =
+        static_cast<SkillActivation>(
+            settings.value(
+                        "BuffTitles/Down/Activation",
+                        static_cast<int>(
+                            SkillActivation::CtrlCipolla
+                            )
+                        ).toInt()
+            );
+
+
+    // --------------------------------------------------------
+    // RIGHT
+    // --------------------------------------------------------
+
+    config.right.name =
+        settings.value(
+                    "BuffTitles/Right/Name",
+                    "Other"
+                    ).toString();
+
+
+    config.right.imagePath =
+        settings.value(
+                    "BuffTitles/Right/Image",
+                    "images/artifact.png"
+                    ).toString();
+
+
+    config.right.cooldown =
+        settings.value(
+                    "BuffTitles/Right/Cooldown",
+                    0
+                    ).toInt();
+
+
+    config.right.activation =
+        static_cast<SkillActivation>(
+            settings.value(
+                        "BuffTitles/Right/Activation",
+                        static_cast<int>(
+                            SkillActivation::Combo
+                            )
+                        ).toInt()
+            );
+
+
+    // --------------------------------------------------------
+    // COMBO KEYS PER SKILL
+    // --------------------------------------------------------
+
+    auto loadComboKeys =
+        [&settings](
+            const QString &prefix,
+            QList<int> &keys,
+            const QList<int> &defaults
+            )
+    {
+        keys.clear();
+
+
+        int size =
+            settings.beginReadArray(
+                prefix + "/ComboKeys"
+                );
+
+
+        if(size == 0)
+        {
+            keys = defaults;
+        }
+        else
+        {
+            for(int i = 0;
+                 i < size;
+                 ++i)
+            {
+                settings.setArrayIndex(i);
+
+
+                int key =
+                    settings.value(
+                                "Key",
+                                0
+                                ).toInt();
+
+
+                if(key != 0)
+                {
+                    keys.append(key);
+                }
+            }
+        }
+
+
+        settings.endArray();
+    };
+
+
+    loadComboKeys(
+        "BuffTitles/Up",
+        config.up.comboKeys,
+        {}
         );
 
+
+    loadComboKeys(
+        "BuffTitles/Left",
+        config.left.comboKeys,
+        { 'F', 'T' }
+        );
+
+
+    loadComboKeys(
+        "BuffTitles/Down",
+        config.down.comboKeys,
+        {}
+        );
+
+
+    loadComboKeys(
+        "BuffTitles/Right",
+        config.right.comboKeys,
+        {}
+        );
 }
 
 
+// ============================================================
+// APPLY CONFIG
+// ============================================================
 
-
-void SkillOverlay::resetAllCooldowns()
+void SkillOverlay::applyConfig(
+    const SkillOverlayConfig &newConfig
+    )
 {
+    config =
+        newConfig;
 
-    concerto->resetCooldown();
 
-    artifact->resetCooldown();
-
-    nightParade->resetCooldown();
-
-    settingSun->resetCooldown();
-
+    updateSkillBoxes();
 }
 
 
+// ============================================================
+// UPDATE SKILL BOXES
+// ============================================================
 
-
-void SkillOverlay::checkSequences(int key)
+void SkillOverlay::updateSkillBoxes()
 {
+    upSkill->setSkillName(
+        config.up.name
+        );
+
+
+    upSkill->setImage(
+        config.up.imagePath
+        );
+
+
+    upSkill->setCooldown(
+        config.up.cooldown
+        );
+
+
+    leftSkill->setSkillName(
+        config.left.name
+        );
+
+
+    leftSkill->setImage(
+        config.left.imagePath
+        );
+
+
+    leftSkill->setCooldown(
+        config.left.cooldown
+        );
+
+
+    downSkill->setSkillName(
+        config.down.name
+        );
+
+
+    downSkill->setImage(
+        config.down.imagePath
+        );
+
+
+    downSkill->setCooldown(
+        config.down.cooldown
+        );
+
+
+    rightSkill->setSkillName(
+        config.right.name
+        );
+
+
+    rightSkill->setImage(
+        config.right.imagePath
+        );
+
+
+    rightSkill->setCooldown(
+        config.right.cooldown
+        );
+}
+
+
+// ============================================================
+// CURRENT SKILL
+// ============================================================
+
+SkillConfig *SkillOverlay::currentSkill()
+{
+    switch(currentDirection)
+    {
+    case Direction::Up:
+        return &config.up;
+
+
+    case Direction::Left:
+        return &config.left;
+
+
+    case Direction::Down:
+        return &config.down;
+
+
+    case Direction::Right:
+        return &config.right;
+
+
+    case Direction::None:
+        break;
+    }
+
+
+    return nullptr;
+}
+
+
+// ============================================================
+// CTRL SINISTRO
+// ============================================================
+
+void SkillOverlay::activateCtrlSkill()
+{
+    // --------------------------------------------------------
+    // Primo CTRL: avvia il tracking
+    // --------------------------------------------------------
 
     if(!trackingActive)
     {
+        trackingActive = true;
 
-        sequenceState =
-            SequenceState::WaitingG;
+        // Primo CTRL:
+        // attiva Concerto
+        // upSkill->startCooldown();
 
-        return;
+        // Attiva anche l'Artifact, ovunque sia configurato
+        if(config.up.activation == SkillActivation::Artifact)
+            upSkill->startCooldown();
 
+        if(config.left.activation == SkillActivation::Artifact)
+            leftSkill->startCooldown();
+
+        if(config.down.activation == SkillActivation::Artifact)
+            downSkill->startCooldown();
+
+        if(config.right.activation == SkillActivation::Artifact)
+            rightSkill->startCooldown();
+
+        //return;
     }
 
 
+    // --------------------------------------------------------
+    // CTRL DURANTE IL TRACKING
+    // --------------------------------------------------------
+    //
+    // ARTIFACT:
+    // è globale durante il tracking.
+    //
+    // Se QUALSIASI dei 4 box è configurato come Artifact,
+    // CTRL lo attiva indipendentemente dalla direzione corrente.
+    // --------------------------------------------------------
 
-    switch(sequenceState)
+    if(
+        config.up.activation ==
+        SkillActivation::Artifact
+        )
     {
+        upSkill->startCooldown();
+    }
 
 
-        // =========================
-        // ASPETTA G
-        // =========================
+    if(
+        config.left.activation ==
+        SkillActivation::Artifact
+        )
+    {
+        leftSkill->startCooldown();
+    }
 
-    case SequenceState::WaitingG:
+
+    if(
+        config.down.activation ==
+        SkillActivation::Artifact
+        )
+    {
+        downSkill->startCooldown();
+    }
 
 
-        if(key == 'G')
+    if(
+        config.right.activation ==
+        SkillActivation::Artifact
+        )
+    {
+        rightSkill->startCooldown();
+    }
+
+
+    // --------------------------------------------------------
+    // SKILL DELLA DIREZIONE CORRENTE
+    // --------------------------------------------------------
+
+    SkillConfig *skill =
+        currentSkill();
+
+
+    if(!skill)
+    {
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // CTRL / CIPOLLA
+    // --------------------------------------------------------
+
+    if(
+        skill->activation ==
+        SkillActivation::CtrlCipolla
+        )
+    {
+        switch(currentDirection)
         {
+        case Direction::Up:
+            upSkill->startCooldown();
+            break;
 
-            sequenceState =
-                SequenceState::WaitingDirection;
 
+        case Direction::Left:
+            leftSkill->startCooldown();
+            break;
+
+
+        case Direction::Down:
+            downSkill->startCooldown();
+            break;
+
+
+        case Direction::Right:
+            rightSkill->startCooldown();
+            break;
+
+
+        case Direction::None:
+            break;
         }
+    }
+}
 
+
+// ============================================================
+// CIPOLLA
+// ============================================================
+
+void SkillOverlay::activateCipollaSkill()
+{
+    SkillConfig *skill =
+        currentSkill();
+
+
+    if(!skill)
+    {
+        return;
+    }
+
+
+    if(
+        skill->activation !=
+        SkillActivation::CtrlCipolla
+        )
+    {
+        return;
+    }
+
+
+    switch(currentDirection)
+    {
+    case Direction::Up:
+        upSkill->startCooldown();
         break;
 
 
+    case Direction::Left:
+        leftSkill->startCooldown();
+        break;
 
-        // =========================
-        // SCELTA TITOLO
-        // =========================
 
-    case SequenceState::WaitingDirection:
+    case Direction::Down:
+        downSkill->startCooldown();
+        break;
 
+
+    case Direction::Right:
+        rightSkill->startCooldown();
+        break;
+
+
+    case Direction::None:
+        break;
+    }
+}
+
+
+// ============================================================
+// COMBO
+// ============================================================
+
+void SkillOverlay::activateComboSkill(
+    int key
+    )
+{
+    SkillConfig *skill =
+        currentSkill();
+
+
+    if(!skill)
+    {
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // COMBO RIMANE LEGATO ALLA DIREZIONE CORRENTE
+    // --------------------------------------------------------
+
+    if(
+        skill->activation !=
+        SkillActivation::Combo
+        )
+    {
+        return;
+    }
+
+
+    if(
+        !skill->comboKeys.contains(key)
+        )
+    {
+        return;
+    }
+
+
+    switch(currentDirection)
+    {
+    case Direction::Up:
+        upSkill->startCooldown();
+        break;
+
+
+    case Direction::Left:
+        leftSkill->startCooldown();
+        break;
+
+
+    case Direction::Down:
+        downSkill->startCooldown();
+        break;
+
+
+    case Direction::Right:
+        rightSkill->startCooldown();
+        break;
+
+
+    case Direction::None:
+        break;
+    }
+}
+
+
+// ============================================================
+// SEQUENCES
+// ============================================================
+
+void SkillOverlay::checkSequences(
+    int key
+    )
+{
+    if(!trackingActive)
+    {
+        sequenceState =
+            SequenceState::WaitingStateKey;
+
+        //return;
+    }
+
+
+    // ========================================================
+    // ATTESA TASTO STATO
+    // ========================================================
+
+    if(
+        sequenceState ==
+        SequenceState::WaitingStateKey
+        )
+    {
+        if(key == config.stateKey)
+        {
+            sequenceState =
+                SequenceState::WaitingDirection;
+        }
+
+
+        return;
+    }
+
+
+    // ========================================================
+    // ATTESA DIREZIONE
+    // ========================================================
+
+    if(
+        sequenceState ==
+        SequenceState::WaitingDirection
+        )
+    {
+        // Le frecce rimangono FISSE.
 
         if(key == VK_UP)
         {
-
-            currentTitle =
-                ActiveTitle::Concerto;
-
+            currentDirection =
+                Direction::Up;
         }
-
-
         else if(key == VK_LEFT)
         {
-
-            currentTitle =
-                ActiveTitle::NightParade;
-
+            currentDirection =
+                Direction::Left;
         }
-
-
         else if(key == VK_DOWN)
         {
-
-            currentTitle =
-                ActiveTitle::SettingSun;
-
+            currentDirection =
+                Direction::Down;
         }
-
-
         else if(key == VK_RIGHT)
         {
-
-            currentTitle =
-                ActiveTitle::Other;
-
+            currentDirection =
+                Direction::Right;
         }
-
-
-        else if(key == 'G')
+        else if(key == config.stateKey)
         {
-            // rimane in attesa
-
-            break;
+            // Rimane in attesa della direzione.
+            return;
         }
-
-
         else
         {
-            break;
+            // Sequenza interrotta.
+            sequenceState =
+                SequenceState::WaitingStateKey;
+
+            return;
         }
-
-
-
-        selectedDirection = key;
 
 
         sequenceState =
-            SequenceState::WaitingG;
-
-
-        break;
-
+            SequenceState::WaitingStateKey;
     }
+}
 
+
+// ============================================================
+// RESET
+// ============================================================
+
+void SkillOverlay::resetAllCooldowns()
+{
+    upSkill->resetCooldown();
+
+
+    leftSkill->resetCooldown();
+
+
+    downSkill->resetCooldown();
+
+
+    rightSkill->resetCooldown();
+}
+
+
+// ============================================================
+// MOUSE PRESS
+// ============================================================
+
+void SkillOverlay::mousePressEvent(
+    QMouseEvent *event
+    )
+{
+    if(
+        event->button() ==
+        Qt::LeftButton
+        )
+    {
+        dragPosition =
+            event->globalPosition().toPoint()
+            - frameGeometry().topLeft();
+
+
+        event->accept();
+    }
+}
+
+
+// ============================================================
+// MOUSE MOVE
+// ============================================================
+
+void SkillOverlay::mouseMoveEvent(
+    QMouseEvent *event
+    )
+{
+    if(
+        event->buttons() &
+        Qt::LeftButton
+        )
+    {
+        move(
+            event->globalPosition().toPoint()
+            - dragPosition
+            );
+
+
+        QSettings settings(
+            QCoreApplication::applicationDirPath() +
+                "/ElsOverlay.ini",
+            QSettings::IniFormat
+            );
+
+
+        settings.setValue(
+            "Overlay/BuffGroup/position",
+            pos()
+            );
+
+
+        settings.sync();
+    }
 }

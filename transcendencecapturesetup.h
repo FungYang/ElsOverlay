@@ -2,7 +2,6 @@
 
 #include <QWidget>
 #include <QRect>
-#include <QPoint>
 #include <QString>
 
 class OverlayRoot;
@@ -13,90 +12,59 @@ class TranscendenceCaptureSetup : public QWidget
 
 public:
     explicit TranscendenceCaptureSetup(
-        OverlayRoot *parent
+        OverlayRoot *parent = nullptr
         );
 
     QRect searchArea() const;
     QRect iconRect() const;
 
-    void setSearchArea(
-        const QRect &area
-        );
-
-    void setIconRect(
-        const QRect &rect
-        );
-
-    void setCaptureMode(
-        bool capturing
-        );
-
-    void showFeedback(
-        const QString &text
-        );
+    void setSearchArea(const QRect &area);
+    void setIconRect(const QRect &rect);
+    void setCaptureMode(bool capturing);
+    void showFeedback(const QString &text);
 
 protected:
-
-    void paintEvent(
-        QPaintEvent *event
-        ) override;
-
-    void mousePressEvent(
-        QMouseEvent *event
-        ) override;
-
-    void mouseMoveEvent(
-        QMouseEvent *event
-        ) override;
-
-    void mouseReleaseEvent(
-        QMouseEvent *event
-        ) override;
+    void paintEvent(QPaintEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 private:
-
     enum class Handle
     {
         None,
         Move,
+        MoveIcon,
         TopLeft,
-        Top,
         TopRight,
-        Right,
-        BottomRight,
-        Bottom,
         BottomLeft,
+        BottomRight,
+        Top,
+        Bottom,
         Left,
-        MoveIcon
+        Right
     };
 
-    static constexpr int HANDLE_SIZE = 10;
+    Handle hitTest(const QPoint &pos) const;
 
-    Handle hitTest(
-        const QPoint &pos
-        ) const;
-
-    void updateCursor(
-        Handle handle
-        );
-
+    void updateCursor(Handle handle);
     void applyResize(
         Handle handle,
         const QPoint &pos
         );
 
-
     QRect m_searchArea;
     QRect m_iconRect;
 
-    Handle m_activeHandle =
-        Handle::None;
+    Handle m_activeHandle = Handle::None;
 
     QPoint m_dragStart;
     QRect m_areaAtDragStart;
     QPoint m_iconDragOffset;
 
+    QString m_feedback;
+
     bool m_hideRectangles = false;
 
-    QString m_feedback;
+    static constexpr int HANDLE_SIZE = 10;
 };

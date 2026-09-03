@@ -130,10 +130,10 @@ bool ScreenCapture::reinit()
 
     if(FAILED(hr))
     {
-        qDebug()
-        << "ScreenCapture: CreateDXGIFactory1 failed:"
-        << Qt::hex
-        << hr;
+        // qDebug()
+        // << "ScreenCapture: CreateDXGIFactory1 failed:"
+        // << Qt::hex
+        // << hr;
 
         return false;
     }
@@ -205,15 +205,15 @@ bool ScreenCapture::reinit()
             }
 
 
-            qDebug()
-                << "ScreenCapture: output trovato:"
-                << QString::fromWCharArray(
-                       outputDesc.DeviceName
-                       )
-                << "adapter"
-                << adapterIndex
-                << "output"
-                << outputIndex;
+            // qDebug()
+            //     << "ScreenCapture: output trovato:"
+            //     << QString::fromWCharArray(
+            //            outputDesc.DeviceName
+            //            )
+            //     << "adapter"
+            //     << adapterIndex
+            //     << "output"
+            //     << outputIndex;
 
 
             ComPtr<ID3D11Device>
@@ -246,11 +246,11 @@ bool ScreenCapture::reinit()
 
             if(FAILED(devHr))
             {
-                qDebug()
-                << "ScreenCapture:"
-                << "D3D11CreateDevice failed:"
-                << Qt::hex
-                << devHr;
+                // qDebug()
+                // << "ScreenCapture:"
+                // << "D3D11CreateDevice failed:"
+                // << Qt::hex
+                // << devHr;
 
                 return false;
             }
@@ -268,11 +268,11 @@ bool ScreenCapture::reinit()
 
             if(FAILED(asHr))
             {
-                qDebug()
-                << "ScreenCapture:"
-                << "QueryInterface IDXGIOutput1 failed:"
-                << Qt::hex
-                << asHr;
+                // qDebug()
+                // << "ScreenCapture:"
+                // << "QueryInterface IDXGIOutput1 failed:"
+                // << Qt::hex
+                // << asHr;
 
                 return false;
             }
@@ -291,11 +291,11 @@ bool ScreenCapture::reinit()
 
             if(FAILED(dupHr))
             {
-                qDebug()
-                << "ScreenCapture:"
-                << "DuplicateOutput failed:"
-                << Qt::hex
-                << dupHr;
+                // qDebug()
+                // << "ScreenCapture:"
+                // << "DuplicateOutput failed:"
+                // << Qt::hex
+                // << dupHr;
 
                 return false;
             }
@@ -317,12 +317,12 @@ bool ScreenCapture::reinit()
                 true;
 
 
-            qDebug()
-                << "ScreenCapture:"
-                << "DXGI duplication attiva su"
-                << QString::fromWCharArray(
-                       outputDesc.DeviceName
-                       );
+            // qDebug()
+            //     << "ScreenCapture:"
+            //     << "DXGI duplication attiva su"
+            //     << QString::fromWCharArray(
+            //            outputDesc.DeviceName
+            //            );
 
 
             return true;
@@ -333,10 +333,10 @@ bool ScreenCapture::reinit()
     }
 
 
-    qDebug()
-        << "ScreenCapture:"
-        << "nessun output corrisponde allo schermo primario:"
-        << targetGeometry;
+    // qDebug()
+    //     << "ScreenCapture:"
+    //     << "nessun output corrisponde allo schermo primario:"
+    //     << targetGeometry;
 
 
     return false;
@@ -353,10 +353,10 @@ int ScreenCapture::registerRegion(
 {
     if(rect.isNull() || rect.isEmpty())
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "tentativo di registrare rect invalido:"
-        << rect;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "tentativo di registrare rect invalido:"
+        // << rect;
 
         return -1;
     }
@@ -372,11 +372,11 @@ int ScreenCapture::registerRegion(
         );
 
 
-    qDebug()
-        << "ScreenCapture:"
-        << "region registered:"
-        << "id =" << id
-        << "rect =" << rect;
+    // qDebug()
+    //     << "ScreenCapture:"
+    //     << "region registered:"
+    //     << "id =" << id
+    //     << "rect =" << rect;
 
 
     return id;
@@ -448,10 +448,10 @@ bool ScreenCapture::beginFrame()
 {
     if(s_frameAcquired)
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "beginFrame chiamato mentre un frame"
-        << "e' gia' acquisito";
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "beginFrame chiamato mentre un frame"
+        // << "e' gia' acquisito";
 
         return true;
     }
@@ -463,9 +463,9 @@ bool ScreenCapture::beginFrame()
 
     if(s_regions.isEmpty())
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "beginFrame: nessuna regione registrata";
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "beginFrame: nessuna regione registrata";
 
         return false;
     }
@@ -489,9 +489,9 @@ bool ScreenCapture::beginFrame()
 
     if(hr == DXGI_ERROR_WAIT_TIMEOUT)
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "DXGI WAIT_TIMEOUT";
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "DXGI WAIT_TIMEOUT";
 
         return false;
     }
@@ -499,9 +499,9 @@ bool ScreenCapture::beginFrame()
 
     if(hr == DXGI_ERROR_ACCESS_LOST)
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "DXGI ACCESS_LOST - reinit";
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "DXGI ACCESS_LOST - reinit";
 
 
         reinit();
@@ -512,11 +512,11 @@ bool ScreenCapture::beginFrame()
 
     if(FAILED(hr))
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "AcquireNextFrame failed:"
-        << Qt::hex
-        << hr;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "AcquireNextFrame failed:"
+        // << Qt::hex
+        // << hr;
 
         return false;
     }
@@ -534,11 +534,11 @@ bool ScreenCapture::beginFrame()
 
     if(FAILED(hr))
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "frame resource non convertibile:"
-        << Qt::hex
-        << hr;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "frame resource non convertibile:"
+        // << Qt::hex
+        // << hr;
 
 
         s_duplication->ReleaseFrame();
@@ -555,10 +555,10 @@ bool ScreenCapture::beginFrame()
         true;
 
 
-    qDebug()
-        << "DXGI NEW FRAME:"
-        << "active regions ="
-        << s_regions.size();
+    // qDebug()
+    //     << "DXGI NEW FRAME:"
+    //     << "active regions ="
+    //     << s_regions.size();
 
 
     return true;
@@ -651,11 +651,11 @@ bool ScreenCapture::ensureStaging(
 
     if(FAILED(hr))
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "CreateTexture2D staging failed:"
-        << Qt::hex
-        << hr;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "CreateTexture2D staging failed:"
+        // << Qt::hex
+        // << hr;
 
 
         s_stagingSize =
@@ -719,12 +719,12 @@ QImage ScreenCapture::captureRectFromCurrentFrame(
         rect.size()
         )
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "rect fuori dal desktop:"
-        << rect
-        << "desktop:"
-        << s_desktopRect;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "rect fuori dal desktop:"
+        // << rect
+        // << "desktop:"
+        // << s_desktopRect;
 
         return QImage();
     }
@@ -807,13 +807,13 @@ QImage ScreenCapture::captureRectFromCurrentFrame(
 
     if(FAILED(hr))
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "Map failed:"
-        << Qt::hex
-        << hr
-        << "rect:"
-        << rect;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "Map failed:"
+        // << Qt::hex
+        // << hr
+        // << "rect:"
+        // << rect;
 
         return QImage();
     }
@@ -869,10 +869,10 @@ QImage ScreenCapture::captureRegion(
 {
     if(!s_regions.contains(regionId))
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "region ID non registrato:"
-        << regionId;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "region ID non registrato:"
+        // << regionId;
 
         return QImage();
     }
@@ -880,10 +880,10 @@ QImage ScreenCapture::captureRegion(
 
     if(!s_frameAcquired)
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "captureRegion chiamata senza beginFrame:"
-        << regionId;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "captureRegion chiamata senza beginFrame:"
+        // << regionId;
 
         return s_regionCache.value(
             regionId
@@ -910,12 +910,12 @@ QImage ScreenCapture::captureRegion(
             image
             );
 
-        qDebug()
-            << "ScreenCapture:"
-            << "region captured:"
-            << "id =" << regionId
-            << "rect =" << rect
-            << "size =" << image.size();
+        // qDebug()
+        //     << "ScreenCapture:"
+        //     << "region captured:"
+        //     << "id =" << regionId
+        //     << "rect =" << rect
+        //     << "size =" << image.size();
 
 
         return image;
@@ -953,9 +953,9 @@ void ScreenCapture::endFrame()
         false;
 
 
-    qDebug()
-        << "ScreenCapture:"
-        << "DXGI frame released";
+    // qDebug()
+    //     << "ScreenCapture:"
+    //     << "DXGI frame released";
 }
 
 
@@ -1088,20 +1088,20 @@ bool ScreenCapture::updateRegion(
 {
     if (rect.isNull() || rect.isEmpty())
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "tentativo di aggiornare con rect invalido:"
-        << rect;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "tentativo di aggiornare con rect invalido:"
+        // << rect;
 
         return false;
     }
 
     if (!s_regions.contains(regionId))
     {
-        qDebug()
-        << "ScreenCapture:"
-        << "updateRegion: ID non registrato:"
-        << regionId;
+        // qDebug()
+        // << "ScreenCapture:"
+        // << "updateRegion: ID non registrato:"
+        // << regionId;
 
         return false;
     }
@@ -1115,12 +1115,12 @@ bool ScreenCapture::updateRegion(
     // Va quindi eliminata.
     s_regionCache.remove(regionId);
 
-    qDebug()
-        << "ScreenCapture:"
-        << "region updated:"
-        << "id =" << regionId
-        << "old =" << oldRect
-        << "new =" << rect;
+    // qDebug()
+    //     << "ScreenCapture:"
+    //     << "region updated:"
+    //     << "id =" << regionId
+    //     << "old =" << oldRect
+    //     << "new =" << rect;
 
     return true;
 }

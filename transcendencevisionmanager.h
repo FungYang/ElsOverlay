@@ -9,14 +9,13 @@ class GlobalKeyboard;
 class OverlayRoot;
 class Overlay;
 class TranscendenceCaptureSetup;
-
+class TranscendencePrecisionCrop;
 
 class TranscendenceVisionManager : public QObject
 {
     Q_OBJECT
 
 public:
-
     explicit TranscendenceVisionManager(
         GlobalKeyboard *keyboard,
         OverlayRoot *overlayRoot,
@@ -28,37 +27,28 @@ public:
 
     void configure();
 
-    void setEnabled(
-        bool enabled
-        );
-
+    void setEnabled(bool enabled);
 
 public slots:
-
     void onCooldownStarted();
-
     void onCooldownReset();
 
-
 private:
-
     void loadSettings();
-
     void saveSettings();
-
     void loadIcon();
 
     void registerSearchRegion();
-
     void unregisterSearchRegion();
 
     void startScanning();
-
     void stopAll();
-
     void stopScanning();
-
     void scanTick();
+
+    void openPrecisionCrop();
+    void savePreciseIcon(const QImage &icon);
+    void closePrecisionCrop();
 
     void saveCurrentIcon();
 
@@ -74,48 +64,22 @@ private:
         int offsetY
         ) const;
 
-
 private:
-
     GlobalKeyboard *keyboard = nullptr;
-
     OverlayRoot *overlayRoot = nullptr;
-
     Overlay *overlay = nullptr;
 
     TranscendenceCaptureSetup *captureSetup = nullptr;
-
-
-    // =====================================================
-    // SEARCH REGION
-    // =====================================================
+    TranscendencePrecisionCrop *precisionCrop = nullptr;
 
     QRect m_searchArea;
-
     int m_searchRegionId = -1;
-
-
-    // =====================================================
-    // TEMPLATE
-    // =====================================================
 
     QImage m_templateIcon;
 
-
-    // =====================================================
-    // TIMERS
-    // =====================================================
-
     QTimer m_delayTimer;
-
     QTimer m_scanTimer;
 
-
-    // =====================================================
-    // STATE
-    // =====================================================
-
     bool m_enabled = false;
-
     bool m_configured = false;
 };
