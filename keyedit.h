@@ -2,30 +2,24 @@
 #define KEYEDIT_H
 
 #include <QLineEdit>
-#include <QKeyEvent>
-#include <QString>
 
-#ifdef Q_OS_WIN
-#include <windows.h>
-#endif
-
+class QKeyEvent;
 
 class KeyEdit : public QLineEdit
 {
+    Q_OBJECT
+
 public:
 
     explicit KeyEdit(
         QWidget *parent = nullptr
         );
 
-
     int keyCode() const;
-
 
     void setKeyCode(
         int key
         );
-
 
 protected:
 
@@ -33,16 +27,15 @@ protected:
         QKeyEvent *event
         ) override;
 
+    void keyReleaseEvent(
+        QKeyEvent *event
+        ) override;
 
 private:
-
-    int m_keyCode = 0;
-
 
     QString keyName(
         int key
         ) const;
-
 
 #ifdef Q_OS_WIN
 
@@ -51,6 +44,10 @@ private:
         ) const;
 
 #endif
+
+private:
+
+    int m_keyCode = 0;
 };
 
-#endif
+#endif // KEYEDIT_H

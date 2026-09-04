@@ -2,11 +2,10 @@
 #define NEWBUFFDIALOG_H
 
 #include <QDialog>
-#include <QChar>
+#include "keyedit.h"
 
-class QLineEdit;
-class QPushButton;
 class QSpinBox;
+class QPushButton;
 
 class NewBuffDialog : public QDialog
 {
@@ -19,14 +18,14 @@ public:
         );
 
 
-    QChar key() const;
+    int keyCode() const;
 
     int cooldown() const;
 
 
 private:
 
-    QLineEdit *keyEdit = nullptr;
+    KeyEdit *keyEdit = nullptr;
 
     QSpinBox *cooldownSpinBox = nullptr;
 
@@ -36,6 +35,7 @@ private:
 
 
     void createUi();
+
 
 private slots:
 

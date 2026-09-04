@@ -1,3 +1,4 @@
+
 #include "buffoverlay.h"
 
 #include <QtAlgorithms>
@@ -56,7 +57,12 @@ void BuffOverlay::loadConfiguration(
         box->move(
             buff.position
             );
-        box->setConfigurationMode(false);
+
+
+        box->setConfigurationMode(
+            false
+            );
+
 
         box->show();
 
@@ -90,7 +96,7 @@ void BuffOverlay::handleKey(
          m_buffs)
     {
 
-        if(buff->key().unicode() == key)
+        if(buff->key() == key)
         {
 
             buff->startCooldown();
@@ -102,25 +108,42 @@ void BuffOverlay::handleKey(
     }
 }
 
+
+
 void BuffOverlay::resetAll()
 {
-    for(BuffBox *buff : m_buffs)
+    for(BuffBox *buff :
+         m_buffs)
     {
+
         buff->reset();
+
     }
 }
 
+
+
 void BuffOverlay::removePendingBoxes()
 {
-    for(int i = m_buffs.size() - 1; i >= 0; --i)
+    for(int i = m_buffs.size() - 1;
+         i >= 0;
+         --i)
     {
-        BuffBox *buff = m_buffs.at(i);
+
+        BuffBox *buff =
+            m_buffs.at(i);
+
 
         if(!buff->isInConfigurationMode())
             continue;
 
-        m_buffs.removeAt(i);
+
+        m_buffs.removeAt(
+            i
+            );
+
 
         buff->deleteLater();
+
     }
 }

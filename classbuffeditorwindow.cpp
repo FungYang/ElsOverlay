@@ -1,18 +1,216 @@
+
 #include "classbuffeditorwindow.h"
 #include "newbuffdialog.h"
 
 #include <QCloseEvent>
 #include <QHBoxLayout>
-#include <QInputDialog>
 #include <QLabel>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QVBoxLayout>
+
 #include "buffbox.h"
 #include "globalkeyboard.h"
 
+
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
+
+    // ============================================================
+    // KEY NAME
+    // ============================================================
+
+    static QString keyName(
+        int key
+        )
+{
+#ifdef Q_OS_WIN
+
+    switch(key)
+    {
+
+    case VK_LCONTROL:
+        return "L-Ctrl";
+
+    case VK_RCONTROL:
+        return "R-Ctrl";
+
+    case VK_LSHIFT:
+        return "L-Shift";
+
+    case VK_RSHIFT:
+        return "R-Shift";
+
+    case VK_LMENU:
+        return "L-Alt";
+
+    case VK_RMENU:
+        return "R-Alt";
+
+    case VK_LWIN:
+        return "L-Win";
+
+    case VK_RWIN:
+        return "R-Win";
+
+    case VK_SPACE:
+        return "Space";
+
+    case VK_RETURN:
+        return "Enter";
+
+    case VK_ESCAPE:
+        return "Esc";
+
+    case VK_TAB:
+        return "Tab";
+
+    case VK_BACK:
+        return "Back";
+
+    case VK_UP:
+        return "Up";
+
+    case VK_DOWN:
+        return "Down";
+
+    case VK_LEFT:
+        return "Left";
+
+    case VK_RIGHT:
+        return "Right";
+
+    case VK_DELETE:
+        return "Del";
+
+    case VK_INSERT:
+        return "Ins";
+
+    case VK_HOME:
+        return "Home";
+
+    case VK_END:
+        return "End";
+
+    case VK_PRIOR:
+        return "PgUp";
+
+    case VK_NEXT:
+        return "PgDn";
+
+    case VK_F1:
+        return "F1";
+
+    case VK_F2:
+        return "F2";
+
+    case VK_F3:
+        return "F3";
+
+    case VK_F4:
+        return "F4";
+
+    case VK_F5:
+        return "F5";
+
+    case VK_F6:
+        return "F6";
+
+    case VK_F7:
+        return "F7";
+
+    case VK_F8:
+        return "F8";
+
+    case VK_F9:
+        return "F9";
+
+    case VK_F10:
+        return "F10";
+
+    case VK_F11:
+        return "F11";
+
+    case VK_F12:
+        return "F12";
+
+    case VK_F13:
+        return "F13";
+
+    case VK_F14:
+        return "F14";
+
+    case VK_F15:
+        return "F15";
+
+    case VK_F16:
+        return "F16";
+
+    case VK_F17:
+        return "F17";
+
+    case VK_F18:
+        return "F18";
+
+    case VK_F19:
+        return "F19";
+
+    case VK_F20:
+        return "F20";
+
+    case VK_F21:
+        return "F21";
+
+    case VK_F22:
+        return "F22";
+
+    case VK_F23:
+        return "F23";
+
+    case VK_F24:
+        return "F24";
+
+    default:
+        break;
+    }
+
+
+    if(
+        key >= 'A' &&
+        key <= 'Z'
+        )
+    {
+        return QString(
+            QChar(key)
+            );
+    }
+
+
+    if(
+        key >= '0' &&
+        key <= '9'
+        )
+    {
+        return QString(
+            QChar(key)
+            );
+    }
+
+#endif
+
+    return QString::number(
+        key
+        );
+}
+
+
+// ============================================================
+// CONSTRUCTOR
+// ============================================================
 
 ClassBuffEditorWindow::ClassBuffEditorWindow(
     ClassConfigurationManager *manager,
@@ -25,7 +223,6 @@ ClassBuffEditorWindow::ClassBuffEditorWindow(
     m_configurationId(configurationId),
     m_keyboard(keyboard)
 {
-
     setWindowTitle(
         "Buff Configuration - " +
         configurationId
@@ -42,22 +239,27 @@ ClassBuffEditorWindow::ClassBuffEditorWindow(
 
     loadConfiguration();
 
-
-
     refreshList();
 
-    connect(
-        m_keyboard,
-        &GlobalKeyboard::confirmPressed,
-        this,
-        &ClassBuffEditorWindow::confirmPositions
-        );
 
+    if(m_keyboard)
+    {
+        connect(
+            m_keyboard,
+            &GlobalKeyboard::confirmPressed,
+            this,
+            &ClassBuffEditorWindow::confirmPositions
+            );
+    }
 }
+
+
+// ============================================================
+// CREATE UI
+// ============================================================
 
 void ClassBuffEditorWindow::createUi()
 {
-
     QVBoxLayout *mainLayout =
         new QVBoxLayout(
             this
@@ -100,7 +302,6 @@ void ClassBuffEditorWindow::createUi()
         );
 
 
-
     buffList =
         new QListWidget(
             this
@@ -110,7 +311,6 @@ void ClassBuffEditorWindow::createUi()
     mainLayout->addWidget(
         buffList
         );
-
 
 
     newKeyButton =
@@ -128,7 +328,6 @@ void ClassBuffEditorWindow::createUi()
     mainLayout->addWidget(
         newKeyButton
         );
-
 
 
     QHBoxLayout *bottomLayout =
@@ -164,7 +363,6 @@ void ClassBuffEditorWindow::createUi()
         );
 
 
-
     connect(
         newKeyButton,
         &QPushButton::clicked,
@@ -187,14 +385,19 @@ void ClassBuffEditorWindow::createUi()
         this,
         &QWidget::close
         );
-
 }
+
+
+// ============================================================
+// LOAD CONFIGURATION
+// ============================================================
 
 void ClassBuffEditorWindow::loadConfiguration()
 {
-
     if(!m_manager)
+    {
         return;
+    }
 
 
     m_buffs =
@@ -202,11 +405,22 @@ void ClassBuffEditorWindow::loadConfiguration()
             m_configurationId
             );
 
+
+    /*
+     * Creiamo anche i preview iniziali
+     * usando la configurazione caricata.
+     */
+
+    createPreviewBoxes();
 }
+
+
+// ============================================================
+// REFRESH LIST
+// ============================================================
 
 void ClassBuffEditorWindow::refreshList()
 {
-
     buffList->clear();
 
 
@@ -238,7 +452,7 @@ void ClassBuffEditorWindow::refreshList()
 
         QLabel *keyLabel =
             new QLabel(
-                QString(buff.key),
+                keyName(buff.key),
                 row
                 );
 
@@ -258,7 +472,7 @@ void ClassBuffEditorWindow::refreshList()
 
 
         keyLabel->setMinimumWidth(
-            40
+            80
             );
 
 
@@ -311,27 +525,59 @@ void ClassBuffEditorWindow::refreshList()
                 deleteBuff(i);
             }
             );
-
     }
-
 }
+
+
+// ============================================================
+// ADD NEW KEY
+// ============================================================
+
 void ClassBuffEditorWindow::addNewKey()
 {
-    NewBuffDialog dialog(this);
+    NewBuffDialog dialog(
+        this
+        );
 
 
-    if(dialog.exec() != QDialog::Accepted)
+    if(
+        dialog.exec() !=
+        QDialog::Accepted
+        )
+    {
         return;
+    }
 
 
-    const QChar key =
-        dialog.key();
+    int keyCode =
+        dialog.keyCode();
 
+
+    // ========================================================
+    // CHECK KEY
+    // ========================================================
+
+    if(keyCode == 0)
+    {
+        QMessageBox::warning(
+            this,
+            "Errore",
+            "Tasto non valido."
+            );
+
+        return;
+    }
+
+
+    // ========================================================
+    // CHECK DUPLICATE
+    // ========================================================
 
     for(const BuffConfiguration &buff :
          m_buffs)
     {
-        if(buff.key == key)
+
+        if(buff.key == keyCode)
         {
             QMessageBox::warning(
                 this,
@@ -344,11 +590,15 @@ void ClassBuffEditorWindow::addNewKey()
     }
 
 
+    // ========================================================
+    // CREATE CONFIGURATION
+    // ========================================================
+
     BuffConfiguration configuration;
 
 
     configuration.key =
-        key;
+        keyCode;
 
 
     configuration.cooldown =
@@ -366,21 +616,30 @@ void ClassBuffEditorWindow::addNewKey()
         configuration
         );
 
+
+    // ========================================================
+    // UPDATE UI
+    // ========================================================
+
     refreshList();
+
 
     createPreviewBoxes();
-
-
-    refreshList();
 }
+
+
+// ============================================================
+// DELETE BUFF
+// ============================================================
 
 void ClassBuffEditorWindow::deleteBuff(
     int index
     )
 {
-
-    if(index < 0 ||
-        index >= m_buffs.size())
+    if(
+        index < 0 ||
+        index >= m_buffs.size()
+        )
     {
         return;
     }
@@ -391,16 +650,44 @@ void ClassBuffEditorWindow::deleteBuff(
         );
 
 
+    /*
+     * IMPORTANTE:
+     *
+     * Ricreiamo i PreviewBox dopo la cancellazione.
+     *
+     * In questo modo l'indice del PreviewBox
+     * corrisponde sempre all'indice del BuffConfiguration.
+     */
+
     refreshList();
 
+
+    createPreviewBoxes();
 }
+
+
+// ============================================================
+// SAVE CONFIGURATION
+// ============================================================
 
 void ClassBuffEditorWindow::saveConfiguration()
 {
-
     if(!m_manager)
+    {
         return;
+    }
 
+
+    /*
+     * Salviamo l'intera lista.
+     *
+     * buff.key è un INT VK.
+     *
+     * Quindi:
+     *
+     * L-Ctrl = 162
+     * R-Ctrl = 163
+     */
 
     m_manager->setBuffs(
         m_configurationId,
@@ -412,33 +699,63 @@ void ClassBuffEditorWindow::saveConfiguration()
 
 
     close();
-
 }
+
+
+// ============================================================
+// CLOSE EVENT
+// ============================================================
 
 void ClassBuffEditorWindow::closeEvent(
     QCloseEvent *event
     )
 {
+    /*
+     * NON emettiamo configurationSaved() qui.
+     *
+     * Se l'utente preme "Chiudi" senza premere
+     * "Salva", non dobbiamo far credere al resto
+     * dell'applicazione che la configurazione sia stata salvata.
+     */
+
     clearPreviewBoxes();
 
-    emit configurationSaved();
+
     emit editorClosed();
+
 
     event->accept();
 }
 
+
+// ============================================================
+// CLEAR PREVIEW BOXES
+// ============================================================
+
 void ClassBuffEditorWindow::clearPreviewBoxes()
 {
-    qDeleteAll(m_previewBoxes);
+    qDeleteAll(
+        m_previewBoxes
+        );
+
+
     m_previewBoxes.clear();
 }
+
+
+// ============================================================
+// CREATE PREVIEW BOXES
+// ============================================================
 
 void ClassBuffEditorWindow::createPreviewBoxes()
 {
     clearPreviewBoxes();
 
-    for(const BuffConfiguration &buff : m_buffs)
+
+    for(const BuffConfiguration &buff :
+         m_buffs)
     {
+
         BuffBox *box =
             new BuffBox(
                 buff.key,
@@ -446,13 +763,19 @@ void ClassBuffEditorWindow::createPreviewBoxes()
                 nullptr
                 );
 
+
         box->move(
             buff.position
             );
 
-        box->setConfigurationMode(true);
+
+        box->setConfigurationMode(
+            true
+            );
+
 
         box->show();
+
 
         m_previewBoxes.append(
             box
@@ -461,26 +784,51 @@ void ClassBuffEditorWindow::createPreviewBoxes()
 }
 
 
+// ============================================================
+// CONFIRM POSITIONS
+// ============================================================
+
 void ClassBuffEditorWindow::confirmPositions()
 {
     if(!m_manager)
+    {
         return;
+    }
 
+
+    /*
+     * Aggiorniamo le posizioni dei buff
+     * in base ai PreviewBox.
+     */
 
     for(int i = 0;
          i < m_previewBoxes.size() &&
          i < m_buffs.size();
          ++i)
     {
+
         m_buffs[i].position =
             m_previewBoxes[i]->pos();
     }
 
 
+    /*
+     * Salviamo immediatamente le nuove posizioni.
+     *
+     * Questo mantiene anche i VK intatti:
+     *
+     * buff.key = 162
+     * buff.key = 163
+     * ecc.
+     */
+
     m_manager->setBuffs(
         m_configurationId,
         m_buffs
         );
+
+
+    emit configurationSaved();
 
 
     clearPreviewBoxes();

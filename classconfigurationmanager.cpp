@@ -237,6 +237,7 @@ void ClassConfigurationManager::load()
                         prefix + "/imagePath"
                         ).toString();
 
+
         int buffCount =
             settings.value(
                         prefix + "/buffCount",
@@ -248,19 +249,36 @@ void ClassConfigurationManager::load()
              j < buffCount;
              ++j)
         {
+
             QString buffPrefix =
                 prefix +
                 "/buffs/" +
                 QString::number(j);
 
 
-            QString keyText =
+            /*
+             * Il tasto viene salvato come VK code.
+             *
+             * Esempi:
+             *
+             * L-Ctrl = 162
+             * R-Ctrl = 163
+             * L-Shift = 160
+             * R-Shift = 161
+             * L-Alt = 164
+             * R-Alt = 165
+             * L-Win = 91
+             * R-Win = 92
+             */
+
+            int keyCode =
                 settings.value(
-                            buffPrefix + "/key"
-                            ).toString();
+                            buffPrefix + "/key",
+                            0
+                            ).toInt();
 
 
-            if(keyText.isEmpty())
+            if(keyCode == 0)
                 continue;
 
 
@@ -268,7 +286,7 @@ void ClassConfigurationManager::load()
 
 
             buff.key =
-                keyText.at(0);
+                keyCode;
 
 
             buff.cooldown =
@@ -295,6 +313,7 @@ void ClassConfigurationManager::load()
             configuration.buffs.append(
                 buff
                 );
+
         }
 
 
@@ -392,6 +411,7 @@ void ClassConfigurationManager::save() const
             configuration.imagePath
             );
 
+
         settings.setValue(
             prefix + "/buffCount",
             configuration.buffs.size()
@@ -402,6 +422,7 @@ void ClassConfigurationManager::save() const
              j < configuration.buffs.size();
              ++j)
         {
+
             const BuffConfiguration &buff =
                 configuration.buffs[j];
 
@@ -412,9 +433,25 @@ void ClassConfigurationManager::save() const
                 QString::number(j);
 
 
+            /*
+             * Salviamo direttamente il VK code
+             * come intero.
+             *
+             * Esempi:
+             *
+             * L-Ctrl = 162
+             * R-Ctrl = 163
+             * L-Shift = 160
+             * R-Shift = 161
+             * L-Alt = 164
+             * R-Alt = 165
+             * L-Win = 91
+             * R-Win = 92
+             */
+
             settings.setValue(
                 buffPrefix + "/key",
-                QString(buff.key)
+                buff.key
                 );
 
 
@@ -434,6 +471,7 @@ void ClassConfigurationManager::save() const
                 buffPrefix + "/y",
                 buff.position.y()
                 );
+
         }
 
     }
@@ -446,14 +484,18 @@ void ClassConfigurationManager::save() const
 
 }
 
+
+
 void ClassConfigurationManager::setBuffs(
     const QString &id,
     const QList<BuffConfiguration> &buffs
     )
 {
+
     for(ClassConfiguration &configuration :
          m_configurations)
     {
+
         if(configuration.id != id)
             continue;
 
@@ -469,22 +511,32 @@ void ClassConfigurationManager::setBuffs(
 
 
         return;
+
     }
+
 }
+
+
 
 QList<BuffConfiguration>
 ClassConfigurationManager::buffs(
     const QString &id
     ) const
 {
+
     for(const ClassConfiguration &configuration :
          m_configurations)
     {
+
         if(configuration.id == id)
         {
+
             return configuration.buffs;
+
         }
+
     }
+
 
     return {};
 }

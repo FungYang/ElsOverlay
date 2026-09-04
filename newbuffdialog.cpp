@@ -2,11 +2,10 @@
 
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QVBoxLayout>
 #include <QSpinBox>
+#include <QVBoxLayout>
 
 
 NewBuffDialog::NewBuffDialog(
@@ -64,18 +63,13 @@ void NewBuffDialog::createUi()
 
 
     keyEdit =
-        new QLineEdit(
+        new KeyEdit(
             this
             );
 
 
-    keyEdit->setMaxLength(
-        1
-        );
-
-
     keyEdit->setPlaceholderText(
-        "A"
+        "Premi un tasto..."
         );
 
 
@@ -195,12 +189,7 @@ void NewBuffDialog::createUi()
 
 void NewBuffDialog::save()
 {
-    const QString text =
-        keyEdit->text()
-            .trimmed();
-
-
-    if(text.size() != 1)
+    if(keyEdit->keyCode() == 0)
     {
         QMessageBox::warning(
             this,
@@ -229,12 +218,9 @@ void NewBuffDialog::save()
 
 
 
-QChar NewBuffDialog::key() const
+int NewBuffDialog::keyCode() const
 {
-    return keyEdit->text()
-    .trimmed()
-        .at(0)
-        .toUpper();
+    return keyEdit->keyCode();
 }
 
 

@@ -1,11 +1,12 @@
 #ifndef BUFFBOX_H
 #define BUFFBOX_H
 
-#include <QWidget>
-#include <QTimer>
 #include <QPoint>
-#include <QChar>
+#include <QTimer>
+#include <QWidget>
 
+    class QMouseEvent;
+class QPaintEvent;
 
 class BuffBox : public QWidget
 {
@@ -14,17 +15,18 @@ class BuffBox : public QWidget
 public:
 
     explicit BuffBox(
-        QChar key,
+        int key,
         int cooldown,
         QWidget *parent = nullptr
         );
 
 
+    int key() const;
+
+
     void startCooldown();
 
     void reset();
-
-    QChar key() const;
 
 
     void setConfigurationPosition(
@@ -34,7 +36,11 @@ public:
 
     QPoint configurationPosition() const;
 
-    void setConfigurationMode(bool enabled);
+
+    void setConfigurationMode(
+        bool enabled
+        );
+
 
     bool isInConfigurationMode() const;
 
@@ -68,11 +74,6 @@ protected:
         ) override;
 
 
-private slots:
-
-    void cooldownFinished();
-
-
 private:
 
     enum class State
@@ -83,28 +84,41 @@ private:
     };
 
 
-    QChar m_key;
+    int m_key = 0;
 
     int m_cooldown = 0;
 
+
     QTimer m_timer;
+
+    QTimer m_glowTimer;
+
 
     State m_state =
         State::Ready;
 
 
-    bool m_dragging = false;
+    bool m_configurationMode =
+        false;
+
+
+    bool m_dragging =
+        false;
+
 
     QPoint m_dragOffset;
 
 
-    QTimer m_glowTimer;
+    int m_glowAlpha =
+        80;
 
-    int m_glowAlpha = 80;
 
-    bool m_glowIncreasing = true;
+    bool m_glowIncreasing =
+        true;
 
-    bool m_configurationMode;
+
+    void cooldownFinished();
+    QString keyName(int key) const;
 
 };
 

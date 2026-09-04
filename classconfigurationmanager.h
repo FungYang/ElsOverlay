@@ -9,12 +9,10 @@
 #include <QVector>
 
 
-struct BuffConfiguration
-{
-    QChar key;
+struct BuffConfiguration {
+    int key = 0;
     int cooldown = 0;
-    QPoint position;
-};
+    QPoint position; };
 
 struct ClassConfiguration
 {
