@@ -18,9 +18,9 @@ constexpr int PRECISION_ZOOM = 3;
 constexpr int DELAY_MS = 18000;
 
 // Frequenza di scansione una volta attiva.
-constexpr int SCAN_INTERVAL_MS = 20;
+constexpr int SCAN_INTERVAL_MS = 100;
 
-constexpr double MATCH_THRESHOLD = 95.0;
-constexpr int    PIXEL_TOLERANCE = 15;
+constexpr double MATCH_THRESHOLD = 97.5;
+constexpr int    PIXEL_TOLERANCE = 7;
 constexpr double FAST_TOLERANCE  = 70.0;
 }

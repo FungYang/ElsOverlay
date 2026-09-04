@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 project(ElsOverlay LANGUAGES CXX)
-
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
-
-
-
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets Concurrent)
 qt_standard_project_setup()
 qt_add_executable(ElsOverlay
     WIN32 MACOSX_BUNDLE
@@ -20,10 +16,8 @@ qt_add_executable(ElsOverlay
     buffbox.h buffbox.cpp
     buffoverlay.h buffoverlay.cpp
     classselector.h classselector.cpp
-
     buffvisioncore.h buffvisioncore.cpp
     buffvisionoverlay.h buffvisionoverlay.cpp
-
     buffvisioncapturesetup.h buffvisioncapturesetup.cpp
     buffvisionmanager.h buffvisionmanager.cpp
     buffvisioncapture.h buffvisioncapture.cpp
@@ -53,24 +47,20 @@ qt_add_executable(ElsOverlay
     skillconfigwindow.h skillconfigwindow.cpp
     SkillConfig.h
     keyedit.h keyedit.cpp
-
-
-
 )
 target_link_libraries(ElsOverlay
     PRIVATE
         Qt::Core
         Qt::Widgets
+        Qt::Concurrent
         d3d11
         dxgi
 )
-
 install(TARGETS ElsOverlay
     BUNDLE  DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
 qt_generate_deploy_app_script(
     TARGET ElsOverlay
     OUTPUT_SCRIPT deploy_script
@@ -82,5 +72,3 @@ add_custom_command(TARGET ElsOverlay POST_BUILD
     $<TARGET_FILE_DIR:ElsOverlay>/images
 )
 install(SCRIPT ${deploy_script})
-
-

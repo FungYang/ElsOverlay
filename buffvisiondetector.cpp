@@ -139,7 +139,7 @@ VisionState BuffVisionDetector::detect(
 
 
 
-    constexpr double confidence = 0.85;
+    constexpr double confidence = 0.90;
 
 
 

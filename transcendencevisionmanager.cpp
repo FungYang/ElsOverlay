@@ -14,6 +14,12 @@
 #include <QScreen>
 #include <QCoreApplication>
 #include <QKeyEvent>
+#include <QThread>
+#include <QtConcurrent/QtConcurrent>
+#include <QFuture>
+#include <QVector>
+#include <QElapsedTimer>
+#include <atomic>
 
 TranscendenceVisionManager::TranscendenceVisionManager(
     GlobalKeyboard *keyboard,
@@ -352,8 +358,15 @@ void TranscendenceVisionManager::openPrecisionCrop()
                 return;
             }
 
-            // Cattura 84x84. Il selettore preciso sceglierà
-            // al suo interno esattamente 28x28 pixel.
+            // Cattura 84x84 per l'anteprima interattiva. Usiamo GDI
+            // (grabWindow) qui perche' e' immediatamente affidabile
+            // subito dopo l'hide del setup; DXGI in questo preciso
+            // istante puo' restituire un frame di transizione
+            // (grigio/vuoto) per via del timing dell'animazione di
+            // compositing di Windows. La cattura "vera" (coerente con
+            // la pipeline di scansione) avviene invece al salvataggio,
+            // quando l'utente conferma il ritaglio: a quel punto non
+            // c'e' piu' alcun rischio di frame di transizione.
             const QImage source =
                 ScreenCapture::captureRegionReliable(
                     screen,
@@ -624,6 +637,222 @@ void TranscendenceVisionManager::scanTick()
             score
             );
 
+#ifdef QT_DEBUG
+    // ==== BLOCCO DIAGNOSTICO - SOLO BUILD DI DEBUG ====
+    // Log dello score ad ogni tentativo, per capire se i mancati
+    // match sono "quasi presi" (soglia troppo stretta) o "lontani"
+    // (area/colore sbagliati).
+    qDebug()
+        << "TRANSCENDENCE: score ="
+        << score
+        << "soglia ="
+        << TranscendenceVisionConfig::MATCH_THRESHOLD
+        << "found ="
+        << found;
+
+    // Salva su disco l'area catturata, al massimo una volta al
+    // secondo, per poterla confrontare a occhio con
+    // transcendence_search.png e capire se il contenuto catturato e'
+    // davvero quello che ci si aspetta in quella posizione dello
+    // schermo. File salvati in /images/debug/, sovrascritti ad ogni
+    // dump (nome fisso, non si accumulano).
+    {
+        static QElapsedTimer dumpTimer;
+
+        const bool shouldDump =
+            found ||
+            !dumpTimer.isValid() ||
+            dumpTimer.elapsed() >= 1000;
+
+        if (shouldDump)
+        {
+            const QString debugDir =
+                QCoreApplication::applicationDirPath() +
+                "/images/debug";
+
+            QDir().mkpath(debugDir);
+
+            // Quando troviamo un match, salviamo con nome separato
+            // (non sovrascritto dai dump periodici successivi) cosi'
+            // il caso "riuscito" resta disponibile per l'ispezione
+            // anche se la prossima scansione riparte solo dopo
+            // DELAY_MS.
+            const QString areaSuffix =
+                found ? "_found" : "";
+
+            area.save(
+                debugDir +
+                "/last_captured_area" +
+                areaSuffix +
+                ".png"
+                );
+
+            // Salviamo anche il crop 28x28 esatto nella posizione di
+            // miglior punteggio trovata (anche se sotto soglia), e
+            // calcoliamo la differenza media/massima per canale
+            // colore rispetto al template. Questo dice con numeri,
+            // non a occhio, se c'e' un vero scostamento cromatico
+            // (es. canale blu sistematicamente diverso) o se il
+            // problema e' altrove (differenze minime ma sparse,
+            // magari dovute a un pixel di bordo/anti-aliasing).
+            if (!foundRect.isNull() &&
+                foundRect.width() == m_templateIcon.width() &&
+                foundRect.height() == m_templateIcon.height())
+            {
+                const QImage candidate =
+                    area.copy(foundRect);
+
+                candidate.save(
+                    debugDir +
+                    "/last_best_candidate" +
+                    areaSuffix +
+                    ".png"
+                    );
+
+                long long sumR = 0;
+                long long sumG = 0;
+                long long sumB = 0;
+
+                int maxR = 0;
+                int maxG = 0;
+                int maxB = 0;
+
+                // Statistiche separate per il bordo esterno (1px)
+                // e per l'interno, per capire se le differenze
+                // grandi sono confinate ai contorni (anti-aliasing/
+                // subpixel) o se sono diffuse anche nel "cuore"
+                // dell'icona.
+                long long sumBorderR = 0;
+                long long sumBorderG = 0;
+                long long sumBorderB = 0;
+                int maxBorderR = 0;
+                int maxBorderG = 0;
+                int maxBorderB = 0;
+                int borderCount = 0;
+
+                long long sumInnerR = 0;
+                long long sumInnerG = 0;
+                long long sumInnerB = 0;
+                int maxInnerR = 0;
+                int maxInnerG = 0;
+                int maxInnerB = 0;
+                int innerCount = 0;
+
+                const int w = m_templateIcon.width();
+                const int h = m_templateIcon.height();
+
+                for (int y = 0; y < h; ++y)
+                {
+                    const QRgb *cLine =
+                        reinterpret_cast<const QRgb *>(
+                            candidate.constScanLine(y)
+                            );
+
+                    const QRgb *tLine =
+                        reinterpret_cast<const QRgb *>(
+                            m_templateIcon.constScanLine(y)
+                            );
+
+                    const bool borderRow =
+                        (y == 0 || y == h - 1);
+
+                    for (int x = 0; x < w; ++x)
+                    {
+                        const int dr =
+                            qAbs(qRed(cLine[x]) - qRed(tLine[x]));
+
+                        const int dg =
+                            qAbs(qGreen(cLine[x]) - qGreen(tLine[x]));
+
+                        const int db =
+                            qAbs(qBlue(cLine[x]) - qBlue(tLine[x]));
+
+                        sumR += dr;
+                        sumG += dg;
+                        sumB += db;
+
+                        maxR = qMax(maxR, dr);
+                        maxG = qMax(maxG, dg);
+                        maxB = qMax(maxB, db);
+
+                        const bool isBorder =
+                            borderRow ||
+                            x == 0 ||
+                            x == w - 1;
+
+                        if (isBorder)
+                        {
+                            sumBorderR += dr;
+                            sumBorderG += dg;
+                            sumBorderB += db;
+
+                            maxBorderR = qMax(maxBorderR, dr);
+                            maxBorderG = qMax(maxBorderG, dg);
+                            maxBorderB = qMax(maxBorderB, db);
+
+                            ++borderCount;
+                        }
+                        else
+                        {
+                            sumInnerR += dr;
+                            sumInnerG += dg;
+                            sumInnerB += db;
+
+                            maxInnerR = qMax(maxInnerR, dr);
+                            maxInnerG = qMax(maxInnerG, dg);
+                            maxInnerB = qMax(maxInnerB, db);
+
+                            ++innerCount;
+                        }
+                    }
+                }
+
+                const int total = w * h;
+
+                qDebug()
+                    << "TRANSCENDENCE DIFF: media R/G/B ="
+                    << (double(sumR) / total)
+                    << (double(sumG) / total)
+                    << (double(sumB) / total)
+                    << " massima R/G/B ="
+                    << maxR << maxG << maxB
+                    << " (PIXEL_TOLERANCE ="
+                    << TranscendenceVisionConfig::PIXEL_TOLERANCE
+                    << ")";
+
+                if (borderCount > 0)
+                {
+                    qDebug()
+                    << "TRANSCENDENCE DIFF BORDO"
+                    << "(" << borderCount << "px ):"
+                    << "media R/G/B ="
+                    << (double(sumBorderR) / borderCount)
+                    << (double(sumBorderG) / borderCount)
+                    << (double(sumBorderB) / borderCount)
+                    << " massima R/G/B ="
+                    << maxBorderR << maxBorderG << maxBorderB;
+                }
+
+                if (innerCount > 0)
+                {
+                    qDebug()
+                    << "TRANSCENDENCE DIFF INTERNO"
+                    << "(" << innerCount << "px ):"
+                    << "media R/G/B ="
+                    << (double(sumInnerR) / innerCount)
+                    << (double(sumInnerG) / innerCount)
+                    << (double(sumInnerB) / innerCount)
+                    << " massima R/G/B ="
+                    << maxInnerR << maxInnerG << maxInnerB;
+                }
+            }
+
+            dumpTimer.restart();
+        }
+    }
+    // ==== FINE BLOCCO DIAGNOSTICO ====
+#endif
+
     if (!found)
         return;
 
@@ -659,40 +888,135 @@ bool TranscendenceVisionManager::findIcon(
         return false;
     }
 
-    for (int y = 0;
-         y <= area.height() - height;
-         ++y)
+    const int maxY =
+        area.height() - height;
+
+    const int maxX =
+        area.width() - width;
+
+    // Struttura per raccogliere il risultato parziale di ogni blocco
+    // di righe elaborato su un thread separato.
+    struct ChunkResult
     {
-        for (int x = 0;
-             x <= area.width() - width;
-             ++x)
-        {
-            const double current =
-                compareAt(
-                    area,
-                    x,
-                    y
-                    );
+        double score = 0.0;
+        QRect rect;
+        bool found = false;
+    };
 
-            if (current > score)
-            {
-                score = current;
+    // Flag condiviso: appena un thread trova un match sopra soglia,
+    // gli altri smettono di scandire righe ancora da processare.
+    std::atomic<bool> stopFlag{false};
 
-                foundRect =
-                    QRect(
-                        x,
-                        y,
-                        width,
-                        height
-                        );
+    const int threadCount =
+        qMax(1, QThread::idealThreadCount());
 
-                if (score >=
-                    TranscendenceVisionConfig::MATCH_THRESHOLD)
+    const int totalRows =
+        maxY + 1;
+
+    // Creiamo piu' blocchi dei thread disponibili (oversubscription):
+    // il costo di compareAt varia molto da posizione a posizione
+    // (uscita rapida al pre-check vs confronto pixel-per-pixel
+    // completo), quindi blocchi piccoli permettono al pool di
+    // ribilanciare il carico dinamicamente invece di bloccarsi
+    // sul thread piu' lento. Riduce anche la latenza dello stopFlag.
+    constexpr int CHUNKS_PER_THREAD = 4;
+
+    const int desiredChunks =
+        qMax(1, threadCount * CHUNKS_PER_THREAD);
+
+    const int rowsPerChunk =
+        qMax(
+            1,
+            (totalRows + desiredChunks - 1) / desiredChunks
+            );
+
+    QVector<QFuture<ChunkResult>> futures;
+
+    for (int yStart = 0;
+         yStart <= maxY;
+         yStart += rowsPerChunk)
+    {
+        const int yEnd =
+            qMin(
+                yStart + rowsPerChunk - 1,
+                maxY
+                );
+
+        futures.append(
+            QtConcurrent::run(
+                [this, &area, &stopFlag, yStart, yEnd, maxX, width, height]()
+                -> ChunkResult
                 {
-                    return true;
+                    ChunkResult result;
+
+                    for (int y = yStart;
+                         y <= yEnd;
+                         ++y)
+                    {
+                        if (stopFlag.load(std::memory_order_relaxed))
+                            break;
+
+                        for (int x = 0;
+                             x <= maxX;
+                             ++x)
+                        {
+                            const double current =
+                                compareAt(
+                                    area,
+                                    x,
+                                    y
+                                    );
+
+                            if (current > result.score)
+                            {
+                                result.score = current;
+
+                                result.rect =
+                                    QRect(
+                                        x,
+                                        y,
+                                        width,
+                                        height
+                                        );
+
+                                if (current >=
+                                    TranscendenceVisionConfig::MATCH_THRESHOLD)
+                                {
+                                    result.found = true;
+
+                                    stopFlag.store(
+                                        true,
+                                        std::memory_order_relaxed
+                                        );
+
+                                    return result;
+                                }
+                            }
+                        }
+                    }
+
+                    return result;
                 }
-            }
+                )
+            );
+    }
+
+    for (QFuture<ChunkResult> &future : futures)
+        future.waitForFinished();
+
+    for (QFuture<ChunkResult> &future : futures)
+    {
+        const ChunkResult result =
+            future.result();
+
+        if (result.score > score)
+        {
+            score = result.score;
+            foundRect = result.rect;
         }
+
+        if (result.found)
+            return true;
     }
 
     return score >=
@@ -711,8 +1035,19 @@ double TranscendenceVisionManager::compareAt(
     const int height =
         m_templateIcon.height();
 
+    // Ignoriamo l'anello esterno di 1px: e' rumoroso per via
+    // dell'anti-aliasing/subpixel del rendering (vedi diagnostica:
+    // media diff bordo ~20, media diff interno ~0.01). Il confronto
+    // (sia il pre-check veloce che quello completo) lavora solo
+    // sull'area interna [1, width-2] x [1, height-2].
+    const int innerWidth =
+        width - 2;
+
+    const int innerHeight =
+        height - 2;
+
     const int total =
-        width * height;
+        innerWidth * innerHeight;
 
     if (total <= 0)
         return 0.0;
@@ -725,43 +1060,25 @@ double TranscendenceVisionManager::compareAt(
             sampleCount
             );
 
-    const int sampleX[sampleCount] = {
-        0,
-        width / 4,
-        width / 2,
-        (width * 3) / 4,
-        width - 1,
-        width / 4,
-        width / 2,
-        (width * 3) / 4,
-        0,
-        width / 4,
-        width / 2,
-        (width * 3) / 4,
-        width - 1,
-        width / 4,
-        width / 2,
-        (width * 3) / 4
-    };
+    // 16 campioni distribuiti su una griglia 4x4 uniforme,
+    // interamente dentro l'area interna (mai su x=0, x=width-1,
+    // y=0, y=height-1).
+    int sampleX[sampleCount];
+    int sampleY[sampleCount];
 
-    const int sampleY[sampleCount] = {
-        0,
-        0,
-        0,
-        0,
-        height / 4,
-        height / 4,
-        height / 4,
-        height / 4,
-        height / 2,
-        height / 2,
-        height / 2,
-        height / 2,
-        (height * 3) / 4,
-        (height * 3) / 4,
-        (height * 3) / 4,
-        (height * 3) / 4
-    };
+    for (int gy = 0; gy < 4; ++gy)
+    {
+        for (int gx = 0; gx < 4; ++gx)
+        {
+            const int idx = gy * 4 + gx;
+
+            sampleX[idx] =
+                1 + (gx * (innerWidth - 1)) / 3;
+
+            sampleY[idx] =
+                1 + (gy * (innerHeight - 1)) / 3;
+        }
+    }
 
     int differentSamples = 0;
 
@@ -839,8 +1156,8 @@ double TranscendenceVisionManager::compareAt(
 
     int differentPixels = 0;
 
-    for (int y = 0;
-         y < height;
+    for (int y = 1;
+         y <= height - 2;
          ++y)
     {
         const QRgb *sourceLine =
@@ -855,8 +1172,8 @@ double TranscendenceVisionManager::compareAt(
                 m_templateIcon.constScanLine(y)
                 );
 
-        for (int x = 0;
-             x < width;
+        for (int x = 1;
+             x <= width - 2;
              ++x)
         {
             const QRgb sourcePixel =

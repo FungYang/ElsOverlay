@@ -404,8 +404,8 @@
         overlay,
         [overlay,&transcendenceVision]()
         {
-            overlay->startCooldown();
-            transcendenceVision.onCooldownStarted();
+            if (overlay->startCooldown())
+                transcendenceVision.onCooldownStarted();
         },
         Qt::QueuedConnection
         );

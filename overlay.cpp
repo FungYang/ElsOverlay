@@ -255,25 +255,24 @@ void Overlay::resetCooldown()
 
 
 
-void Overlay::startCooldown()
+bool Overlay::startCooldown()
 {
     if(!enabled)
-        return;
+        return false;
 
     if(running)
-        return;
+        return false;
 
     running = true;
 
     paused = false;
-
     cooldown = 20;
-
     pausedElapsed = 0;
-
     elapsedTimer.restart();
 
     update();
+
+    return true;
 }
 
 

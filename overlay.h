@@ -14,7 +14,7 @@ public:
     Overlay(QWidget *parent = nullptr);
 
     void resetCooldown();
-    void startCooldown();
+    bool startCooldown();
     void togglePause();
     void restartCooldown();   // <-- nuovo
     void setEnabled(bool enabled);
