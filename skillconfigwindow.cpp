@@ -13,6 +13,7 @@
 #include <QSettings>
 #include <QSpinBox>
 #include <QVBoxLayout>
+
 #include "keyedit.h"
 
 
@@ -29,12 +30,15 @@ SkillConfigWindow::SkillConfigWindow(
         "Configurazione Buff Titles"
         );
 
+
     setMinimumSize(
         650,
         1000
         );
 
+
     buildUi();
+
     loadConfig();
 }
 
@@ -92,6 +96,98 @@ void SkillConfigWindow::buildUi()
 
     mainLayout->addWidget(
         keysGroup
+        );
+
+
+    // ========================================================
+    // SCALA BUFF TITLES
+    // ========================================================
+
+    QGroupBox *scaleGroup =
+        new QGroupBox(
+            "Dimensione Buff Titles",
+            this
+            );
+
+
+    QFormLayout *scaleLayout =
+        new QFormLayout(
+            scaleGroup
+            );
+
+
+    scaleCombo =
+        new QComboBox(
+            scaleGroup
+            );
+
+
+    // --------------------------------------------------------
+    // VALORI SCALA
+    // --------------------------------------------------------
+
+    scaleCombo->addItem(
+        "50%",
+        0.50
+        );
+
+
+    scaleCombo->addItem(
+        "75%",
+        0.75
+        );
+
+
+    scaleCombo->addItem(
+        "100%",
+        1.00
+        );
+
+
+    scaleCombo->addItem(
+        "125%",
+        1.25
+        );
+
+
+    scaleCombo->addItem(
+        "150%",
+        1.50
+        );
+
+
+    scaleCombo->addItem(
+        "175%",
+        1.75
+        );
+
+
+    scaleCombo->addItem(
+        "200%",
+        2.00
+        );
+
+
+    scaleCombo->addItem(
+        "250%",
+        2.50
+        );
+
+
+    scaleCombo->addItem(
+        "300%",
+        3.00
+        );
+
+
+    scaleLayout->addRow(
+        "Scala:",
+        scaleCombo
+        );
+
+
+    mainLayout->addWidget(
+        scaleGroup
         );
 
 
@@ -235,11 +331,14 @@ void SkillConfigWindow::buildUi()
         {
             readUiToConfig();
 
+
             saveConfig();
+
 
             emit configurationChanged(
                 m_config
                 );
+
 
             accept();
         }
@@ -563,6 +662,33 @@ void SkillConfigWindow::loadConfig()
 
 
     // ========================================================
+    // SCALA BUFF TITLES
+    // ========================================================
+
+    m_config.scale =
+        settings.value(
+                    "Overlay/BuffGroup/Scale",
+                    1.0
+                    ).toDouble();
+
+
+    // --------------------------------------------------------
+    // LIMITI
+    // --------------------------------------------------------
+
+    if(m_config.scale < 0.50)
+    {
+        m_config.scale = 0.50;
+    }
+
+
+    if(m_config.scale > 3.00)
+    {
+        m_config.scale = 3.00;
+    }
+
+
+    // ========================================================
     // UP
     // ========================================================
 
@@ -807,6 +933,36 @@ void SkillConfigWindow::loadConfig()
         );
 
 
+    // ========================================================
+    // CARICA SCALA NEL COMBOBOX
+    // ========================================================
+
+    int scaleIndex =
+        scaleCombo->findData(
+            m_config.scale
+            );
+
+
+    if(scaleIndex >= 0)
+    {
+        scaleCombo->setCurrentIndex(
+            scaleIndex
+            );
+    }
+    else
+    {
+        scaleCombo->setCurrentIndex(
+            scaleCombo->findData(
+                1.0
+                )
+            );
+    }
+
+
+    // ========================================================
+    // LOAD SKILL
+    // ========================================================
+
     loadSkill(
         m_config.up,
         upNameEdit,
@@ -961,6 +1117,34 @@ void SkillConfigWindow::readUiToConfig()
 
 
     // ========================================================
+    // SCALA BUFF TITLES
+    // ========================================================
+
+    if(scaleCombo)
+    {
+        m_config.scale =
+            scaleCombo->currentData()
+                .toDouble();
+    }
+
+
+    // --------------------------------------------------------
+    // LIMITI
+    // --------------------------------------------------------
+
+    if(m_config.scale < 0.50)
+    {
+        m_config.scale = 0.50;
+    }
+
+
+    if(m_config.scale > 3.00)
+    {
+        m_config.scale = 3.00;
+    }
+
+
+    // ========================================================
     // SKILL UP
     // ========================================================
 
@@ -1069,6 +1253,7 @@ SkillConfig SkillConfigWindow::readSkill(
     {
         config.comboKeys.clear();
 
+
         return config;
     }
 
@@ -1151,6 +1336,16 @@ void SkillConfigWindow::saveConfig()
 
 
     // ========================================================
+    // SCALA BUFF TITLES
+    // ========================================================
+
+    settings.setValue(
+        "Overlay/BuffGroup/Scale",
+        m_config.scale
+        );
+
+
+    // ========================================================
     // SALVA SKILL
     // ========================================================
 
@@ -1187,7 +1382,7 @@ void SkillConfigWindow::saveConfig()
 
 
         // ----------------------------------------------------
-        // Combo Keys
+        // COMBO KEYS
         // ----------------------------------------------------
 
         settings.beginWriteArray(

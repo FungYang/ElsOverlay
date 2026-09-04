@@ -1,7 +1,9 @@
+
 #include "skillbox.h"
 
 #include <QPainter>
 #include <QImage>
+#include <QFont>
 
 
 SkillBox::SkillBox(
@@ -14,21 +16,32 @@ SkillBox::SkillBox(
     skillName(skillName),
     imagePath(imagePath)
 {
-    image.load(imagePath);
+    image.load(
+        imagePath
+        );
+
 
     QImage gray =
         image.toImage().convertToFormat(
             QImage::Format_Grayscale8
             );
 
+
     grayImage =
-        QPixmap::fromImage(gray);
+        QPixmap::fromImage(
+            gray
+            );
 
 
-    setFixedSize(60,55);
+    setFixedSize(
+        60,
+        55
+        );
+
 
     cooldown =
         cooldownTime;
+
 
     currentCooldown =
         0;
@@ -37,6 +50,7 @@ SkillBox::SkillBox(
     setAttribute(
         Qt::WA_TranslucentBackground
         );
+
 
     setAttribute(
         Qt::WA_TransparentForMouseEvents
@@ -52,7 +66,21 @@ void SkillBox::paintEvent(
     QPaintEvent *
     )
 {
-    QPainter painter(this);
+    QPainter painter(
+        this
+        );
+
+
+    painter.setRenderHint(
+        QPainter::SmoothPixmapTransform,
+        true
+        );
+
+
+    painter.setRenderHint(
+        QPainter::Antialiasing,
+        true
+        );
 
 
     painter.fillRect(
@@ -72,17 +100,53 @@ void SkillBox::paintEvent(
     }
 
 
+    // =====================================================
+    // DIMENSIONI SCALATE
+    // =====================================================
+
+    int imageX =
+        qRound(
+            5.0 * scale
+            );
+
+
+    int imageY =
+        qRound(
+            15.0 * scale
+            );
+
+
+    int imageWidth =
+        qRound(
+            50.0 * scale
+            );
+
+
+    int imageHeight =
+        qRound(
+            35.0 * scale
+            );
+
+
+    // =====================================================
+    // IMAGE
+    // =====================================================
+
     if(!drawImage.isNull())
     {
         painter.drawPixmap(
-            5,
-            15,
-            50,
-            35,
+            imageX,
+            imageY,
+            imageWidth,
+            imageHeight,
             drawImage
             );
     }
 
+
+    // =====================================================
+    // COOLDOWN / READY
+    // =====================================================
 
     painter.setPen(
         Qt::white
@@ -91,10 +155,23 @@ void SkillBox::paintEvent(
 
     QFont font;
 
-    font.setPointSize(16);
-    font.setBold(true);
+    font.setPointSize(
+        qMax(
+            1,
+            qRound(
+                16.0 * scale
+                )
+            )
+        );
 
-    painter.setFont(font);
+    font.setBold(
+        true
+        );
+
+
+    painter.setFont(
+        font
+        );
 
 
     painter.drawText(
@@ -114,11 +191,14 @@ void SkillBox::paintEvent(
 void SkillBox::startCooldown()
 {
     if(activeCooldown)
+    {
         return;
+    }
 
 
     currentCooldown =
         cooldown;
+
 
     activeCooldown =
         true;
@@ -133,8 +213,10 @@ void SkillBox::resetCooldown()
     activeCooldown =
         false;
 
+
     currentCooldown =
         0;
+
 
     update();
 }
@@ -143,7 +225,9 @@ void SkillBox::resetCooldown()
 void SkillBox::tick()
 {
     if(!activeCooldown)
+    {
         return;
+    }
 
 
     currentCooldown--;
@@ -152,6 +236,7 @@ void SkillBox::tick()
     if(currentCooldown <= 0)
     {
         resetCooldown();
+
         return;
     }
 
@@ -200,6 +285,7 @@ void SkillBox::setSkillName(
     skillName =
         name;
 
+
     update();
 }
 
@@ -215,6 +301,63 @@ void SkillBox::setCooldown(
             );
 }
 
+
+// =========================================================
+// SCALE
+// =========================================================
+
+void SkillBox::setScale(
+    double newScale
+    )
+{
+    if(newScale <= 0.0)
+    {
+        newScale =
+            1.0;
+    }
+
+
+    scale =
+        newScale;
+
+
+    int width =
+        qMax(
+            1,
+            qRound(
+                60.0 * scale
+                )
+            );
+
+
+    int height =
+        qMax(
+            1,
+            qRound(
+                55.0 * scale
+                )
+            );
+
+
+    setFixedSize(
+        width,
+        height
+        );
+
+
+    update();
+}
+
+
+double SkillBox::getScale() const
+{
+    return scale;
+}
+
+
+// =========================================================
+// GETTERS
+// =========================================================
 
 QString SkillBox::getSkillName() const
 {

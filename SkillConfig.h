@@ -5,7 +5,7 @@
 #include <QString>
 
 
-enum class SkillActivation
+    enum class SkillActivation
 {
     CtrlCipolla,
     Combo,
@@ -16,6 +16,7 @@ enum class SkillActivation
 struct SkillConfig
 {
     QString name;
+
     QString imagePath;
 
     int cooldown = 0;
@@ -29,18 +30,41 @@ struct SkillConfig
 
 struct SkillOverlayConfig
 {
+    // --------------------------------------------------------
     // Tasto che inizia la sequenza
+    // --------------------------------------------------------
+
     int stateKey = 'G';
 
+
+    // --------------------------------------------------------
     // Tasto Cipolla
+    // --------------------------------------------------------
+
     int cipollaKey = '6';
 
-    // Skill
+
+    // --------------------------------------------------------
+    // SCALA INTERO BLOCCO BUFF TITLES
+    // --------------------------------------------------------
+
+    double scale = 1.0;
+
+
+    // --------------------------------------------------------
+    // SKILL
+    // --------------------------------------------------------
+
     SkillConfig up;
+
     SkillConfig left;
+
     SkillConfig down;
+
     SkillConfig right;
+
     SkillConfig artifact;
 };
+
 
 #endif

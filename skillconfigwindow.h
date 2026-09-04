@@ -4,9 +4,11 @@
 #include <QDialog>
 #include <QString>
 
+
 #include "skillconfig.h"
 
-class QComboBox;
+
+    class QComboBox;
 class QLineEdit;
 class KeyEdit;
 class QPushButton;
@@ -19,11 +21,13 @@ class SkillConfigWindow : public QDialog
 {
     Q_OBJECT
 
+
 public:
 
     explicit SkillConfigWindow(
         QWidget *parent = nullptr
         );
+
 
     SkillOverlayConfig config() const;
 
@@ -44,77 +48,112 @@ private:
     // TASTI GENERALI
     // --------------------------------------------------------
 
-    KeyEdit *stateKeyEdit;
-    KeyEdit *cipollaKeyEdit;
+    KeyEdit *stateKeyEdit = nullptr;
+
+    KeyEdit *cipollaKeyEdit = nullptr;
+
+
+    // --------------------------------------------------------
+    // SCALA
+    // --------------------------------------------------------
+
+    QComboBox *scaleCombo = nullptr;
 
 
     // --------------------------------------------------------
     // SKILL UP
     // --------------------------------------------------------
 
-    QLineEdit *upNameEdit;
-    QLineEdit *upImageEdit;
-    QSpinBox *upCooldownSpin;
-    QComboBox *upActivationCombo;
-    QListWidget *upComboKeysList;
-    QPushButton *upAddComboKeyButton;
-    QPushButton *upRemoveComboKeyButton;
+    QLineEdit *upNameEdit = nullptr;
+
+    QLineEdit *upImageEdit = nullptr;
+
+    QSpinBox *upCooldownSpin = nullptr;
+
+    QComboBox *upActivationCombo = nullptr;
+
+    QListWidget *upComboKeysList = nullptr;
+
+    QPushButton *upAddComboKeyButton = nullptr;
+
+    QPushButton *upRemoveComboKeyButton = nullptr;
 
 
     // --------------------------------------------------------
     // SKILL LEFT
     // --------------------------------------------------------
 
-    QLineEdit *leftNameEdit;
-    QLineEdit *leftImageEdit;
-    QSpinBox *leftCooldownSpin;
-    QComboBox *leftActivationCombo;
-    QListWidget *leftComboKeysList;
-    QPushButton *leftAddComboKeyButton;
-    QPushButton *leftRemoveComboKeyButton;
+    QLineEdit *leftNameEdit = nullptr;
+
+    QLineEdit *leftImageEdit = nullptr;
+
+    QSpinBox *leftCooldownSpin = nullptr;
+
+    QComboBox *leftActivationCombo = nullptr;
+
+    QListWidget *leftComboKeysList = nullptr;
+
+    QPushButton *leftAddComboKeyButton = nullptr;
+
+    QPushButton *leftRemoveComboKeyButton = nullptr;
 
 
     // --------------------------------------------------------
     // SKILL DOWN
     // --------------------------------------------------------
 
-    QLineEdit *downNameEdit;
-    QLineEdit *downImageEdit;
-    QSpinBox *downCooldownSpin;
-    QComboBox *downActivationCombo;
-    QListWidget *downComboKeysList;
-    QPushButton *downAddComboKeyButton;
-    QPushButton *downRemoveComboKeyButton;
+    QLineEdit *downNameEdit = nullptr;
+
+    QLineEdit *downImageEdit = nullptr;
+
+    QSpinBox *downCooldownSpin = nullptr;
+
+    QComboBox *downActivationCombo = nullptr;
+
+    QListWidget *downComboKeysList = nullptr;
+
+    QPushButton *downAddComboKeyButton = nullptr;
+
+    QPushButton *downRemoveComboKeyButton = nullptr;
 
 
     // --------------------------------------------------------
     // SKILL RIGHT
     // --------------------------------------------------------
 
-    QLineEdit *rightNameEdit;
-    QLineEdit *rightImageEdit;
-    QSpinBox *rightCooldownSpin;
-    QComboBox *rightActivationCombo;
-    QListWidget *rightComboKeysList;
-    QPushButton *rightAddComboKeyButton;
-    QPushButton *rightRemoveComboKeyButton;
+    QLineEdit *rightNameEdit = nullptr;
+
+    QLineEdit *rightImageEdit = nullptr;
+
+    QSpinBox *rightCooldownSpin = nullptr;
+
+    QComboBox *rightActivationCombo = nullptr;
+
+    QListWidget *rightComboKeysList = nullptr;
+
+    QPushButton *rightAddComboKeyButton = nullptr;
+
+    QPushButton *rightRemoveComboKeyButton = nullptr;
 
 
     // --------------------------------------------------------
     // SKILL ARTIFACT
     // --------------------------------------------------------
 
-    QLineEdit *artifactNameEdit;
-    QLineEdit *artifactImageEdit;
-    QSpinBox *artifactCooldownSpin;
+    QLineEdit *artifactNameEdit = nullptr;
+
+    QLineEdit *artifactImageEdit = nullptr;
+
+    QSpinBox *artifactCooldownSpin = nullptr;
 
 
     // --------------------------------------------------------
     // BUTTONS
     // --------------------------------------------------------
 
-    QPushButton *saveButton;
-    QPushButton *cancelButton;
+    QPushButton *saveButton = nullptr;
+
+    QPushButton *cancelButton = nullptr;
 
 
     // --------------------------------------------------------
@@ -152,6 +191,7 @@ private:
     // --------------------------------------------------------
 
     void loadConfig();
+
 
     void saveConfig();
 
@@ -208,5 +248,6 @@ private:
         QListWidget *list
         );
 };
+
 
 #endif

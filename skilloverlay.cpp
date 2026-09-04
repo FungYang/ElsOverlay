@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QMouseEvent>
 #include <QSettings>
+#include <QtGlobal>
 
 
 SkillOverlay::SkillOverlay(
@@ -12,11 +13,66 @@ SkillOverlay::SkillOverlay(
     : QWidget(parent),
     keyboard(keyboard)
 {
-    setFixedSize(
-        180,
-        165
+    // ========================================================
+    // CONFIGURAZIONE
+    // ========================================================
+
+    loadDefaultConfig();
+
+
+    // ========================================================
+    // SETTINGS
+    // ========================================================
+
+    QSettings settings(
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
+        QSettings::IniFormat
         );
 
+
+    QPoint savedPosition =
+        settings.value(
+                    "Overlay/BuffGroup/position",
+                    QPoint(100, 100)
+                    ).toPoint();
+
+
+    // La scala viene caricata da loadDefaultConfig().
+    // Qui usiamo direttamente il valore presente nella config.
+
+    scale =
+        config.scale;
+
+
+    // Protezione da valori non validi.
+
+    if(scale <= 0.0)
+    {
+        scale =
+            1.0;
+    }
+
+
+    // Limite minimo e massimo.
+
+    scale =
+        qBound(
+            0.50,
+            scale,
+            3.00
+            );
+
+
+    // Manteniamo config.scale sincronizzato.
+
+    config.scale =
+        scale;
+
+
+    // ========================================================
+    // FINESTRA
+    // ========================================================
 
     setWindowFlags(
         Qt::FramelessWindowHint |
@@ -34,30 +90,9 @@ SkillOverlay::SkillOverlay(
     // POSIZIONE
     // ========================================================
 
-    QSettings settings(
-        QCoreApplication::applicationDirPath() +
-            "/ElsOverlay.ini",
-        QSettings::IniFormat
-        );
-
-
-    QPoint savedPosition =
-        settings.value(
-                    "Overlay/BuffGroup/position",
-                    QPoint(100, 100)
-                    ).toPoint();
-
-
     move(
         savedPosition
         );
-
-
-    // ========================================================
-    // CONFIGURAZIONE
-    // ========================================================
-
-    loadDefaultConfig();
 
 
     // ========================================================
@@ -101,31 +136,34 @@ SkillOverlay::SkillOverlay(
 
 
     // ========================================================
-    // POSIZIONAMENTO
+    // SCALA
     // ========================================================
 
-    upSkill->move(
-        60,
-        0
+    upSkill->setScale(
+        scale
         );
 
 
-    leftSkill->move(
-        20,
-        50
+    leftSkill->setScale(
+        scale
         );
 
 
-    downSkill->move(
-        60,
-        100
+    downSkill->setScale(
+        scale
         );
 
 
-    rightSkill->move(
-        100,
-        50
+    rightSkill->setScale(
+        scale
         );
+
+
+    // ========================================================
+    // POSIZIONAMENTO E DIMENSIONE
+    // ========================================================
+
+    updateOverlayGeometry();
 
 
     // ========================================================
@@ -162,111 +200,118 @@ SkillOverlay::SkillOverlay(
     // KEYBOARD
     // ========================================================
 
-    connect(
-        keyboard,
-        &GlobalKeyboard::keyPressed,
-        this,
-        [this](int key)
-        {
-            if(!trackingActive)
+    if(keyboard)
+    {
+        connect(
+            keyboard,
+            &GlobalKeyboard::keyPressed,
+            this,
+            [this](int key)
             {
-                checkSequences(key);
-                return;
-            }
+                if(!trackingActive)
+                {
+                    checkSequences(
+                        key
+                        );
+
+                    return;
+                }
 
 
-            // ------------------------------------------------
-            // CIPOLLA
-            // ------------------------------------------------
+                // ------------------------------------------------
+                // CIPOLLA
+                // ------------------------------------------------
 
-            if(
-                key == config.cipollaKey &&
-                sequenceState ==
-                    SequenceState::WaitingStateKey
-                )
+                if(
+                    key == config.cipollaKey &&
+                    sequenceState ==
+                        SequenceState::WaitingStateKey
+                    )
+                {
+                    activateCipollaSkill();
+                }
+
+
+                // ------------------------------------------------
+                // COMBO
+                // ------------------------------------------------
+
+                activateComboSkill(
+                    key
+                    );
+
+
+                // ------------------------------------------------
+                // SEQUENZA STATO
+                // ------------------------------------------------
+
+                checkSequences(
+                    key
+                    );
+            },
+            Qt::QueuedConnection
+            );
+
+
+        // ====================================================
+        // CTRL SINISTRO
+        // ====================================================
+
+        connect(
+            keyboard,
+            &GlobalKeyboard::ctrlPressed,
+            this,
+            [this]()
             {
-                activateCipollaSkill();
+                activateCtrlSkill();
+            },
+            Qt::QueuedConnection
+            );
+
+
+        // ====================================================
+        // CTRL DESTRO / RESET
+        // ====================================================
+
+        connect(
+            keyboard,
+            &GlobalKeyboard::resetPressed,
+            this,
+            [this]()
+            {
+                trackingActive =
+                    true;
+
+
+                sequenceState =
+                    SequenceState::WaitingStateKey;
+
+
+                currentDirection =
+                    Direction::None;
+
+
+                resetAllCooldowns();
+            },
+            Qt::QueuedConnection
+            );
+
+
+        // ====================================================
+        // RESET TRASCENDENZA
+        // ====================================================
+
+        connect(
+            keyboard,
+            &GlobalKeyboard::transcendenceResetPressed,
+            this,
+            [this]()
+            {
+                trackingActive =
+                    true;
             }
-
-
-            // ------------------------------------------------
-            // COMBO
-            // ------------------------------------------------
-
-            activateComboSkill(
-                key
-                );
-
-
-            // ------------------------------------------------
-            // SEQUENZA STATO
-            // ------------------------------------------------
-
-            checkSequences(
-                key
-                );
-        },
-        Qt::QueuedConnection
-        );
-
-
-    // ========================================================
-    // CTRL SINISTRO
-    // ========================================================
-
-    connect(
-        keyboard,
-        &GlobalKeyboard::ctrlPressed,
-        this,
-        [this]()
-        {
-            activateCtrlSkill();
-        },
-        Qt::QueuedConnection
-        );
-
-
-    // ========================================================
-    // CTRL DESTRO / RESET
-    // ========================================================
-
-    connect(
-        keyboard,
-        &GlobalKeyboard::resetPressed,
-        this,
-        [this]()
-        {
-            trackingActive = true;
-
-
-            sequenceState =
-                SequenceState::WaitingStateKey;
-
-
-            currentDirection =
-                Direction::None;
-
-
-            resetAllCooldowns();
-
-        },
-        Qt::QueuedConnection
-        );
-
-
-    // ========================================================
-    // RESET TRASCENDENZA
-    // ========================================================
-
-    connect(
-        keyboard,
-        &GlobalKeyboard::transcendenceResetPressed,
-        this,
-        [this]()
-        {
-            trackingActive = true;
-        }
-        );
+            );
+    }
 }
 
 
@@ -281,6 +326,32 @@ void SkillOverlay::loadDefaultConfig()
             "/ElsOverlay.ini",
         QSettings::IniFormat
         );
+
+
+    // --------------------------------------------------------
+    // SCALA
+    // --------------------------------------------------------
+
+    config.scale =
+        settings.value(
+                    "Overlay/BuffGroup/Scale",
+                    1.0
+                    ).toDouble();
+
+
+    if(config.scale <= 0.0)
+    {
+        config.scale =
+            1.0;
+    }
+
+
+    config.scale =
+        qBound(
+            0.50,
+            config.scale,
+            3.00
+            );
 
 
     // --------------------------------------------------------
@@ -446,7 +517,7 @@ void SkillOverlay::loadDefaultConfig()
 
 
     // --------------------------------------------------------
-    // COMBO KEYS PER SKILL
+    // COMBO KEYS
     // --------------------------------------------------------
 
     auto loadComboKeys =
@@ -467,15 +538,20 @@ void SkillOverlay::loadDefaultConfig()
 
         if(size == 0)
         {
-            keys = defaults;
+            keys =
+                defaults;
         }
         else
         {
-            for(int i = 0;
-                 i < size;
-                 ++i)
+            for(
+                int i = 0;
+                i < size;
+                ++i
+                )
             {
-                settings.setArrayIndex(i);
+                settings.setArrayIndex(
+                    i
+                    );
 
 
                 int key =
@@ -487,7 +563,9 @@ void SkillOverlay::loadDefaultConfig()
 
                 if(key != 0)
                 {
-                    keys.append(key);
+                    keys.append(
+                        key
+                        );
                 }
             }
         }
@@ -527,6 +605,208 @@ void SkillOverlay::loadDefaultConfig()
 
 
 // ============================================================
+// SCALE
+// ============================================================
+
+void SkillOverlay::setScale(
+    double newScale
+    )
+{
+    if(newScale <= 0.0)
+    {
+        newScale =
+            1.0;
+    }
+
+
+    newScale =
+        qBound(
+            0.50,
+            newScale,
+            3.00
+            );
+
+
+    scale =
+        newScale;
+
+
+    // Manteniamo la configurazione sincronizzata.
+
+    config.scale =
+        scale;
+
+
+    // --------------------------------------------------------
+    // SKILL BOX
+    // --------------------------------------------------------
+
+    if(upSkill)
+    {
+        upSkill->setScale(
+            scale
+            );
+    }
+
+
+    if(leftSkill)
+    {
+        leftSkill->setScale(
+            scale
+            );
+    }
+
+
+    if(downSkill)
+    {
+        downSkill->setScale(
+            scale
+            );
+    }
+
+
+    if(rightSkill)
+    {
+        rightSkill->setScale(
+            scale
+            );
+    }
+
+
+    // --------------------------------------------------------
+    // GEOMETRIA OVERLAY
+    // --------------------------------------------------------
+
+    updateOverlayGeometry();
+
+
+    // --------------------------------------------------------
+    // SALVATAGGIO
+    // --------------------------------------------------------
+
+    QSettings settings(
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
+        QSettings::IniFormat
+        );
+
+
+    settings.setValue(
+        "Overlay/BuffGroup/Scale",
+        scale
+        );
+
+
+    settings.sync();
+}
+
+
+double SkillOverlay::getScale() const
+{
+    return scale;
+}
+
+
+// ============================================================
+// UPDATE OVERLAY GEOMETRY
+// ============================================================
+
+void SkillOverlay::updateOverlayGeometry()
+{
+    int overlayWidth =
+        qMax(
+            1,
+            qRound(
+                180.0 * scale
+                )
+            );
+
+
+    int overlayHeight =
+        qMax(
+            1,
+            qRound(
+                165.0 * scale
+                )
+            );
+
+
+    setFixedSize(
+        overlayWidth,
+        overlayHeight
+        );
+
+
+    // --------------------------------------------------------
+    // UP
+    // --------------------------------------------------------
+
+    if(upSkill)
+    {
+        upSkill->move(
+            qRound(
+                60.0 * scale
+                ),
+            qRound(
+                0.0 * scale
+                )
+            );
+    }
+
+
+    // --------------------------------------------------------
+    // LEFT
+    // --------------------------------------------------------
+
+    if(leftSkill)
+    {
+        leftSkill->move(
+            qRound(
+                20.0 * scale
+                ),
+            qRound(
+                50.0 * scale
+                )
+            );
+    }
+
+
+    // --------------------------------------------------------
+    // DOWN
+    // --------------------------------------------------------
+
+    if(downSkill)
+    {
+        downSkill->move(
+            qRound(
+                60.0 * scale
+                ),
+            qRound(
+                100.0 * scale
+                )
+            );
+    }
+
+
+    // --------------------------------------------------------
+    // RIGHT
+    // --------------------------------------------------------
+
+    if(rightSkill)
+    {
+        rightSkill->move(
+            qRound(
+                100.0 * scale
+                ),
+            qRound(
+                50.0 * scale
+                )
+            );
+    }
+}
+
+
+// ============================================================
 // APPLY CONFIG
 // ============================================================
 
@@ -534,9 +814,26 @@ void SkillOverlay::applyConfig(
     const SkillOverlayConfig &newConfig
     )
 {
+    // --------------------------------------------------------
+    // CONFIGURAZIONE
+    // --------------------------------------------------------
+
     config =
         newConfig;
 
+
+    // --------------------------------------------------------
+    // SCALA
+    // --------------------------------------------------------
+
+    setScale(
+        config.scale
+        );
+
+
+    // --------------------------------------------------------
+    // SKILL BOXES
+    // --------------------------------------------------------
 
     updateSkillBoxes();
 }
@@ -548,6 +845,19 @@ void SkillOverlay::applyConfig(
 
 void SkillOverlay::updateSkillBoxes()
 {
+    if(!upSkill ||
+        !leftSkill ||
+        !downSkill ||
+        !rightSkill)
+    {
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // UP
+    // --------------------------------------------------------
+
     upSkill->setSkillName(
         config.up.name
         );
@@ -562,6 +872,10 @@ void SkillOverlay::updateSkillBoxes()
         config.up.cooldown
         );
 
+
+    // --------------------------------------------------------
+    // LEFT
+    // --------------------------------------------------------
 
     leftSkill->setSkillName(
         config.left.name
@@ -578,6 +892,10 @@ void SkillOverlay::updateSkillBoxes()
         );
 
 
+    // --------------------------------------------------------
+    // DOWN
+    // --------------------------------------------------------
+
     downSkill->setSkillName(
         config.down.name
         );
@@ -592,6 +910,10 @@ void SkillOverlay::updateSkillBoxes()
         config.down.cooldown
         );
 
+
+    // --------------------------------------------------------
+    // RIGHT
+    // --------------------------------------------------------
 
     rightSkill->setSkillName(
         config.right.name
@@ -648,45 +970,48 @@ SkillConfig *SkillOverlay::currentSkill()
 
 void SkillOverlay::activateCtrlSkill()
 {
-    // --------------------------------------------------------
-    // Primo CTRL: avvia il tracking
-    // --------------------------------------------------------
-
     if(!trackingActive)
     {
-        trackingActive = true;
+        trackingActive =
+            true;
 
-        // Primo CTRL:
-        // attiva Concerto
-        // upSkill->startCooldown();
 
-        // Attiva anche l'Artifact, ovunque sia configurato
-        if(config.up.activation == SkillActivation::Artifact)
+        if(
+            config.up.activation ==
+            SkillActivation::Artifact
+            )
+        {
             upSkill->startCooldown();
+        }
 
-        if(config.left.activation == SkillActivation::Artifact)
+
+        if(
+            config.left.activation ==
+            SkillActivation::Artifact
+            )
+        {
             leftSkill->startCooldown();
+        }
 
-        if(config.down.activation == SkillActivation::Artifact)
+
+        if(
+            config.down.activation ==
+            SkillActivation::Artifact
+            )
+        {
             downSkill->startCooldown();
+        }
 
-        if(config.right.activation == SkillActivation::Artifact)
+
+        if(
+            config.right.activation ==
+            SkillActivation::Artifact
+            )
+        {
             rightSkill->startCooldown();
-
-        //return;
+        }
     }
 
-
-    // --------------------------------------------------------
-    // CTRL DURANTE IL TRACKING
-    // --------------------------------------------------------
-    //
-    // ARTIFACT:
-    // è globale durante il tracking.
-    //
-    // Se QUALSIASI dei 4 box è configurato come Artifact,
-    // CTRL lo attiva indipendentemente dalla direzione corrente.
-    // --------------------------------------------------------
 
     if(
         config.up.activation ==
@@ -724,10 +1049,6 @@ void SkillOverlay::activateCtrlSkill()
     }
 
 
-    // --------------------------------------------------------
-    // SKILL DELLA DIREZIONE CORRENTE
-    // --------------------------------------------------------
-
     SkillConfig *skill =
         currentSkill();
 
@@ -737,10 +1058,6 @@ void SkillOverlay::activateCtrlSkill()
         return;
     }
 
-
-    // --------------------------------------------------------
-    // CTRL / CIPOLLA
-    // --------------------------------------------------------
 
     if(
         skill->activation ==
@@ -847,10 +1164,6 @@ void SkillOverlay::activateComboSkill(
     }
 
 
-    // --------------------------------------------------------
-    // COMBO RIMANE LEGATO ALLA DIREZIONE CORRENTE
-    // --------------------------------------------------------
-
     if(
         skill->activation !=
         SkillActivation::Combo
@@ -861,7 +1174,9 @@ void SkillOverlay::activateComboSkill(
 
 
     if(
-        !skill->comboKeys.contains(key)
+        !skill->comboKeys.contains(
+            key
+            )
         )
     {
         return;
@@ -908,21 +1223,18 @@ void SkillOverlay::checkSequences(
     {
         sequenceState =
             SequenceState::WaitingStateKey;
-
-        //return;
     }
 
-
-    // ========================================================
-    // ATTESA TASTO STATO
-    // ========================================================
 
     if(
         sequenceState ==
         SequenceState::WaitingStateKey
         )
     {
-        if(key == config.stateKey)
+        if(
+            key ==
+            config.stateKey
+            )
         {
             sequenceState =
                 SequenceState::WaitingDirection;
@@ -933,17 +1245,11 @@ void SkillOverlay::checkSequences(
     }
 
 
-    // ========================================================
-    // ATTESA DIREZIONE
-    // ========================================================
-
     if(
         sequenceState ==
         SequenceState::WaitingDirection
         )
     {
-        // Le frecce rimangono FISSE.
-
         if(key == VK_UP)
         {
             currentDirection =
@@ -964,16 +1270,18 @@ void SkillOverlay::checkSequences(
             currentDirection =
                 Direction::Right;
         }
-        else if(key == config.stateKey)
+        else if(
+            key ==
+            config.stateKey
+            )
         {
-            // Rimane in attesa della direzione.
             return;
         }
         else
         {
-            // Sequenza interrotta.
             sequenceState =
                 SequenceState::WaitingStateKey;
+
 
             return;
         }
@@ -993,12 +1301,9 @@ void SkillOverlay::resetAllCooldowns()
 {
     upSkill->resetCooldown();
 
-
     leftSkill->resetCooldown();
 
-
     downSkill->resetCooldown();
-
 
     rightSkill->resetCooldown();
 }
@@ -1019,7 +1324,8 @@ void SkillOverlay::mousePressEvent(
     {
         dragPosition =
             event->globalPosition().toPoint()
-            - frameGeometry().topLeft();
+            -
+            frameGeometry().topLeft();
 
 
         event->accept();
@@ -1042,7 +1348,8 @@ void SkillOverlay::mouseMoveEvent(
     {
         move(
             event->globalPosition().toPoint()
-            - dragPosition
+            -
+            dragPosition
             );
 
 

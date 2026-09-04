@@ -1,3 +1,4 @@
+
 #ifndef SKILLBOX_H
 #define SKILLBOX_H
 
@@ -5,7 +6,7 @@
 #include <QPixmap>
 
 
-class SkillBox : public QWidget
+    class SkillBox : public QWidget
 {
     Q_OBJECT
 
@@ -39,6 +40,14 @@ public:
         );
 
 
+    void setScale(
+        double scale
+        );
+
+
+    double getScale() const;
+
+
     QString getSkillName() const;
     QString getImagePath() const;
     int getCooldown() const;
@@ -63,6 +72,8 @@ private:
     int currentCooldown = 0;
 
     bool activeCooldown = false;
+
+    double scale = 1.0;
 };
 
 #endif

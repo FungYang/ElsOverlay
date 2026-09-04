@@ -11,7 +11,7 @@
 #include "skillconfig.h"
 
 
-class SkillOverlay : public QWidget
+    class SkillOverlay : public QWidget
 {
     Q_OBJECT
 
@@ -29,6 +29,14 @@ public:
     void checkSequences(
         int key
         );
+
+
+    void setScale(
+        double scale
+        );
+
+
+    double getScale() const;
 
 
 public slots:
@@ -56,18 +64,20 @@ private:
     // SKILL BOX
     // --------------------------------------------------------
 
-    SkillBox *upSkill;
-    SkillBox *leftSkill;
-    SkillBox *downSkill;
-    SkillBox *rightSkill;
+    SkillBox *upSkill = nullptr;
 
+    SkillBox *leftSkill = nullptr;
+
+    SkillBox *downSkill = nullptr;
+
+    SkillBox *rightSkill = nullptr;
 
 
     // --------------------------------------------------------
     // TIMER
     // --------------------------------------------------------
 
-    QTimer *timer;
+    QTimer *timer = nullptr;
 
 
     // --------------------------------------------------------
@@ -81,7 +91,7 @@ private:
     // KEYBOARD
     // --------------------------------------------------------
 
-    GlobalKeyboard *keyboard;
+    GlobalKeyboard *keyboard = nullptr;
 
 
     // --------------------------------------------------------
@@ -89,6 +99,13 @@ private:
     // --------------------------------------------------------
 
     SkillOverlayConfig config;
+
+
+    // --------------------------------------------------------
+    // SCALE
+    // --------------------------------------------------------
+
+    double scale = 1.0;
 
 
     // --------------------------------------------------------
@@ -145,6 +162,9 @@ private:
 
 
     void loadDefaultConfig();
+
+
+    void updateOverlayGeometry();
 };
 
 #endif
