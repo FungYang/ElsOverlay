@@ -22,6 +22,9 @@
 #include "distanceguideconfigwindow.h"
 #include "distanceguideoverlay.h"
 #include "skillconfigwindow.h"
+#include "specialcooldownmanager.h"
+#include "specialcooldownconfigwindow.h"
+#include "specialcooldownoverlay.h"
 
 
     int main(int argc, char *argv[])
@@ -189,6 +192,8 @@
         );
 
 
+
+
     // ==================================================
     // SHOW MAIN WINDOW
     // ==================================================
@@ -238,6 +243,41 @@
             else
                 overlay->hide();
         }
+        );
+
+
+    // SPECIAL COOLDOWN
+
+
+    SpecialCooldownManager specialCooldownManager;
+
+    specialCooldownManager.load();
+
+    SpecialCooldownConfigWindow specialCooldownConfigWindow(
+        &specialCooldownManager
+        );
+    SpecialCooldownOverlay *specialCooldowns =
+        new SpecialCooldownOverlay(
+            &specialCooldownManager,
+            &keyboard,
+            overlayRoot
+            );
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::specialCooldownConfigRequested,
+        &specialCooldownConfigWindow,
+        [&specialCooldownConfigWindow]()
+        {
+            specialCooldownConfigWindow.show();
+            specialCooldownConfigWindow.raise();
+            specialCooldownConfigWindow.activateWindow();
+        }
+        );
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::specialCooldownsToggled,
+        specialCooldowns,
+        &SpecialCooldownOverlay::setEnabled
         );
 
 

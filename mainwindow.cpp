@@ -16,6 +16,7 @@
 #include <QWidget>
 #include <QDebug>
 
+
     namespace
 {
 
@@ -29,12 +30,15 @@
                 static_cast<UINT>(scanCode) << 16
                 );
 
+
         if(extended)
         {
             lParam |= (1 << 24);
         }
 
+
         wchar_t buffer[64] = { 0 };
+
 
         if(GetKeyNameTextW(
                 lParam,
@@ -44,6 +48,7 @@
         {
             return QString::fromWCharArray(buffer);
         }
+
 
         return QString("ScanCode 0x%1")
             .arg(
@@ -77,6 +82,7 @@
                 "Configura Tasto"
                 );
 
+
             setFixedSize(
                 260,
                 120
@@ -93,6 +99,7 @@
                     this
                     );
 
+
             m_infoLabel->setAlignment(
                 Qt::AlignCenter
                 );
@@ -104,6 +111,7 @@
                     this
                     );
 
+
             m_saveButton->setEnabled(
                 false
                 );
@@ -113,7 +121,9 @@
                 m_infoLabel
                 );
 
+
             layout->addStretch();
+
 
             layout->addWidget(
                 m_saveButton
@@ -187,6 +197,7 @@
             m_scanCode =
                 scanCode;
 
+
             m_extended =
                 extended;
 
@@ -240,14 +251,16 @@ MainWindow::MainWindow(
         "ElsOverlay"
         );
 
+
     setFixedSize(
         420,
-        600
+        700
         );
 
 
     QWidget *central =
         new QWidget(this);
+
 
     setCentralWidget(
         central
@@ -267,6 +280,7 @@ MainWindow::MainWindow(
         20
         );
 
+
     mainLayout->setSpacing(
         10
         );
@@ -285,9 +299,11 @@ MainWindow::MainWindow(
 
     QFont titleFont;
 
+
     titleFont.setPointSize(
         18
         );
+
 
     titleFont.setBold(
         true
@@ -297,6 +313,7 @@ MainWindow::MainWindow(
     title->setFont(
         titleFont
         );
+
 
     title->setAlignment(
         Qt::AlignCenter
@@ -348,7 +365,9 @@ MainWindow::MainWindow(
         atmaConfigButton
         );
 
+
     atmaLayout->addStretch();
+
 
     atmaLayout->addWidget(
         atmaToggleButton
@@ -400,7 +419,9 @@ MainWindow::MainWindow(
         classBuffConfigButton
         );
 
+
     classBuffLayout->addStretch();
+
 
     classBuffLayout->addWidget(
         classBuffToggleButton
@@ -452,7 +473,9 @@ MainWindow::MainWindow(
         distanceGuidesConfigButton
         );
 
+
     distanceLayout->addStretch();
+
 
     distanceLayout->addWidget(
         distanceGuidesToggleButton
@@ -518,6 +541,10 @@ MainWindow::MainWindow(
         );
 
 
+    // ========================================================
+    // BUFF TRASCENDENZA
+    // ========================================================
+
     QGroupBox *buffTranscendenceGroup =
         new QGroupBox(
             "Buff Trascendenza",
@@ -554,7 +581,9 @@ MainWindow::MainWindow(
         transcendenceConfigButton
         );
 
+
     buffTranscendenceLayout->addStretch();
+
 
     buffTranscendenceLayout->addWidget(
         buffTranscendenceToggleButton
@@ -563,6 +592,60 @@ MainWindow::MainWindow(
 
     mainLayout->addWidget(
         buffTranscendenceGroup
+        );
+
+
+    // ========================================================
+    // SPECIAL COOLDOWNS
+    // ========================================================
+
+    QGroupBox *specialCooldownGroup =
+        new QGroupBox(
+            "Special Cooldowns",
+            central
+            );
+
+
+    QHBoxLayout *specialCooldownLayout =
+        new QHBoxLayout(
+            specialCooldownGroup
+            );
+
+
+    specialCooldownConfigButton =
+        new QPushButton(
+            "Configura",
+            specialCooldownGroup
+            );
+
+
+    specialCooldownToggleButton =
+        new QPushButton(
+            "OFF",
+            specialCooldownGroup
+            );
+
+
+    setupToggleButton(
+        specialCooldownToggleButton
+        );
+
+
+    specialCooldownLayout->addWidget(
+        specialCooldownConfigButton
+        );
+
+
+    specialCooldownLayout->addStretch();
+
+
+    specialCooldownLayout->addWidget(
+        specialCooldownToggleButton
+        );
+
+
+    mainLayout->addWidget(
+        specialCooldownGroup
         );
 
 
@@ -704,6 +787,7 @@ MainWindow::MainWindow(
                 enabled
                 );
 
+
             emit atmaToggled(
                 enabled
                 );
@@ -734,6 +818,7 @@ MainWindow::MainWindow(
                 enabled
                 );
 
+
             emit classBuffToggled(
                 enabled
                 );
@@ -752,6 +837,7 @@ MainWindow::MainWindow(
         &MainWindow::buffTitlesConfigRequested
         );
 
+
     connect(
         buffTitlesToggleButton,
         &QPushButton::toggled,
@@ -762,6 +848,7 @@ MainWindow::MainWindow(
                 buffTitlesToggleButton,
                 enabled
                 );
+
 
             emit buffTitlesToggled(
                 enabled
@@ -785,16 +872,50 @@ MainWindow::MainWindow(
                 enabled
                 );
 
+
             emit buffTranscendenceToggled(
                 enabled
                 );
         }
         );
+
+
     connect(
         transcendenceConfigButton,
         &QPushButton::clicked,
         this,
         &MainWindow::transcendenceConfigRequested
+        );
+
+
+    // ========================================================
+    // SPECIAL COOLDOWNS
+    // ========================================================
+
+    connect(
+        specialCooldownConfigButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::specialCooldownConfigRequested
+        );
+
+
+    connect(
+        specialCooldownToggleButton,
+        &QPushButton::toggled,
+        this,
+        [this](bool enabled)
+        {
+            updateToggleText(
+                specialCooldownToggleButton,
+                enabled
+                );
+
+
+            emit specialCooldownsToggled(
+                enabled
+                );
+        }
         );
 
 
@@ -832,6 +953,7 @@ MainWindow::MainWindow(
                 distanceGuidesToggleButton,
                 enabled
                 );
+
 
             emit distanceGuidesToggled(
                 enabled
@@ -871,9 +993,11 @@ void MainWindow::setupToggleButton(
         true
         );
 
+
     button->setChecked(
         false
         );
+
 
     button->setMinimumWidth(
         70
@@ -948,6 +1072,7 @@ void MainWindow::savePauseKey(
 {
     m_pauseScanCode =
         scanCode;
+
 
     m_pauseExtended =
         extended;
@@ -1066,6 +1191,7 @@ void MainWindow::saveResetKey(
 {
     m_resetScanCode =
         scanCode;
+
 
     m_resetExtended =
         extended;

@@ -6,6 +6,7 @@
 
 class QPushButton;
 
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -32,6 +33,9 @@ signals:
 
     void buffTranscendenceToggled(bool enabled);
 
+    void specialCooldownConfigRequested();
+    void specialCooldownsToggled(bool enabled);
+
     void pauseKeyChanged(int scanCode, bool extended);
     void resetKeyChanged(int scanCode, bool extended);
 
@@ -54,11 +58,16 @@ private:
 
     QPushButton *buffTranscendenceToggleButton;
 
+    QPushButton *specialCooldownConfigButton;
+    QPushButton *specialCooldownToggleButton;
+
     QPushButton *closeButton;
 
     QPushButton *pauseKeyButton;
     QPushButton *resetKeyButton;
     QPushButton *transcendenceConfigButton;
+
+
 
     int m_pauseScanCode = 0x01;
     bool m_pauseExtended = false;

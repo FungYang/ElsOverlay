@@ -47,6 +47,10 @@ qt_add_executable(ElsOverlay
     skillconfigwindow.h skillconfigwindow.cpp
     SkillConfig.h
     keyedit.h keyedit.cpp
+    SpecialCooldownConfiguration.h
+    specialcooldownconfigwindow.h specialcooldownconfigwindow.cpp
+    specialcooldownmanager.h specialcooldownmanager.cpp
+    specialcooldownoverlay.h specialcooldownoverlay.cpp
 )
 target_link_libraries(ElsOverlay
     PRIVATE
