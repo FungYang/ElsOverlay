@@ -62,6 +62,8 @@ private:
     BuffVisionOverlay *overlay = nullptr;
 
     BuffVisionCaptureSetup *captureSetup = nullptr;
+    void startTracking();
+    void resetTracking();
 
 
 #ifdef QT_DEBUG
