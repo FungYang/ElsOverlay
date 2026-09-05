@@ -1,12 +1,16 @@
+
 #ifndef BUFFBOX_H
 #define BUFFBOX_H
 
 #include <QPoint>
+#include <QSize>
 #include <QTimer>
 #include <QWidget>
 
+
     class QMouseEvent;
 class QPaintEvent;
+
 
 class BuffBox : public QWidget
 {
@@ -25,6 +29,7 @@ public:
 
 
     void startCooldown();
+
 
     void reset();
 
@@ -52,6 +57,11 @@ signals:
         );
 
 
+    void sizeChanged(
+        const QSize &size
+        );
+
+
 protected:
 
     void paintEvent(
@@ -74,6 +84,16 @@ protected:
         ) override;
 
 
+    void enterEvent(
+        QEnterEvent *event
+        ) override;
+
+
+    void leaveEvent(
+        QEvent *event
+        ) override;
+
+
 private:
 
     enum class State
@@ -84,12 +104,24 @@ private:
     };
 
 
+    enum class ResizeCorner
+    {
+        None,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight
+    };
+
+
     int m_key = 0;
+
 
     int m_cooldown = 0;
 
 
     QTimer m_timer;
+
 
     QTimer m_glowTimer;
 
@@ -106,7 +138,24 @@ private:
         false;
 
 
+    bool m_resizing =
+        false;
+
+
+    ResizeCorner m_resizeCorner =
+        ResizeCorner::None;
+
+
     QPoint m_dragOffset;
+
+
+    QPoint m_resizeStartGlobal;
+
+
+    QPoint m_resizeStartPosition;
+
+
+    QSize m_resizeStartSize;
 
 
     int m_glowAlpha =
@@ -117,9 +166,38 @@ private:
         true;
 
 
-    void cooldownFinished();
-    QString keyName(int key) const;
+    // ========================================================
+    // RIDIMENSIONAMENTO
+    // ========================================================
 
+    static constexpr int ResizeMargin = 8;
+
+
+    static constexpr int MinimumSize = 20;
+
+
+    ResizeCorner resizeCornerAt(
+        const QPoint &position
+        ) const;
+
+
+    void updateResizeCursor(
+        const QPoint &position
+        );
+
+
+    void resizeFromCorner(
+        const QPoint &globalPosition
+        );
+
+
+    void cooldownFinished();
+
+
+    QString keyName(
+        int key
+        ) const;
 };
+
 
 #endif

@@ -1,3 +1,4 @@
+
 #include "classconfigurationmanager.h"
 
 #include <QSettings>
@@ -12,6 +13,9 @@ ClassConfigurationManager::ClassConfigurationManager(
 }
 
 
+// ============================================================
+// CONFIGURATIONS
+// ============================================================
 
 QList<ClassConfiguration>
 ClassConfigurationManager::configurations() const
@@ -20,6 +24,9 @@ ClassConfigurationManager::configurations() const
 }
 
 
+// ============================================================
+// ACTIVE CONFIGURATION
+// ============================================================
 
 QString
 ClassConfigurationManager::activeConfigurationId() const
@@ -28,19 +35,21 @@ ClassConfigurationManager::activeConfigurationId() const
 }
 
 
+// ============================================================
+// CONTAINS
+// ============================================================
 
 bool ClassConfigurationManager::contains(
     const QString &id
     ) const
 {
-
     for(const ClassConfiguration &configuration :
          m_configurations)
     {
-
         if(configuration.id == id)
+        {
             return true;
-
+        }
     }
 
 
@@ -48,25 +57,33 @@ bool ClassConfigurationManager::contains(
 }
 
 
+// ============================================================
+// ADD CONFIGURATION
+// ============================================================
 
 bool ClassConfigurationManager::addConfiguration(
     const QString &id,
     const QString &imagePath
     )
 {
-
     if(id.isEmpty())
+    {
         return false;
+    }
 
 
     if(contains(id))
+    {
         return false;
+    }
 
 
     ClassConfiguration configuration;
 
+
     configuration.id =
         id;
+
 
     configuration.imagePath =
         imagePath;
@@ -84,10 +101,8 @@ bool ClassConfigurationManager::addConfiguration(
 
     if(m_activeConfigurationId.isEmpty())
     {
-
         m_activeConfigurationId =
             id;
-
     }
 
 
@@ -106,22 +121,27 @@ bool ClassConfigurationManager::addConfiguration(
 }
 
 
+// ============================================================
+// REMOVE CONFIGURATION
+// ============================================================
 
 void ClassConfigurationManager::removeConfiguration(
     const QString &id
     )
 {
-
     for(int i = 0;
          i < m_configurations.size();
          ++i)
     {
-
         if(m_configurations[i].id != id)
+        {
             continue;
+        }
 
 
-        m_configurations.removeAt(i);
+        m_configurations.removeAt(
+            i
+            );
 
 
         /*
@@ -132,21 +152,15 @@ void ClassConfigurationManager::removeConfiguration(
 
         if(m_activeConfigurationId == id)
         {
-
             if(m_configurations.isEmpty())
             {
-
                 m_activeConfigurationId.clear();
-
             }
             else
             {
-
                 m_activeConfigurationId =
                     m_configurations.first().id;
-
             }
-
         }
 
 
@@ -162,24 +176,28 @@ void ClassConfigurationManager::removeConfiguration(
 
 
         return;
-
     }
-
 }
 
 
+// ============================================================
+// SET ACTIVE CONFIGURATION
+// ============================================================
 
 void ClassConfigurationManager::setActiveConfiguration(
     const QString &id
     )
 {
-
     if(!contains(id))
+    {
         return;
+    }
 
 
     if(m_activeConfigurationId == id)
+    {
         return;
+    }
 
 
     m_activeConfigurationId =
@@ -192,14 +210,15 @@ void ClassConfigurationManager::setActiveConfiguration(
     emit activeConfigurationChanged(
         id
         );
-
 }
 
 
+// ============================================================
+// LOAD
+// ============================================================
 
 void ClassConfigurationManager::load()
 {
-
     QSettings settings(
         "ElsOverlay.ini",
         QSettings::IniFormat
@@ -217,7 +236,6 @@ void ClassConfigurationManager::load()
          i < count;
          ++i)
     {
-
         QString prefix =
             "ClassConfigurations/" +
             QString::number(i);
@@ -249,7 +267,6 @@ void ClassConfigurationManager::load()
              j < buffCount;
              ++j)
         {
-
             QString buffPrefix =
                 prefix +
                 "/buffs/" +
@@ -261,14 +278,14 @@ void ClassConfigurationManager::load()
              *
              * Esempi:
              *
-             * L-Ctrl = 162
-             * R-Ctrl = 163
+             * L-Ctrl  = 162
+             * R-Ctrl  = 163
              * L-Shift = 160
              * R-Shift = 161
-             * L-Alt = 164
-             * R-Alt = 165
-             * L-Win = 91
-             * R-Win = 92
+             * L-Alt   = 164
+             * R-Alt   = 165
+             * L-Win   = 91
+             * R-Win   = 92
              */
 
             int keyCode =
@@ -279,7 +296,9 @@ void ClassConfigurationManager::load()
 
 
             if(keyCode == 0)
+            {
                 continue;
+            }
 
 
             BuffConfiguration buff;
@@ -289,12 +308,20 @@ void ClassConfigurationManager::load()
                 keyCode;
 
 
+            // ====================================================
+            // COOLDOWN
+            // ====================================================
+
             buff.cooldown =
                 settings.value(
                             buffPrefix + "/cooldown",
                             1
                             ).toInt();
 
+
+            // ====================================================
+            // POSITION
+            // ====================================================
 
             buff.position =
                 QPoint(
@@ -310,23 +337,74 @@ void ClassConfigurationManager::load()
                     );
 
 
+            // ====================================================
+            // SIZE
+            // ====================================================
+
+            int width =
+                settings.value(
+                            buffPrefix + "/width",
+                            42
+                            ).toInt();
+
+
+            int height =
+                settings.value(
+                            buffPrefix + "/height",
+                            42
+                            ).toInt();
+
+
+            /*
+             * Protezione per vecchie configurazioni
+             * oppure valori non validi.
+             *
+             * La dimensione minima consentita dal BuffBox
+             * è 20x20.
+             */
+
+            if(width < 20)
+            {
+                width =
+                    42;
+            }
+
+
+            if(height < 20)
+            {
+                height =
+                    42;
+            }
+
+
+            buff.size =
+                QSize(
+                    width,
+                    height
+                    );
+
+
             configuration.buffs.append(
                 buff
                 );
-
         }
 
 
         if(configuration.id.isEmpty())
+        {
             continue;
+        }
 
 
         m_configurations.append(
             configuration
             );
-
     }
 
+
+    // ============================================================
+    // ACTIVE CONFIGURATION
+    // ============================================================
 
     m_activeConfigurationId =
         settings.value(
@@ -345,9 +423,7 @@ void ClassConfigurationManager::load()
         !contains(m_activeConfigurationId)
         )
     {
-
         m_activeConfigurationId.clear();
-
     }
 
 
@@ -356,24 +432,31 @@ void ClassConfigurationManager::load()
         !m_configurations.isEmpty()
         )
     {
-
         m_activeConfigurationId =
             m_configurations.first().id;
-
     }
-
 }
 
 
+// ============================================================
+// SAVE
+// ============================================================
 
 void ClassConfigurationManager::save() const
 {
-
     QSettings settings(
         "ElsOverlay.ini",
         QSettings::IniFormat
         );
 
+
+    /*
+     * Ricostruiamo completamente la sezione
+     * delle configurazioni.
+     *
+     * In questo modo eventuali buff cancellati
+     * non rimangono nel file INI.
+     */
 
     settings.remove(
         "ClassConfigurations"
@@ -390,7 +473,6 @@ void ClassConfigurationManager::save() const
          i < m_configurations.size();
          ++i)
     {
-
         const ClassConfiguration &configuration =
             m_configurations[i];
 
@@ -399,6 +481,10 @@ void ClassConfigurationManager::save() const
             "ClassConfigurations/" +
             QString::number(i);
 
+
+        // ========================================================
+        // CONFIGURATION DATA
+        // ========================================================
 
         settings.setValue(
             prefix + "/id",
@@ -418,11 +504,14 @@ void ClassConfigurationManager::save() const
             );
 
 
+        // ========================================================
+        // BUFFS
+        // ========================================================
+
         for(int j = 0;
              j < configuration.buffs.size();
              ++j)
         {
-
             const BuffConfiguration &buff =
                 configuration.buffs[j];
 
@@ -439,14 +528,14 @@ void ClassConfigurationManager::save() const
              *
              * Esempi:
              *
-             * L-Ctrl = 162
-             * R-Ctrl = 163
+             * L-Ctrl  = 162
+             * R-Ctrl  = 163
              * L-Shift = 160
              * R-Shift = 161
-             * L-Alt = 164
-             * R-Alt = 165
-             * L-Win = 91
-             * R-Win = 92
+             * L-Alt   = 164
+             * R-Alt   = 165
+             * L-Win   = 91
+             * R-Win   = 92
              */
 
             settings.setValue(
@@ -455,11 +544,19 @@ void ClassConfigurationManager::save() const
                 );
 
 
+            // ====================================================
+            // COOLDOWN
+            // ====================================================
+
             settings.setValue(
                 buffPrefix + "/cooldown",
                 buff.cooldown
                 );
 
+
+            // ====================================================
+            // POSITION
+            // ====================================================
 
             settings.setValue(
                 buffPrefix + "/x",
@@ -472,32 +569,55 @@ void ClassConfigurationManager::save() const
                 buff.position.y()
                 );
 
-        }
 
+            // ====================================================
+            // SIZE
+            // ====================================================
+
+            settings.setValue(
+                buffPrefix + "/width",
+                buff.size.width()
+                );
+
+
+            settings.setValue(
+                buffPrefix + "/height",
+                buff.size.height()
+                );
+        }
     }
 
+
+    // ============================================================
+    // ACTIVE CONFIGURATION
+    // ============================================================
 
     settings.setValue(
         "ClassConfigurations/active",
         m_activeConfigurationId
         );
 
+
+    settings.sync();
 }
 
 
+// ============================================================
+// SET BUFFS
+// ============================================================
 
 void ClassConfigurationManager::setBuffs(
     const QString &id,
     const QList<BuffConfiguration> &buffs
     )
 {
-
     for(ClassConfiguration &configuration :
          m_configurations)
     {
-
         if(configuration.id != id)
+        {
             continue;
+        }
 
 
         configuration.buffs =
@@ -511,30 +631,26 @@ void ClassConfigurationManager::setBuffs(
 
 
         return;
-
     }
-
 }
 
 
+// ============================================================
+// GET BUFFS
+// ============================================================
 
 QList<BuffConfiguration>
 ClassConfigurationManager::buffs(
     const QString &id
     ) const
 {
-
     for(const ClassConfiguration &configuration :
          m_configurations)
     {
-
         if(configuration.id == id)
         {
-
             return configuration.buffs;
-
         }
-
     }
 
 

@@ -1,4 +1,3 @@
-
 #include "buffoverlay.h"
 
 #include <QtAlgorithms>
@@ -34,6 +33,9 @@ BuffOverlay::BuffOverlay(
 }
 
 
+// ============================================================
+// LOAD CONFIGURATION
+// ============================================================
 
 void BuffOverlay::loadConfiguration(
     const ClassConfiguration &configuration
@@ -45,7 +47,6 @@ void BuffOverlay::loadConfiguration(
     for(const BuffConfiguration &buff :
          configuration.buffs)
     {
-
         BuffBox *box =
             new BuffBox(
                 buff.key,
@@ -54,10 +55,27 @@ void BuffOverlay::loadConfiguration(
                 );
 
 
+        // ====================================================
+        // DIMENSIONE SALVATA
+        // ====================================================
+
+        box->resize(
+            buff.size
+            );
+
+
+        // ====================================================
+        // POSIZIONE SALVATA
+        // ====================================================
+
         box->move(
             buff.position
             );
 
+
+        // ====================================================
+        // MODALITÀ NORMALE
+        // ====================================================
 
         box->setConfigurationMode(
             false
@@ -70,11 +88,13 @@ void BuffOverlay::loadConfiguration(
         m_buffs.append(
             box
             );
-
     }
 }
 
 
+// ============================================================
+// CLEAR BUFFS
+// ============================================================
 
 void BuffOverlay::clearBuffs()
 {
@@ -87,6 +107,9 @@ void BuffOverlay::clearBuffs()
 }
 
 
+// ============================================================
+// HANDLE KEY
+// ============================================================
 
 void BuffOverlay::handleKey(
     int key
@@ -95,33 +118,33 @@ void BuffOverlay::handleKey(
     for(BuffBox *buff :
          m_buffs)
     {
-
         if(buff->key() == key)
         {
-
             buff->startCooldown();
 
             return;
-
         }
-
     }
 }
 
 
+// ============================================================
+// RESET ALL
+// ============================================================
 
 void BuffOverlay::resetAll()
 {
     for(BuffBox *buff :
          m_buffs)
     {
-
         buff->reset();
-
     }
 }
 
 
+// ============================================================
+// REMOVE PENDING BOXES
+// ============================================================
 
 void BuffOverlay::removePendingBoxes()
 {
@@ -129,7 +152,6 @@ void BuffOverlay::removePendingBoxes()
          i >= 0;
          --i)
     {
-
         BuffBox *buff =
             m_buffs.at(i);
 
@@ -144,6 +166,5 @@ void BuffOverlay::removePendingBoxes()
 
 
         buff->deleteLater();
-
     }
 }

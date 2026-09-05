@@ -7,12 +7,14 @@
 #include <QPoint>
 #include <QChar>
 #include <QVector>
+#include <QSize>
 
 
 struct BuffConfiguration {
     int key = 0;
     int cooldown = 0;
-    QPoint position; };
+    QPoint position;
+    QSize size;};
 
 struct ClassConfiguration
 {

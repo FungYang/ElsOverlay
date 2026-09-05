@@ -3,6 +3,7 @@
 #include "newbuffdialog.h"
 
 #include <QCloseEvent>
+#include <QFont>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
@@ -32,7 +33,6 @@
 
     switch(key)
     {
-
     case VK_LCONTROL:
         return "L-Ctrl";
 
@@ -406,11 +406,6 @@ void ClassBuffEditorWindow::loadConfiguration()
             );
 
 
-    /*
-     * Creiamo anche i preview iniziali
-     * usando la configurazione caricata.
-     */
-
     createPreviewBoxes();
 }
 
@@ -428,7 +423,6 @@ void ClassBuffEditorWindow::refreshList()
          i < m_buffs.size();
          ++i)
     {
-
         const BuffConfiguration &buff =
             m_buffs.at(i);
 
@@ -576,7 +570,6 @@ void ClassBuffEditorWindow::addNewKey()
     for(const BuffConfiguration &buff :
          m_buffs)
     {
-
         if(buff.key == keyCode)
         {
             QMessageBox::warning(
@@ -609,6 +602,13 @@ void ClassBuffEditorWindow::addNewKey()
         QPoint(
             100,
             100
+            );
+
+
+    configuration.size =
+        QSize(
+            42,
+            42
             );
 
 
@@ -650,15 +650,6 @@ void ClassBuffEditorWindow::deleteBuff(
         );
 
 
-    /*
-     * IMPORTANTE:
-     *
-     * Ricreiamo i PreviewBox dopo la cancellazione.
-     *
-     * In questo modo l'indice del PreviewBox
-     * corrisponde sempre all'indice del BuffConfiguration.
-     */
-
     refreshList();
 
 
@@ -681,12 +672,8 @@ void ClassBuffEditorWindow::saveConfiguration()
     /*
      * Salviamo l'intera lista.
      *
-     * buff.key è un INT VK.
-     *
-     * Quindi:
-     *
-     * L-Ctrl = 162
-     * R-Ctrl = 163
+     * La posizione e la dimensione sono già
+     * contenute in m_buffs.
      */
 
     m_manager->setBuffs(
@@ -710,14 +697,6 @@ void ClassBuffEditorWindow::closeEvent(
     QCloseEvent *event
     )
 {
-    /*
-     * NON emettiamo configurationSaved() qui.
-     *
-     * Se l'utente preme "Chiudi" senza premere
-     * "Salva", non dobbiamo far credere al resto
-     * dell'applicazione che la configurazione sia stata salvata.
-     */
-
     clearPreviewBoxes();
 
 
@@ -755,7 +734,6 @@ void ClassBuffEditorWindow::createPreviewBoxes()
     for(const BuffConfiguration &buff :
          m_buffs)
     {
-
         BuffBox *box =
             new BuffBox(
                 buff.key,
@@ -763,6 +741,19 @@ void ClassBuffEditorWindow::createPreviewBoxes()
                 nullptr
                 );
 
+
+        // ====================================================
+        // APPLICA DIMENSIONE SALVATA
+        // ====================================================
+
+        box->resize(
+            buff.size
+            );
+
+
+        // ====================================================
+        // APPLICA POSIZIONE SALVATA
+        // ====================================================
 
         box->move(
             buff.position
@@ -796,31 +787,27 @@ void ClassBuffEditorWindow::confirmPositions()
     }
 
 
-    /*
-     * Aggiorniamo le posizioni dei buff
-     * in base ai PreviewBox.
-     */
+    // ========================================================
+    // SALVA POSIZIONE E DIMENSIONE
+    // ========================================================
 
     for(int i = 0;
          i < m_previewBoxes.size() &&
          i < m_buffs.size();
          ++i)
     {
-
         m_buffs[i].position =
             m_previewBoxes[i]->pos();
+
+
+        m_buffs[i].size =
+            m_previewBoxes[i]->size();
     }
 
 
-    /*
-     * Salviamo immediatamente le nuove posizioni.
-     *
-     * Questo mantiene anche i VK intatti:
-     *
-     * buff.key = 162
-     * buff.key = 163
-     * ecc.
-     */
+    // ========================================================
+    // SALVA CONFIGURAZIONE
+    // ========================================================
 
     m_manager->setBuffs(
         m_configurationId,
