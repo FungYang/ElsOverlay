@@ -1024,13 +1024,13 @@ void SpecialCooldownOverlay::resetAll()
 }
 
 
-// ============================================================
-// ACTIVATE KEY
-// ============================================================
+    // ============================================================
+    // ACTIVATE KEY
+    // ============================================================
 
-void SpecialCooldownOverlay::activateKey(
-    int key
-    )
+    void SpecialCooldownOverlay::activateKey(
+        int key
+        )
 {
     if(!m_enabled)
     {
@@ -1044,16 +1044,32 @@ void SpecialCooldownOverlay::activateKey(
         ++i
         )
     {
+        const SpecialCooldownConfiguration &configuration =
+            m_states[i].configuration;
+
+
+        /*
+         * Il cooldown viene attivato solamente se
+         * il tasto ricevuto è presente nella lista
+         * dei tasti accettati.
+         */
+
         if(
-            m_states[i].configuration.key != key
+            !configuration.acceptedKeys.contains(
+                key
+                )
             )
         {
             continue;
         }
 
 
+        /*
+         * Riavvia il cooldown.
+         */
+
         m_states[i].remainingMilliseconds =
-            m_states[i].configuration.cooldown *
+            configuration.cooldown *
             1000;
 
 
@@ -1066,6 +1082,7 @@ void SpecialCooldownOverlay::activateKey(
             );
     }
 }
+
 
 
 // ============================================================

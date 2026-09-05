@@ -4,11 +4,14 @@
 #include <QPoint>
 #include <QSize>
 #include <QString>
+#include <QList>
 
 
-    struct SpecialCooldownConfiguration
+struct SpecialCooldownConfiguration
 {
     int key = 0;
+
+    QList<int> acceptedKeys;
 
     QString imagePath;
 

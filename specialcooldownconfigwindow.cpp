@@ -9,6 +9,7 @@
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
+#include <QIcon>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -16,6 +17,7 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QSpinBox>
+#include <QStringList>
 #include <QVBoxLayout>
 
 
@@ -35,10 +37,12 @@ SpecialCooldownConfigWindow::SpecialCooldownConfigWindow(
         400
         );
 
+
     QVBoxLayout *mainLayout =
         new QVBoxLayout(
             this
             );
+
 
     m_listWidget =
         new QListWidget(
@@ -56,12 +60,15 @@ SpecialCooldownConfigWindow::SpecialCooldownConfigWindow(
         4
         );
 
+
     mainLayout->addWidget(
         m_listWidget
         );
 
+
     QHBoxLayout *buttonLayout =
         new QHBoxLayout();
+
 
     m_addButton =
         new QPushButton(
@@ -69,11 +76,13 @@ SpecialCooldownConfigWindow::SpecialCooldownConfigWindow(
             this
             );
 
+
     m_removeButton =
         new QPushButton(
             "Rimuovi",
             this
             );
+
 
     buttonLayout->addWidget(
         m_addButton
@@ -85,17 +94,20 @@ SpecialCooldownConfigWindow::SpecialCooldownConfigWindow(
 
     buttonLayout->addStretch();
 
+
     m_saveButton =
         new QPushButton(
             "Salva",
             this
             );
 
+
     m_cancelButton =
         new QPushButton(
             "Annulla",
             this
             );
+
 
     buttonLayout->addWidget(
         m_saveButton
@@ -105,9 +117,11 @@ SpecialCooldownConfigWindow::SpecialCooldownConfigWindow(
         m_cancelButton
         );
 
+
     mainLayout->addLayout(
         buttonLayout
         );
+
 
     connect(
         m_addButton,
@@ -116,12 +130,14 @@ SpecialCooldownConfigWindow::SpecialCooldownConfigWindow(
         &SpecialCooldownConfigWindow::addSpecialCooldown
         );
 
+
     connect(
         m_removeButton,
         &QPushButton::clicked,
         this,
         &SpecialCooldownConfigWindow::removeSpecialCooldown
         );
+
 
     connect(
         m_listWidget,
@@ -130,12 +146,14 @@ SpecialCooldownConfigWindow::SpecialCooldownConfigWindow(
         &SpecialCooldownConfigWindow::editSpecialCooldown
         );
 
+
     connect(
         m_saveButton,
         &QPushButton::clicked,
         this,
         &SpecialCooldownConfigWindow::saveConfiguration
         );
+
 
     connect(
         m_cancelButton,
@@ -144,15 +162,21 @@ SpecialCooldownConfigWindow::SpecialCooldownConfigWindow(
         &QDialog::reject
         );
 
-    if (m_manager)
+
+    if(m_manager)
     {
         m_configurations =
             m_manager->configurations();
     }
 
+
     refreshList();
 }
 
+
+// ============================================================
+// ADD
+// ============================================================
 
 void SpecialCooldownConfigWindow::addSpecialCooldown()
 {
@@ -160,41 +184,119 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
         this
         );
 
+
     dialog.setWindowTitle(
         "Nuovo Special Cooldown"
         );
+
+
+    dialog.resize(
+        500,
+        400
+        );
+
 
     QVBoxLayout *mainLayout =
         new QVBoxLayout(
             &dialog
             );
 
+
     QFormLayout *formLayout =
         new QFormLayout();
+
+
+    // ========================================================
+    // TASTI ACCETTATI
+    // ========================================================
+
+    QVBoxLayout *keysLayout =
+        new QVBoxLayout();
+
+
+    QListWidget *acceptedKeysList =
+        new QListWidget(
+            &dialog
+            );
+
+
+    acceptedKeysList->setMinimumHeight(
+        120
+        );
+
+
+    QHBoxLayout *keyInputLayout =
+        new QHBoxLayout();
+
 
     KeyEdit *keyEdit =
         new KeyEdit(
             &dialog
             );
 
-    formLayout->addRow(
-        "Tasto:",
+
+    QPushButton *addKeyButton =
+        new QPushButton(
+            "Aggiungi",
+            &dialog
+            );
+
+
+    keyInputLayout->addWidget(
         keyEdit
         );
 
+    keyInputLayout->addWidget(
+        addKeyButton
+        );
+
+
+    QPushButton *removeKeyButton =
+        new QPushButton(
+            "Rimuovi selezionato",
+            &dialog
+            );
+
+
+    keysLayout->addWidget(
+        acceptedKeysList
+        );
+
+    keysLayout->addLayout(
+        keyInputLayout
+        );
+
+    keysLayout->addWidget(
+        removeKeyButton
+        );
+
+
+    formLayout->addRow(
+        "Tasti accettati:",
+        keysLayout
+        );
+
+
+    // ========================================================
+    // IMMAGINE
+    // ========================================================
+
     QHBoxLayout *imageLayout =
         new QHBoxLayout();
+
 
     QLineEdit *imageEdit =
         new QLineEdit(
             &dialog
             );
 
+
     QPushButton *browseButton =
         new QPushButton(
             "Sfoglia...",
             &dialog
             );
+
 
     imageLayout->addWidget(
         imageEdit
@@ -204,33 +306,44 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
         browseButton
         );
 
+
     formLayout->addRow(
         "Immagine:",
         imageLayout
         );
+
+
+    // ========================================================
+    // COOLDOWN
+    // ========================================================
 
     QSpinBox *cooldownSpinBox =
         new QSpinBox(
             &dialog
             );
 
+
     cooldownSpinBox->setRange(
         1,
         86400
         );
 
+
     cooldownSpinBox->setValue(
         60
         );
+
 
     formLayout->addRow(
         "Cooldown:",
         cooldownSpinBox
         );
 
+
     mainLayout->addLayout(
         formLayout
         );
+
 
     QDialogButtonBox *buttonBox =
         new QDialogButtonBox(
@@ -239,9 +352,115 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
             &dialog
             );
 
+
     mainLayout->addWidget(
         buttonBox
         );
+
+
+    // ========================================================
+    // AGGIUNGI TASTO
+    // ========================================================
+
+    connect(
+        addKeyButton,
+        &QPushButton::clicked,
+        &dialog,
+        [this, keyEdit, acceptedKeysList]()
+        {
+            const int keyCode =
+                keyEdit->keyCode();
+
+
+            if(keyCode == 0)
+            {
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // Evita duplicati
+            // ------------------------------------------------
+
+            for(
+                int i = 0;
+                i < acceptedKeysList->count();
+                ++i
+                )
+            {
+                QListWidgetItem *item =
+                    acceptedKeysList->item(
+                        i
+                        );
+
+
+                if(
+                    item->data(
+                            Qt::UserRole
+                            ).toInt() == keyCode
+                    )
+                {
+                    return;
+                }
+            }
+
+
+            QListWidgetItem *item =
+                new QListWidgetItem(
+                    keyName(
+                        keyCode
+                        )
+                    );
+
+
+            item->setData(
+                Qt::UserRole,
+                keyCode
+                );
+
+
+            acceptedKeysList->addItem(
+                item
+                );
+
+
+            keyEdit->setKeyCode(
+                0
+                );
+        }
+        );
+
+
+    // ========================================================
+    // RIMUOVI TASTO
+    // ========================================================
+
+    connect(
+        removeKeyButton,
+        &QPushButton::clicked,
+        &dialog,
+        [acceptedKeysList]()
+        {
+            const int row =
+                acceptedKeysList->currentRow();
+
+
+            if(row < 0)
+            {
+                return;
+            }
+
+
+            delete acceptedKeysList->takeItem(
+                row
+                );
+        }
+        );
+
+
+    // ========================================================
+    // BROWSE IMMAGINE
+    // ========================================================
 
     connect(
         browseButton,
@@ -257,7 +476,8 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
                     "Immagini (*.png *.jpg *.jpeg *.bmp *.webp)"
                     );
 
-            if (!filePath.isEmpty())
+
+            if(!filePath.isEmpty())
             {
                 imageEdit->setText(
                     filePath
@@ -266,12 +486,14 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
         }
         );
 
+
     connect(
         buttonBox,
         &QDialogButtonBox::accepted,
         &dialog,
         &QDialog::accept
         );
+
 
     connect(
         buttonBox,
@@ -280,7 +502,8 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
         &QDialog::reject
         );
 
-    if (
+
+    if(
         dialog.exec() !=
         QDialog::Accepted
         )
@@ -288,27 +511,55 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
         return;
     }
 
-    const int keyCode =
-        keyEdit->keyCode();
+
+    // ========================================================
+    // LETTURA DATI
+    // ========================================================
+
+    QList<int> acceptedKeys;
+
+
+    for(
+        int i = 0;
+        i < acceptedKeysList->count();
+        ++i
+        )
+    {
+        acceptedKeys.append(
+            acceptedKeysList->item(
+                                i
+                                )->data(
+                    Qt::UserRole
+                    ).toInt()
+            );
+    }
+
 
     const QString imagePath =
         imageEdit->text().trimmed();
 
+
     const int cooldown =
         cooldownSpinBox->value();
 
-    if (keyCode == 0)
+
+    // ========================================================
+    // VALIDAZIONE
+    // ========================================================
+
+    if(acceptedKeys.isEmpty())
     {
         QMessageBox::warning(
             this,
             "Configurazione",
-            "Devi assegnare un tasto."
+            "Devi assegnare almeno un tasto."
             );
 
         return;
     }
 
-    if (imagePath.isEmpty())
+
+    if(imagePath.isEmpty())
     {
         QMessageBox::warning(
             this,
@@ -319,7 +570,8 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
         return;
     }
 
-    if (cooldown <= 0)
+
+    if(cooldown <= 0)
     {
         QMessageBox::warning(
             this,
@@ -330,16 +582,25 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
         return;
     }
 
+
+    // ========================================================
+    // CREA CONFIGURAZIONE
+    // ========================================================
+
     SpecialCooldownConfiguration configuration;
 
-    configuration.key =
-        keyCode;
+
+    configuration.acceptedKeys =
+        acceptedKeys;
+
 
     configuration.imagePath =
         imagePath;
 
+
     configuration.cooldown =
         cooldown;
+
 
     configuration.position =
         QPoint(
@@ -347,29 +608,38 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
             100
             );
 
+
     configuration.size =
         QSize(
             42,
             42
             );
 
+
     m_configurations.append(
         configuration
         );
 
+
     refreshList();
 }
 
+
+// ============================================================
+// REMOVE
+// ============================================================
 
 void SpecialCooldownConfigWindow::removeSpecialCooldown()
 {
     const int row =
         m_listWidget->currentRow();
 
-    if (row < 0)
+
+    if(row < 0)
     {
         return;
     }
+
 
     const QMessageBox::StandardButton result =
         QMessageBox::question(
@@ -378,7 +648,8 @@ void SpecialCooldownConfigWindow::removeSpecialCooldown()
             "Vuoi davvero rimuovere lo Special Cooldown selezionato?"
             );
 
-    if (
+
+    if(
         result !=
         QMessageBox::Yes
         )
@@ -386,29 +657,37 @@ void SpecialCooldownConfigWindow::removeSpecialCooldown()
         return;
     }
 
+
     m_configurations.removeAt(
         row
         );
+
 
     refreshList();
 }
 
 
+// ============================================================
+// EDIT
+// ============================================================
+
 void SpecialCooldownConfigWindow::editSpecialCooldown(
     QListWidgetItem *item
     )
 {
-    if (!item)
+    if(!item)
     {
         return;
     }
+
 
     const int row =
         m_listWidget->row(
             item
             );
 
-    if (
+
+    if(
         row < 0 ||
         row >= m_configurations.size()
         )
@@ -416,58 +695,164 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
         return;
     }
 
+
     SpecialCooldownConfiguration configuration =
         m_configurations.at(
             row
             );
 
+
     QDialog dialog(
         this
         );
 
+
     dialog.setWindowTitle(
         "Modifica Special Cooldown"
         );
+
+
+    dialog.resize(
+        500,
+        400
+        );
+
 
     QVBoxLayout *mainLayout =
         new QVBoxLayout(
             &dialog
             );
 
+
     QFormLayout *formLayout =
         new QFormLayout();
+
+
+    // ========================================================
+    // TASTI ACCETTATI
+    // ========================================================
+
+    QVBoxLayout *keysLayout =
+        new QVBoxLayout();
+
+
+    QListWidget *acceptedKeysList =
+        new QListWidget(
+            &dialog
+            );
+
+
+    acceptedKeysList->setMinimumHeight(
+        120
+        );
+
+
+    // --------------------------------------------------------
+    // Carica tasti esistenti
+    // --------------------------------------------------------
+
+    for(
+        int key :
+        configuration.acceptedKeys
+        )
+    {
+        QListWidgetItem *keyItem =
+            new QListWidgetItem(
+                keyName(
+                    key
+                    )
+                );
+
+
+        keyItem->setData(
+            Qt::UserRole,
+            key
+            );
+
+
+        acceptedKeysList->addItem(
+            keyItem
+            );
+    }
+
+
+    QHBoxLayout *keyInputLayout =
+        new QHBoxLayout();
+
 
     KeyEdit *keyEdit =
         new KeyEdit(
             &dialog
             );
 
-    keyEdit->setKeyCode(
-        configuration.key
-        );
 
-    formLayout->addRow(
-        "Tasto:",
+    QPushButton *addKeyButton =
+        new QPushButton(
+            "Aggiungi",
+            &dialog
+            );
+
+
+    keyInputLayout->addWidget(
         keyEdit
         );
 
+    keyInputLayout->addWidget(
+        addKeyButton
+        );
+
+
+    QPushButton *removeKeyButton =
+        new QPushButton(
+            "Rimuovi selezionato",
+            &dialog
+            );
+
+
+    keysLayout->addWidget(
+        acceptedKeysList
+        );
+
+    keysLayout->addLayout(
+        keyInputLayout
+        );
+
+    keysLayout->addWidget(
+        removeKeyButton
+        );
+
+
+    formLayout->addRow(
+        "Tasti accettati:",
+        keysLayout
+        );
+
+
+    // ========================================================
+    // IMMAGINE
+    // ========================================================
+
     QHBoxLayout *imageLayout =
         new QHBoxLayout();
+
 
     QLineEdit *imageEdit =
         new QLineEdit(
             &dialog
             );
 
+
     imageEdit->setText(
         configuration.imagePath
         );
+
 
     QPushButton *browseButton =
         new QPushButton(
             "Sfoglia...",
             &dialog
             );
+
 
     imageLayout->addWidget(
         imageEdit
@@ -477,33 +862,44 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
         browseButton
         );
 
+
     formLayout->addRow(
         "Immagine:",
         imageLayout
         );
+
+
+    // ========================================================
+    // COOLDOWN
+    // ========================================================
 
     QSpinBox *cooldownSpinBox =
         new QSpinBox(
             &dialog
             );
 
+
     cooldownSpinBox->setRange(
         1,
         86400
         );
 
+
     cooldownSpinBox->setValue(
         configuration.cooldown
         );
+
 
     formLayout->addRow(
         "Cooldown:",
         cooldownSpinBox
         );
 
+
     mainLayout->addLayout(
         formLayout
         );
+
 
     QDialogButtonBox *buttonBox =
         new QDialogButtonBox(
@@ -512,9 +908,115 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
             &dialog
             );
 
+
     mainLayout->addWidget(
         buttonBox
         );
+
+
+    // ========================================================
+    // AGGIUNGI TASTO
+    // ========================================================
+
+    connect(
+        addKeyButton,
+        &QPushButton::clicked,
+        &dialog,
+        [this, keyEdit, acceptedKeysList]()
+        {
+            const int keyCode =
+                keyEdit->keyCode();
+
+
+            if(keyCode == 0)
+            {
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // Evita duplicati
+            // ------------------------------------------------
+
+            for(
+                int i = 0;
+                i < acceptedKeysList->count();
+                ++i
+                )
+            {
+                QListWidgetItem *item =
+                    acceptedKeysList->item(
+                        i
+                        );
+
+
+                if(
+                    item->data(
+                            Qt::UserRole
+                            ).toInt() == keyCode
+                    )
+                {
+                    return;
+                }
+            }
+
+
+            QListWidgetItem *item =
+                new QListWidgetItem(
+                    keyName(
+                        keyCode
+                        )
+                    );
+
+
+            item->setData(
+                Qt::UserRole,
+                keyCode
+                );
+
+
+            acceptedKeysList->addItem(
+                item
+                );
+
+
+            keyEdit->setKeyCode(
+                0
+                );
+        }
+        );
+
+
+    // ========================================================
+    // RIMUOVI TASTO
+    // ========================================================
+
+    connect(
+        removeKeyButton,
+        &QPushButton::clicked,
+        &dialog,
+        [acceptedKeysList]()
+        {
+            const int row =
+                acceptedKeysList->currentRow();
+
+
+            if(row < 0)
+            {
+                return;
+            }
+
+
+            delete acceptedKeysList->takeItem(
+                row
+                );
+        }
+        );
+
+
+    // ========================================================
+    // BROWSE IMMAGINE
+    // ========================================================
 
     connect(
         browseButton,
@@ -530,7 +1032,8 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
                     "Immagini (*.png *.jpg *.jpeg *.bmp *.webp)"
                     );
 
-            if (!filePath.isEmpty())
+
+            if(!filePath.isEmpty())
             {
                 imageEdit->setText(
                     filePath
@@ -539,12 +1042,14 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
         }
         );
 
+
     connect(
         buttonBox,
         &QDialogButtonBox::accepted,
         &dialog,
         &QDialog::accept
         );
+
 
     connect(
         buttonBox,
@@ -553,7 +1058,8 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
         &QDialog::reject
         );
 
-    if (
+
+    if(
         dialog.exec() !=
         QDialog::Accepted
         )
@@ -561,27 +1067,55 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
         return;
     }
 
-    const int keyCode =
-        keyEdit->keyCode();
+
+    // ========================================================
+    // LETTURA DATI
+    // ========================================================
+
+    QList<int> acceptedKeys;
+
+
+    for(
+        int i = 0;
+        i < acceptedKeysList->count();
+        ++i
+        )
+    {
+        acceptedKeys.append(
+            acceptedKeysList->item(
+                                i
+                                )->data(
+                    Qt::UserRole
+                    ).toInt()
+            );
+    }
+
 
     const QString imagePath =
         imageEdit->text().trimmed();
 
+
     const int cooldown =
         cooldownSpinBox->value();
 
-    if (keyCode == 0)
+
+    // ========================================================
+    // VALIDAZIONE
+    // ========================================================
+
+    if(acceptedKeys.isEmpty())
     {
         QMessageBox::warning(
             this,
             "Configurazione",
-            "Devi assegnare un tasto."
+            "Devi assegnare almeno un tasto."
             );
 
         return;
     }
 
-    if (imagePath.isEmpty())
+
+    if(imagePath.isEmpty())
     {
         QMessageBox::warning(
             this,
@@ -592,25 +1126,50 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
         return;
     }
 
-    configuration.key =
-        keyCode;
+
+    if(cooldown <= 0)
+    {
+        QMessageBox::warning(
+            this,
+            "Configurazione",
+            "Il cooldown deve essere maggiore di zero."
+            );
+
+        return;
+    }
+
+
+    // ========================================================
+    // AGGIORNA CONFIGURAZIONE
+    // ========================================================
+
+    configuration.acceptedKeys =
+        acceptedKeys;
+
 
     configuration.imagePath =
         imagePath;
 
+
     configuration.cooldown =
         cooldown;
 
+
     m_configurations[row] =
         configuration;
+
 
     refreshList();
 }
 
 
+// ============================================================
+// SAVE
+// ============================================================
+
 void SpecialCooldownConfigWindow::saveConfiguration()
 {
-    if (!m_manager)
+    if(!m_manager)
     {
         QMessageBox::warning(
             this,
@@ -621,23 +1180,32 @@ void SpecialCooldownConfigWindow::saveConfiguration()
         return;
     }
 
+
     m_manager->setConfigurations(
         m_configurations
         );
 
+
     m_manager->save();
 
+
     emit configurationSaved();
+
 
     accept();
 }
 
 
+// ============================================================
+// REFRESH LIST
+// ============================================================
+
 void SpecialCooldownConfigWindow::refreshList()
 {
     m_listWidget->clear();
 
-    for (
+
+    for(
         const SpecialCooldownConfiguration &configuration :
         m_configurations
         )
@@ -645,11 +1213,13 @@ void SpecialCooldownConfigWindow::refreshList()
         QListWidgetItem *item =
             new QListWidgetItem();
 
+
         QPixmap pixmap(
             configuration.imagePath
             );
 
-        if (!pixmap.isNull())
+
+        if(!pixmap.isNull())
         {
             QPixmap thumbnail =
                 pixmap.scaled(
@@ -659,6 +1229,7 @@ void SpecialCooldownConfigWindow::refreshList()
                     Qt::SmoothTransformation
                     );
 
+
             item->setIcon(
                 QIcon(
                     thumbnail
@@ -666,11 +1237,13 @@ void SpecialCooldownConfigWindow::refreshList()
                 );
         }
 
+
         item->setText(
             displayName(
                 configuration
                 )
             );
+
 
         item->setSizeHint(
             QSize(
@@ -679,12 +1252,17 @@ void SpecialCooldownConfigWindow::refreshList()
                 )
             );
 
+
         m_listWidget->addItem(
             item
             );
     }
 }
 
+
+// ============================================================
+// DISPLAY NAME
+// ============================================================
 
 QString SpecialCooldownConfigWindow::displayName(
     const SpecialCooldownConfiguration &configuration
@@ -694,16 +1272,38 @@ QString SpecialCooldownConfigWindow::displayName(
         configuration.imagePath
         );
 
+
     const QString fileName =
         fileInfo.fileName();
+
+
+    QStringList keyNames;
+
+
+    for(
+        int key :
+        configuration.acceptedKeys
+        )
+    {
+        keyNames.append(
+            keyName(
+                key
+                )
+            );
+    }
+
+
+    const QString keysText =
+        keyNames.join(
+            ", "
+            );
+
 
     return QString(
                "%1    |    %2    |    %3 s"
                )
         .arg(
-            keyName(
-                configuration.key
-                )
+            keysText
             )
         .arg(
             fileName
@@ -714,11 +1314,19 @@ QString SpecialCooldownConfigWindow::displayName(
 }
 
 
+// ============================================================
+// KEY NAME
+// ============================================================
+
 QString SpecialCooldownConfigWindow::keyName(
     int key
     ) const
 {
-    if (
+    // ========================================================
+    // LETTERE
+    // ========================================================
+
+    if(
         key >= 'A' &&
         key <= 'Z'
         )
@@ -730,7 +1338,12 @@ QString SpecialCooldownConfigWindow::keyName(
             );
     }
 
-    if (
+
+    // ========================================================
+    // NUMERI
+    // ========================================================
+
+    if(
         key >= '0' &&
         key <= '9'
         )
@@ -742,7 +1355,12 @@ QString SpecialCooldownConfigWindow::keyName(
             );
     }
 
-    switch (key)
+
+    // ========================================================
+    // TASTI SPECIALI
+    // ========================================================
+
+    switch(key)
     {
     case 162:
         return "Left Ctrl";
@@ -792,6 +1410,11 @@ QString SpecialCooldownConfigWindow::keyName(
     case 40:
         return "Down";
 
+
+        // --------------------------------------------------------
+        // F1 - F12
+        // --------------------------------------------------------
+
     case 112:
         return "F1";
 
@@ -827,12 +1450,54 @@ QString SpecialCooldownConfigWindow::keyName(
 
     case 123:
         return "F12";
+
+
+        // --------------------------------------------------------
+        // CONTROLLO
+        // --------------------------------------------------------
+
+    case 8:
+        return "Backspace";
+
+    case 20:
+        return "Caps Lock";
+
+    case 144:
+        return "Num Lock";
+
+    case 145:
+        return "Scroll Lock";
+
+    case 19:
+        return "Pause";
+
+    case 33:
+        return "Page Up";
+
+    case 34:
+        return "Page Down";
+
+    case 35:
+        return "End";
+
+    case 36:
+        return "Home";
+
+    case 45:
+        return "Insert";
+
+    case 46:
+        return "Delete";
+
+    case 44:
+        return "Print Screen";
+
+
+    default:
+        return QString(
+                   "VK %1"
+                   ).arg(
+                key
+                );
     }
-
-    return QString(
-               "VK %1"
-               ).arg(
-            key
-            );
 }
-

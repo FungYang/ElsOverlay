@@ -1,3 +1,4 @@
+
 #include "specialcooldownmanager.h"
 
 #include <QCoreApplication>
@@ -36,7 +37,7 @@ void SpecialCooldownManager::load()
                     ).toInt();
 
 
-    for (
+    for(
         int i = 0;
         i < count;
         ++i
@@ -51,12 +52,79 @@ void SpecialCooldownManager::load()
         SpecialCooldownConfiguration configuration;
 
 
-        configuration.key =
+        // ====================================================
+        // ACCEPTED KEYS
+        // ====================================================
+
+        const int acceptedKeysCount =
             settings.value(
-                        prefix + "key",
+                        prefix + "acceptedKeys/count",
                         0
                         ).toInt();
 
+
+        for(
+            int keyIndex = 0;
+            keyIndex < acceptedKeysCount;
+            ++keyIndex
+            )
+        {
+            const int key =
+                settings.value(
+                            prefix +
+                                QString(
+                                    "acceptedKeys/%1"
+                                    ).arg(
+                                        keyIndex
+                                        ),
+                            0
+                            ).toInt();
+
+
+            if(key != 0)
+            {
+                configuration.acceptedKeys.append(
+                    key
+                    );
+            }
+        }
+
+
+        // ====================================================
+        // COMPATIBILITÀ VECCHIO FORMATO
+        // ====================================================
+
+        /*
+         * Se il vecchio formato contiene ancora:
+         *
+         * key=162
+         *
+         * e non abbiamo trovato acceptedKeys,
+         * convertiamo automaticamente il vecchio
+         * tasto in una lista con un solo elemento.
+         */
+
+        if(configuration.acceptedKeys.isEmpty())
+        {
+            const int oldKey =
+                settings.value(
+                            prefix + "key",
+                            0
+                            ).toInt();
+
+
+            if(oldKey != 0)
+            {
+                configuration.acceptedKeys.append(
+                    oldKey
+                    );
+            }
+        }
+
+
+        // ====================================================
+        // IMAGE
+        // ====================================================
 
         configuration.imagePath =
             settings.value(
@@ -65,12 +133,20 @@ void SpecialCooldownManager::load()
                         ).toString();
 
 
+        // ====================================================
+        // COOLDOWN
+        // ====================================================
+
         configuration.cooldown =
             settings.value(
                         prefix + "cooldown",
                         0
                         ).toInt();
 
+
+        // ====================================================
+        // POSITION
+        // ====================================================
 
         configuration.position =
             QPoint(
@@ -86,6 +162,10 @@ void SpecialCooldownManager::load()
                 );
 
 
+        // ====================================================
+        // SIZE
+        // ====================================================
+
         int width =
             settings.value(
                         prefix + "width",
@@ -100,13 +180,13 @@ void SpecialCooldownManager::load()
                         ).toInt();
 
 
-        if (width < 20)
+        if(width < 20)
         {
             width = 42;
         }
 
 
-        if (height < 20)
+        if(height < 20)
         {
             height = 42;
         }
@@ -159,7 +239,7 @@ void SpecialCooldownManager::save() const
         );
 
 
-    for (
+    for(
         int i = 0;
         i < m_configurations.size();
         ++i
@@ -174,11 +254,45 @@ void SpecialCooldownManager::save() const
             );
 
 
-        settings.setValue(
-            "key",
-            configuration.key
+        // ====================================================
+        // ACCEPTED KEYS
+        // ====================================================
+
+        settings.beginGroup(
+            "acceptedKeys"
             );
 
+
+        settings.setValue(
+            "count",
+            configuration.acceptedKeys.size()
+            );
+
+
+        for(
+            int keyIndex = 0;
+            keyIndex < configuration.acceptedKeys.size();
+            ++keyIndex
+            )
+        {
+            settings.setValue(
+                QString::number(
+                    keyIndex
+                    ),
+
+                configuration.acceptedKeys.at(
+                    keyIndex
+                    )
+                );
+        }
+
+
+        settings.endGroup();
+
+
+        // ====================================================
+        // IMAGE
+        // ====================================================
 
         settings.setValue(
             "image",
@@ -186,11 +300,19 @@ void SpecialCooldownManager::save() const
             );
 
 
+        // ====================================================
+        // COOLDOWN
+        // ====================================================
+
         settings.setValue(
             "cooldown",
             configuration.cooldown
             );
 
+
+        // ====================================================
+        // POSITION
+        // ====================================================
 
         settings.setValue(
             "x",
@@ -203,6 +325,10 @@ void SpecialCooldownManager::save() const
             configuration.position.y()
             );
 
+
+        // ====================================================
+        // SIZE
+        // ====================================================
 
         settings.setValue(
             "width",
@@ -273,7 +399,7 @@ void SpecialCooldownManager::removeConfiguration(
     int index
     )
 {
-    if (
+    if(
         index < 0 ||
         index >= m_configurations.size()
         )

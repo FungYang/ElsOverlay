@@ -46,6 +46,9 @@ private:
     QPushButton *m_cancelButton = nullptr;
 
     SpecialCooldownManager *m_manager = nullptr;
+    QString keyNameForDialog(
+        int key
+        ) const;
 
     QList<SpecialCooldownConfiguration> m_configurations;
 
