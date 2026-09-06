@@ -27,9 +27,16 @@
 #include "specialcooldownoverlay.h"
 
 
-    int main(int argc, char *argv[])
+    int main(
+        int argc,
+        char *argv[]
+        )
 {
-    QApplication app(argc, argv);
+    QApplication app(
+        argc,
+        argv
+        );
+
 
     // ==================================================
     // ROOT OVERLAY
@@ -46,6 +53,25 @@
     // ==================================================
 
     GlobalKeyboard keyboard;
+
+
+    // ==================================================
+    // HIDE / SHOW OVERLAY
+    // ==================================================
+
+    QObject::connect(
+        &keyboard,
+        &GlobalKeyboard::keyPressed,
+        overlayRoot,
+        [overlayRoot](int key)
+        {
+            if(key == VK_DELETE)
+            {
+                overlayRoot->toggleVisibility();
+            }
+        },
+        Qt::QueuedConnection
+        );
 
 
     // ==================================================
@@ -103,6 +129,10 @@
             overlayRoot
             );
 
+    overlayRoot->registerOverlay(
+        distanceGuides
+        );
+
 
     QObject::connect(
         &mainWindow,
@@ -111,8 +141,11 @@
         [&distanceGuideConfigWindow]()
         {
             distanceGuideConfigWindow.refresh();
+
             distanceGuideConfigWindow.show();
+
             distanceGuideConfigWindow.raise();
+
             distanceGuideConfigWindow.activateWindow();
         }
         );
@@ -124,7 +157,6 @@
         distanceGuides,
         &DistanceGuideOverlay::setEnabled
         );
-
 
 
     // ==================================================
@@ -192,14 +224,14 @@
         );
 
 
-
-
     // ==================================================
     // SHOW MAIN WINDOW
     // ==================================================
 
     mainWindow.show();
+
     mainWindow.raise();
+
     mainWindow.activateWindow();
 
 
@@ -212,6 +244,11 @@
             overlayRoot
             );
 
+    overlayRoot->registerOverlay(
+        overlay
+        );
+
+
     if(!overlayRoot)
     {
         qDebug()
@@ -219,6 +256,7 @@
 
         return -1;
     }
+
 
     if(!overlay)
     {
@@ -236,32 +274,49 @@
         [overlay](bool enabled)
         {
             if(!overlay)
+            {
                 return;
+            }
+
 
             if(enabled)
+            {
                 overlay->show();
+            }
             else
+            {
                 overlay->hide();
+            }
         }
         );
 
 
+    // ==================================================
     // SPECIAL COOLDOWN
-
+    // ==================================================
 
     SpecialCooldownManager specialCooldownManager;
 
     specialCooldownManager.load();
 
+
     SpecialCooldownConfigWindow specialCooldownConfigWindow(
         &specialCooldownManager
         );
+
+
     SpecialCooldownOverlay *specialCooldowns =
         new SpecialCooldownOverlay(
             &specialCooldownManager,
             &keyboard,
             overlayRoot
             );
+
+    overlayRoot->registerOverlay(
+        specialCooldowns
+        );
+
+
     QObject::connect(
         &mainWindow,
         &MainWindow::specialCooldownConfigRequested,
@@ -269,10 +324,14 @@
         [&specialCooldownConfigWindow]()
         {
             specialCooldownConfigWindow.show();
+
             specialCooldownConfigWindow.raise();
+
             specialCooldownConfigWindow.activateWindow();
         }
         );
+
+
     QObject::connect(
         &mainWindow,
         &MainWindow::specialCooldownsToggled,
@@ -285,10 +344,6 @@
     // TRANSCENDENCE VISION
     // ==================================================
 
-    // qDebug()
-    //     << "MAIN: prima TranscendenceVisionManager";
-
-
     TranscendenceVisionManager transcendenceVision(
         &keyboard,
         overlayRoot,
@@ -296,44 +351,42 @@
         );
 
 
-    // qDebug()
-    //     << "MAIN: dopo TranscendenceVisionManager";
-
-
-    // qDebug() << "MAIN: prima connect transcendenceConfig";
     QObject::connect(
         &mainWindow,
         &MainWindow::transcendenceConfigRequested,
         &transcendenceVision,
         &TranscendenceVisionManager::configure
         );
-    // qDebug() << "MAIN: dopo connect transcendenceConfig";
 
-    // qDebug() << "MAIN: prima connect transcendenceToggle";
+
     QObject::connect(
         &mainWindow,
         &MainWindow::buffTranscendenceToggled,
         &transcendenceVision,
         &TranscendenceVisionManager::setEnabled
         );
-    // qDebug() << "MAIN: dopo connect transcendenceToggle";
 
 
-
-
-    // // ==================================================
-    // // SKILL OVERLAY
-    // // ==================================================
-    // qDebug() << "MAIN: prima SkillOverlay";
+    // ==================================================
+    // SKILL OVERLAY
+    // ==================================================
 
     SkillOverlay *skills =
         new SkillOverlay(
             &keyboard,
             overlayRoot
             );
-    // qDebug() << "MAIN: dopo SkillOverlay";
+
+    overlayRoot->registerOverlay(
+        skills
+        );
+
+
     SkillConfigWindow *skillConfigWindow =
-        new SkillConfigWindow(&mainWindow);
+        new SkillConfigWindow(
+            &mainWindow
+            );
+
 
     QObject::connect(
         &mainWindow,
@@ -342,17 +395,20 @@
         [skillConfigWindow]()
         {
             skillConfigWindow->show();
+
             skillConfigWindow->raise();
+
             skillConfigWindow->activateWindow();
         }
         );
+
+
     QObject::connect(
         skillConfigWindow,
         &SkillConfigWindow::configurationChanged,
         skills,
         &SkillOverlay::applyConfig
         );
-
 
 
     QObject::connect(
@@ -376,13 +432,16 @@
     // ==================================================
     // CLASS BUFF OVERLAY
     // ==================================================
-    // qDebug() << "MAIN: prima BuffOverlay";
 
     BuffOverlay *buffs =
         new BuffOverlay(
+            overlayRoot,
             overlayRoot
             );
-    // qDebug() << "MAIN: dopo BuffOverlay";
+
+    overlayRoot->registerOverlay(
+        buffs
+        );
 
 
     QObject::connect(
@@ -394,6 +453,7 @@
             if(!enabled)
             {
                 buffs->clearBuffs();
+
                 return;
             }
 
@@ -403,7 +463,9 @@
 
 
             if(activeId.isEmpty())
+            {
                 return;
+            }
 
 
             const QList<ClassConfiguration> configurations =
@@ -414,7 +476,9 @@
                  configurations)
             {
                 if(configuration.id != activeId)
+                {
                     continue;
+                }
 
 
                 buffs->loadConfiguration(
@@ -444,8 +508,10 @@
         overlay,
         [overlay,&transcendenceVision]()
         {
-            if (overlay->startCooldown())
+            if(overlay->startCooldown())
+            {
                 transcendenceVision.onCooldownStarted();
+            }
         },
         Qt::QueuedConnection
         );
@@ -461,10 +527,8 @@
         overlay,
         [overlay,&transcendenceVision]()
         {
-            // qDebug()
-            // << "RESET ARRIVATO ALL'OVERLAY";
-
             overlay->resetCooldown();
+
             transcendenceVision.onCooldownReset();
         },
         Qt::QueuedConnection
@@ -478,11 +542,11 @@
         [overlay,&transcendenceVision]()
         {
             overlay->resetCooldown();
+
             transcendenceVision.onCooldownReset();
         },
         Qt::QueuedConnection
         );
-
 
 
     // ==================================================
@@ -498,6 +562,7 @@
             if(key == '6')
             {
                 overlay->startCooldown();
+
                 transcendenceVision.onCooldownStarted();
             }
 
@@ -544,8 +609,11 @@
         [&classBuffConfigWindow]()
         {
             classBuffConfigWindow.refresh();
+
             classBuffConfigWindow.show();
+
             classBuffConfigWindow.raise();
+
             classBuffConfigWindow.activateWindow();
         }
         );
@@ -555,12 +623,10 @@
     // ATMA BUFF VISION
     // ==================================================
 
-    //qDebug() << "MAIN: prima BuffVisionManager";
     BuffVisionManager atma(
         &keyboard,
         overlayRoot
         );
-    //qDebug() << "MAIN: dopo BuffVisionManager";
 
 
     QObject::connect(

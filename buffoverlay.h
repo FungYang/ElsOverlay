@@ -1,3 +1,4 @@
+
 #ifndef BUFFOVERLAY_H
 #define BUFFOVERLAY_H
 
@@ -8,6 +9,9 @@
 #include "classconfigurationmanager.h"
 
 
+    class OverlayRoot;
+
+
 class BuffOverlay : public QWidget
 {
     Q_OBJECT
@@ -15,6 +19,7 @@ class BuffOverlay : public QWidget
 public:
 
     explicit BuffOverlay(
+        OverlayRoot *root,
         QWidget *parent = nullptr
         );
 
@@ -27,17 +32,20 @@ public:
         );
 
 
-
 public slots:
 
     void handleKey(
         int key
         );
+
     void resetAll();
+
     void removePendingBoxes();
 
 
 private:
+
+    OverlayRoot *m_root = nullptr;
 
     QList<BuffBox*> m_buffs;
 

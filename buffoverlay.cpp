@@ -1,12 +1,17 @@
+
 #include "buffoverlay.h"
+
+#include "overlayroot.h"
 
 #include <QtAlgorithms>
 
 
 BuffOverlay::BuffOverlay(
+    OverlayRoot *root,
     QWidget *parent
     )
-    : QWidget(parent)
+    : QWidget(parent),
+    m_root(root)
 {
     setAttribute(
         Qt::WA_TranslucentBackground
@@ -80,6 +85,26 @@ void BuffOverlay::loadConfiguration(
         box->setConfigurationMode(
             false
             );
+
+
+        // ====================================================
+        // REGISTRA NELL'OVERLAY ROOT
+        // ====================================================
+
+        /*
+         * BuffBox utilizza Qt::Tool e quindi è una
+         * finestra indipendente.
+         *
+         * Deve essere registrato direttamente nell'OverlayRoot
+         * affinché il DELETE globale possa nasconderlo.
+         */
+
+        if(m_root)
+        {
+            m_root->registerOverlay(
+                box
+                );
+        }
 
 
         box->show();

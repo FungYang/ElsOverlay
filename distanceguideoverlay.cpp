@@ -226,7 +226,7 @@ void DistanceGuideOverlay::rebuild()
                     m_manager->effectiveGuideColor(
                         guide
                         ),
-                    m_root
+                    this
                     );
 
 
@@ -259,6 +259,18 @@ void DistanceGuideOverlay::rebuild()
                 );
 
 
+            /*
+             * La Line è una Qt::Tool,
+             * quindi è una finestra indipendente.
+             *
+             * Registriamola direttamente nel root.
+             */
+
+            m_root->registerOverlay(
+                line
+                );
+
+
             line->show();
             line->raise();
 
@@ -283,7 +295,7 @@ void DistanceGuideOverlay::rebuild()
                     m_manager->effectiveGuideColor(
                         guide
                         ),
-                    m_root
+                    this
                     );
 
 
@@ -334,6 +346,15 @@ void DistanceGuideOverlay::rebuild()
                 );
 
 
+            /*
+             * Anche il Rectangle è una Qt::Tool.
+             */
+
+            m_root->registerOverlay(
+                rectangle
+                );
+
+
             rectangle->show();
             rectangle->raise();
 
@@ -358,7 +379,7 @@ void DistanceGuideOverlay::rebuild()
                     m_manager->effectiveGuideColor(
                         guide
                         ),
-                    m_root
+                    this
                     );
 
 
@@ -402,6 +423,17 @@ void DistanceGuideOverlay::rebuild()
                     size / 2,
                 centerY -
                     size / 2
+                );
+
+
+            /*
+             * IMPORTANTE:
+             *
+             * Registriamo anche il Circle standalone.
+             */
+
+            m_root->registerOverlay(
+                circle
                 );
 
 
@@ -466,7 +498,7 @@ void DistanceGuideOverlay::rebuild()
                         m_manager->effectiveGuideColor(
                             guide
                             ),
-                        m_root
+                        this
                         );
 
 
@@ -499,6 +531,20 @@ void DistanceGuideOverlay::rebuild()
                     );
 
 
+                /*
+                 * IMPORTANTE:
+                 *
+                 * Questa Line appartiene a un Group,
+                 * ma è comunque una finestra indipendente.
+                 *
+                 * La registriamo direttamente.
+                 */
+
+                m_root->registerOverlay(
+                    line
+                    );
+
+
                 line->show();
                 line->raise();
 
@@ -523,7 +569,7 @@ void DistanceGuideOverlay::rebuild()
                         m_manager->effectiveGuideColor(
                             guide
                             ),
-                        m_root
+                        this
                         );
 
 
@@ -574,6 +620,15 @@ void DistanceGuideOverlay::rebuild()
                     );
 
 
+                /*
+                 * Rectangle appartenente al Group.
+                 */
+
+                m_root->registerOverlay(
+                    rectangle
+                    );
+
+
                 rectangle->show();
                 rectangle->raise();
 
@@ -598,7 +653,7 @@ void DistanceGuideOverlay::rebuild()
                         m_manager->effectiveGuideColor(
                             guide
                             ),
-                        m_root
+                        this
                         );
 
 
@@ -642,6 +697,21 @@ void DistanceGuideOverlay::rebuild()
                         size / 2,
                     centerY -
                         size / 2
+                    );
+
+
+                /*
+                 * QUI è il punto fondamentale:
+                 *
+                 * ogni Circle del Group viene registrato
+                 * individualmente nell'OverlayRoot.
+                 *
+                 * Se il Group contiene 20 Circle,
+                 * OverlayRoot avrà 20 finestre registrate.
+                 */
+
+                m_root->registerOverlay(
+                    circle
                     );
 
 

@@ -126,16 +126,19 @@
 
     protected:
 
-        void paintEvent(
-            QPaintEvent *
-            ) override
+
+            void paintEvent(
+                QPaintEvent *
+                ) override
         {
             QPainter painter(this);
+
 
             painter.setRenderHint(
                 QPainter::Antialiasing,
                 true
                 );
+
 
             painter.setRenderHint(
                 QPainter::SmoothPixmapTransform,
@@ -152,6 +155,10 @@
                     );
 
 
+            // ========================================================
+            // IMMAGINE
+            // ========================================================
+
             if(!m_pixmap.isNull())
             {
                 painter.drawPixmap(
@@ -161,9 +168,9 @@
             }
 
 
-            /*
-         * Bordo.
-         */
+            // ========================================================
+            // BORDO
+            // ========================================================
 
             painter.setPen(
                 QPen(
@@ -171,6 +178,7 @@
                     1
                     )
                 );
+
 
             painter.drawRect(
                 rect().adjusted(
@@ -182,61 +190,146 @@
                 );
 
 
-            /*
-         * Countdown.
-         */
+            // ========================================================
+            // COUNTDOWN
+            // ========================================================
 
             if(m_active)
             {
-                const double seconds =
-                    static_cast<double>(
-                        m_remainingMilliseconds
-                        ) /
-                    1000.0;
+                /*
+         * Mostriamo solamente i secondi.
+         *
+         * Esempio:
+         *
+         * 15
+         * 14
+         * 13
+         * ...
+         * 2
+         * 1
+         */
+
+                const int seconds =
+                    qCeil(
+                        static_cast<double>(
+                            m_remainingMilliseconds
+                            ) /
+                        1000.0
+                        );
 
 
                 const QString text =
                     QString::number(
-                        seconds,
-                        'f',
-                        1
+                        seconds
                         );
 
 
                 QFont font =
                     painter.font();
 
+
                 font.setBold(
                     true
                     );
 
-                font.setPointSize(
+
+                /*
+         * Dimensione iniziale del carattere.
+         *
+         * Il testo occupa una buona parte del quadrato.
+         */
+
+                int pointSize =
                     qMax(
-                        8,
-                        width() / 5
+                        12,
+                        width() / 3
+                        );
+
+
+                /*
+         * Riduciamo automaticamente il font
+         * se il numero non entra nel quadrato.
+         *
+         * Questo è importante soprattutto per:
+         *
+         * 100
+         * 120
+         * 180
+         * ecc.
+         */
+
+                while(pointSize > 8)
+                {
+                    font.setPointSize(
+                        pointSize
+                        );
+
+
+                    QFontMetrics metrics(
+                        font
+                        );
+
+
+                    QRect textRect =
+                        metrics.boundingRect(
+                            text
+                            );
+
+
+                    const int maxWidth =
+                        width() -
+                        8;
+
+
+                    const int maxHeight =
+                        height() -
+                        8;
+
+
+                    if(
+                        textRect.width() <= maxWidth &&
+                        textRect.height() <= maxHeight
                         )
-                    );
+                    {
+                        break;
+                    }
+
+
+                    --pointSize;
+                }
+
 
                 painter.setFont(
                     font
                     );
+
 
                 painter.setPen(
                     Qt::white
                     );
 
 
+                /*
+         * Numero perfettamente centrato
+         * sia orizzontalmente che verticalmente.
+         */
+
                 painter.drawText(
-                    rect(),
+                    rect().adjusted(
+                        4,
+                        4,
+                        -4,
+                        -4
+                        ),
                     Qt::AlignCenter,
                     text
                     );
             }
 
 
-            /*
-         * Quattro maniglie.
-         */
+            // ========================================================
+            // QUATTRO MANIGLIE
+            // ========================================================
 
             const int handleSize =
                 6;
@@ -245,6 +338,7 @@
             painter.setBrush(
                 Qt::white
                 );
+
 
             painter.setPen(
                 Qt::NoPen
@@ -282,6 +376,7 @@
                 handleSize
                 );
         }
+
 
 
         void mousePressEvent(
