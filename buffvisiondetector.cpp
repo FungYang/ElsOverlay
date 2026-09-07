@@ -139,7 +139,7 @@ VisionState BuffVisionDetector::detect(
 
 
 
-    constexpr double confidence = 0.90;
+    constexpr double confidence = 0.98;
 
 
 
@@ -260,7 +260,7 @@ double BuffVisionDetector::compareImages(
 
 
 
-    constexpr int COLOR_TOLERANCE = 10;
+    constexpr int COLOR_TOLERANCE = 5;
 
 
     long long totalDiff = 0;
