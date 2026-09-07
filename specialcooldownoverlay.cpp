@@ -1,13 +1,12 @@
-
 #include "specialcooldownoverlay.h"
 
 #include "globalkeyboard.h"
+#include "overlayroot.h"
 #include "specialcooldownmanager.h"
 
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
-#include <QResizeEvent>
 #include <QtMath>
 
 #include <functional>
@@ -37,23 +36,40 @@
             : QWidget(parent),
             m_configuration(configuration)
         {
-            setMouseTracking(
-                true
+            setWindowFlags(
+                Qt::Tool |
+                Qt::FramelessWindowHint |
+                Qt::WindowStaysOnTopHint
                 );
 
-            setMinimumSize(
-                30,
-                30
-                );
 
             setAttribute(
                 Qt::WA_TranslucentBackground,
                 true
                 );
 
+
+            setAttribute(
+                Qt::WA_NoSystemBackground,
+                true
+                );
+
+
+            setMouseTracking(
+                true
+                );
+
+
+            setMinimumSize(
+                30,
+                30
+                );
+
+
             setAutoFillBackground(
                 false
                 );
+
 
             m_pixmap =
                 QPixmap(
@@ -75,10 +91,22 @@
             m_configuration =
                 configuration;
 
+
             m_pixmap =
                 QPixmap(
                     m_configuration.imagePath
                     );
+
+
+            move(
+                m_configuration.position
+                );
+
+
+            resize(
+                m_configuration.size
+                );
+
 
             update();
         }
@@ -94,6 +122,7 @@
                     milliseconds
                     );
 
+
             update();
         }
 
@@ -104,6 +133,7 @@
         {
             m_active =
                 active;
+
 
             update();
         }
@@ -127,9 +157,9 @@
     protected:
 
 
-            void paintEvent(
-                QPaintEvent *
-                ) override
+        void paintEvent(
+            QPaintEvent *
+            ) override
         {
             QPainter painter(this);
 
@@ -196,19 +226,6 @@
 
             if(m_active)
             {
-                /*
-         * Mostriamo solamente i secondi.
-         *
-         * Esempio:
-         *
-         * 15
-         * 14
-         * 13
-         * ...
-         * 2
-         * 1
-         */
-
                 const int seconds =
                     qCeil(
                         static_cast<double>(
@@ -233,30 +250,12 @@
                     );
 
 
-                /*
-         * Dimensione iniziale del carattere.
-         *
-         * Il testo occupa una buona parte del quadrato.
-         */
-
                 int pointSize =
                     qMax(
                         12,
                         width() / 3
                         );
 
-
-                /*
-         * Riduciamo automaticamente il font
-         * se il numero non entra nel quadrato.
-         *
-         * Questo è importante soprattutto per:
-         *
-         * 100
-         * 120
-         * 180
-         * ecc.
-         */
 
                 while(pointSize > 8)
                 {
@@ -308,11 +307,6 @@
                     Qt::white
                     );
 
-
-                /*
-         * Numero perfettamente centrato
-         * sia orizzontalmente che verticalmente.
-         */
 
                 painter.drawText(
                     rect().adjusted(
@@ -378,7 +372,6 @@
         }
 
 
-
         void mousePressEvent(
             QMouseEvent *event
             ) override
@@ -399,11 +392,14 @@
             {
                 m_resizing = true;
 
+
                 m_resizeStartGlobal =
                     event->globalPosition().toPoint();
 
+
                 m_resizeStartPosition =
                     pos();
+
 
                 m_resizeStartSize =
                     size();
@@ -422,6 +418,7 @@
 
 
             m_dragging = true;
+
 
             m_dragOffset =
                 event->globalPosition().toPoint() -
@@ -452,6 +449,7 @@
                     event->globalPosition().toPoint()
                     );
 
+
                 event->accept();
 
                 return;
@@ -465,18 +463,9 @@
                     m_dragOffset;
 
 
-                if(parentWidget())
-                {
-                    const QPoint newPosition =
-                        parentWidget()->mapFromGlobal(
-                            newGlobalPosition
-                            );
-
-
-                    move(
-                        newPosition
-                        );
-                }
+                move(
+                    newGlobalPosition
+                    );
 
 
                 event->accept();
@@ -502,7 +491,9 @@
 
 
             m_dragging = false;
+
             m_resizing = false;
+
 
             m_resizeCorner =
                 ResizeCorner::None;
@@ -522,8 +513,10 @@
             QEvent *event
             ) override
         {
-            if(!m_dragging &&
-                !m_resizing)
+            if(
+                !m_dragging &&
+                !m_resizing
+                )
             {
                 unsetCursor();
             }
@@ -541,25 +534,34 @@
 
         QPixmap m_pixmap;
 
+
         int m_remainingMilliseconds = 0;
 
         bool m_active = false;
 
+
         bool m_dragging = false;
+
         bool m_resizing = false;
+
 
         ResizeCorner m_resizeCorner =
             ResizeCorner::None;
 
+
         QPoint m_dragOffset;
 
+
         QPoint m_resizeStartGlobal;
+
         QPoint m_resizeStartPosition;
+
 
         QSize m_resizeStartSize;
 
 
         static constexpr int ResizeMargin = 10;
+
         static constexpr int MinimumSize = 30;
 
 
@@ -570,14 +572,21 @@
             const bool left =
                 position.x() <= ResizeMargin;
 
+
             const bool right =
-                position.x() >= width() - ResizeMargin;
+                position.x() >=
+                width() -
+                    ResizeMargin;
+
 
             const bool top =
                 position.y() <= ResizeMargin;
 
+
             const bool bottom =
-                position.y() >= height() - ResizeMargin;
+                position.y() >=
+                height() -
+                    ResizeMargin;
 
 
             if(left && top)
@@ -660,6 +669,7 @@
 
             const int deltaX =
                 delta.x();
+
 
             const int deltaY =
                 delta.y();
@@ -746,6 +756,7 @@
                     newSize
                     );
 
+
                 newPosition.setY(
                     m_resizeStartPosition.y() +
                     m_resizeStartSize.height() -
@@ -788,6 +799,7 @@
                 newPosition
                 );
 
+
             resize(
                 newSize,
                 newSize
@@ -817,31 +829,23 @@
 SpecialCooldownOverlay::SpecialCooldownOverlay(
     SpecialCooldownManager *manager,
     GlobalKeyboard *keyboard,
+    OverlayRoot *root,
     QWidget *parent
     )
     : QWidget(parent),
     m_manager(manager),
-    m_keyboard(keyboard)
+    m_keyboard(keyboard),
+    m_root(root)
 {
+    /*
+     * Questo widget non è più un overlay visuale.
+     *
+     * È solamente il controller dei cooldown.
+     */
+
+
     setAttribute(
-        Qt::WA_TranslucentBackground,
-        true
-        );
-
-    setAttribute(
-        Qt::WA_NoSystemBackground,
-        true
-        );
-
-
-    setWindowFlags(
-        Qt::Tool |
-        Qt::FramelessWindowHint |
-        Qt::WindowStaysOnTopHint
-        );
-
-
-    setMouseTracking(
+        Qt::WA_DontShowOnScreen,
         true
         );
 
@@ -883,9 +887,6 @@ SpecialCooldownOverlay::SpecialCooldownOverlay(
     loadConfigurations();
 
     createWidgets();
-
-
-    hide();
 }
 
 
@@ -915,11 +916,14 @@ void SpecialCooldownOverlay::loadConfigurations()
     {
         CooldownState state;
 
+
         state.configuration =
             configuration;
 
+
         state.remainingMilliseconds =
             0;
+
 
         state.active =
             false;
@@ -938,90 +942,206 @@ void SpecialCooldownOverlay::loadConfigurations()
 
 void SpecialCooldownOverlay::createWidgets()
 {
-    clearWidgets();
+    /*
+     * Se i widget esistono già, li riutilizziamo.
+     *
+     * Questo è importante perché OverlayRoot conserva
+     * i puntatori agli overlay registrati.
+     */
 
+    if(m_widgets.size() != m_states.size())
+    {
+        /*
+         * In questa fase non ricreiamo dinamicamente la lista.
+         *
+         * Il numero dei cooldown configurati viene normalmente
+         * definito dalla configurazione.
+         *
+         * Se cambia, ricostruiamo i widget mancanti.
+         */
+
+        while(
+            m_widgets.size() <
+            m_states.size()
+            )
+        {
+            const int index =
+                m_widgets.size();
+
+
+            SpecialCooldownWidget *widget =
+                new SpecialCooldownWidget(
+                    m_states[index].configuration,
+                    nullptr
+                    );
+
+
+            widget->geometryChanged =
+                [this, index](
+                    const QPoint &position,
+                    const QSize &size
+                    )
+            {
+                if(
+                    index < 0 ||
+                    index >= m_states.size()
+                    )
+                {
+                    return;
+                }
+
+
+                m_states[index].configuration.position =
+                    position;
+
+
+                m_states[index].configuration.size =
+                    size;
+
+
+                if(m_manager)
+                {
+                    QList<SpecialCooldownConfiguration> configurations;
+
+
+                    for(
+                        const CooldownState &state :
+                        m_states
+                        )
+                    {
+                        configurations.append(
+                            state.configuration
+                            );
+                    }
+
+
+                    m_manager->setConfigurations(
+                        configurations
+                        );
+
+
+                    m_manager->save();
+                }
+            };
+
+
+            widget->interactionStarted =
+                [this]()
+            {
+                if(!m_enabled)
+                {
+                    return;
+                }
+            };
+
+
+            m_widgets.append(
+                widget
+                );
+
+
+            if(m_root)
+            {
+                m_root->registerOverlay(
+                    widget
+                    );
+            }
+        }
+    }
+
+
+    /*
+     * Aggiorniamo la configurazione dei widget esistenti.
+     */
 
     for(
         int i = 0;
-        i < m_states.size();
+        i < m_states.size() &&
+        i < m_widgets.size();
         ++i
         )
     {
         SpecialCooldownWidget *widget =
-            new SpecialCooldownWidget(
-                m_states[i].configuration,
-                this
+            static_cast<SpecialCooldownWidget *>(
+                m_widgets[i]
                 );
 
 
-        widget->resize(
-            m_states[i].configuration.size
+        widget->setConfiguration(
+            m_states[i].configuration
             );
 
 
-        widget->move(
-            m_states[i].configuration.position
+        widget->setRemainingMilliseconds(
+            m_states[i].remainingMilliseconds
             );
 
 
-        widget->geometryChanged =
-            [this, i](
-                const QPoint &position,
-                const QSize &size
-                )
-        {
-            if(i < 0 ||
-                i >= m_states.size())
-            {
-                return;
-            }
-
-
-            m_states[i].configuration.position =
-                position;
-
-
-            m_states[i].configuration.size =
-                size;
-
-
-            if(m_manager)
-            {
-                QList<SpecialCooldownConfiguration> configurations;
-
-
-                for(
-                    const CooldownState &state :
-                    m_states
-                    )
-                {
-                    configurations.append(
-                        state.configuration
-                        );
-                }
-
-
-                m_manager->setConfigurations(
-                    configurations
-                    );
-
-                m_manager->save();
-            }
-        };
-
-
-        widget->interactionStarted =
-            [this]()
-        {
-            if(!m_enabled)
-            {
-                return;
-            }
-        };
-
-
-        widget->show();
+        widget->setActive(
+            m_states[i].active
+            );
     }
+}
+
+
+// ============================================================
+// UPDATE WIDGETS
+// ============================================================
+
+void SpecialCooldownOverlay::updateWidgets()
+{
+    for(
+        int i = 0;
+        i < m_states.size() &&
+        i < m_widgets.size();
+        ++i
+        )
+    {
+        updateWidget(
+            i
+            );
+    }
+}
+
+
+// ============================================================
+// UPDATE WIDGET
+// ============================================================
+
+void SpecialCooldownOverlay::updateWidget(
+    int index
+    )
+{
+    if(
+        index < 0 ||
+        index >= m_states.size() ||
+        index >= m_widgets.size()
+        )
+    {
+        return;
+    }
+
+
+    SpecialCooldownWidget *widget =
+        static_cast<SpecialCooldownWidget *>(
+            m_widgets[index]
+            );
+
+
+    if(!widget)
+    {
+        return;
+    }
+
+
+    widget->setRemainingMilliseconds(
+        m_states[index].remainingMilliseconds
+        );
+
+
+    widget->setActive(
+        m_states[index].active
+        );
 }
 
 
@@ -1031,19 +1151,24 @@ void SpecialCooldownOverlay::createWidgets()
 
 void SpecialCooldownOverlay::clearWidgets()
 {
-    const QList<QWidget *> children =
-        findChildren<QWidget *>(
-            QString(),
-            Qt::FindDirectChildrenOnly
-            );
-
+    /*
+     * Non distruggiamo i widget.
+     *
+     * Sono registrati nell'OverlayRoot e devono rimanere
+     * validi per tutta la vita dell'applicazione.
+     *
+     * Vengono semplicemente nascosti.
+     */
 
     for(
         QWidget *widget :
-        children
+        m_widgets
         )
     {
-        widget->deleteLater();
+        if(widget)
+        {
+            widget->hide();
+        }
     }
 }
 
@@ -1067,16 +1192,20 @@ void SpecialCooldownOverlay::setEnabled(
         createWidgets();
 
 
-        if(parentWidget())
+        for(
+            QWidget *widget :
+            m_widgets
+            )
         {
-            resize(
-                parentWidget()->size()
-                );
+            if(widget)
+            {
+                widget->show();
+                widget->raise();
+            }
         }
 
 
-        show();
-        raise();
+        updateWidgets();
 
 
         if(!m_timer.isActive())
@@ -1088,7 +1217,8 @@ void SpecialCooldownOverlay::setEnabled(
     {
         m_timer.stop();
 
-        hide();
+
+        clearWidgets();
     }
 }
 
@@ -1108,6 +1238,7 @@ void SpecialCooldownOverlay::resetAll()
         m_states[i].remainingMilliseconds =
             0;
 
+
         m_states[i].active =
             false;
 
@@ -1119,13 +1250,13 @@ void SpecialCooldownOverlay::resetAll()
 }
 
 
-    // ============================================================
-    // ACTIVATE KEY
-    // ============================================================
+// ============================================================
+// ACTIVATE KEY
+// ============================================================
 
-    void SpecialCooldownOverlay::activateKey(
-        int key
-        )
+void SpecialCooldownOverlay::activateKey(
+    int key
+    )
 {
     if(!m_enabled)
     {
@@ -1143,12 +1274,6 @@ void SpecialCooldownOverlay::resetAll()
             m_states[i].configuration;
 
 
-        /*
-         * Il cooldown viene attivato solamente se
-         * il tasto ricevuto è presente nella lista
-         * dei tasti accettati.
-         */
-
         if(
             !configuration.acceptedKeys.contains(
                 key
@@ -1158,10 +1283,6 @@ void SpecialCooldownOverlay::resetAll()
             continue;
         }
 
-
-        /*
-         * Riavvia il cooldown.
-         */
 
         m_states[i].remainingMilliseconds =
             configuration.cooldown *
@@ -1177,7 +1298,6 @@ void SpecialCooldownOverlay::resetAll()
             );
     }
 }
-
 
 
 // ============================================================
@@ -1215,6 +1335,7 @@ void SpecialCooldownOverlay::updateCooldowns()
             m_states[i].remainingMilliseconds =
                 0;
 
+
             m_states[i].active =
                 false;
         }
@@ -1224,54 +1345,6 @@ void SpecialCooldownOverlay::updateCooldowns()
             i
             );
     }
-}
-
-
-// ============================================================
-// UPDATE WIDGET
-// ============================================================
-
-void SpecialCooldownOverlay::updateWidget(
-    int index
-    )
-{
-    const QList<QWidget *> children =
-        findChildren<QWidget *>(
-            QString(),
-            Qt::FindDirectChildrenOnly
-            );
-
-
-    if(
-        index < 0 ||
-        index >= children.size() ||
-        index >= m_states.size()
-        )
-    {
-        return;
-    }
-
-
-    SpecialCooldownWidget *widget =
-        dynamic_cast<SpecialCooldownWidget *>(
-            children.at(index)
-            );
-
-
-    if(!widget)
-    {
-        return;
-    }
-
-
-    widget->setRemainingMilliseconds(
-        m_states[index].remainingMilliseconds
-        );
-
-
-    widget->setActive(
-        m_states[index].active
-        );
 }
 
 
@@ -1290,24 +1363,15 @@ void SpecialCooldownOverlay::savePositionsAndSizes()
     QList<SpecialCooldownConfiguration> configurations;
 
 
-    const QList<QWidget *> children =
-        findChildren<QWidget *>(
-            QString(),
-            Qt::FindDirectChildrenOnly
-            );
-
-
     for(
         int i = 0;
         i < m_states.size() &&
-        i < children.size();
+        i < m_widgets.size();
         ++i
         )
     {
-        SpecialCooldownWidget *widget =
-            dynamic_cast<SpecialCooldownWidget *>(
-                children.at(i)
-                );
+        QWidget *widget =
+            m_widgets[i];
 
 
         if(!widget)
@@ -1334,38 +1398,8 @@ void SpecialCooldownOverlay::savePositionsAndSizes()
         configurations
         );
 
+
     m_manager->save();
-}
-
-
-// ============================================================
-// RESIZE EVENT
-// ============================================================
-
-void SpecialCooldownOverlay::resizeEvent(
-    QResizeEvent *event
-    )
-{
-    QWidget::resizeEvent(
-        event
-        );
-}
-
-
-// ============================================================
-// PAINT
-// ============================================================
-
-void SpecialCooldownOverlay::paintEvent(
-    QPaintEvent *
-    )
-{
-    /*
-     * Overlay trasparente.
-     *
-     * I singoli SpecialCooldownWidget
-     * disegnano direttamente le proprie immagini.
-     */
 }
 
 

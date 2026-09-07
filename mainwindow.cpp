@@ -14,7 +14,6 @@
 #include <QSettings>
 #include <QVBoxLayout>
 #include <QWidget>
-#include <QDebug>
 
 
     namespace
@@ -46,11 +45,15 @@
                 64
                 ) > 0)
         {
-            return QString::fromWCharArray(buffer);
+            return QString::fromWCharArray(
+                buffer
+                );
         }
 
 
-        return QString("ScanCode 0x%1")
+        return QString(
+                   "ScanCode 0x%1"
+                   )
             .arg(
                 scanCode,
                 2,
@@ -90,7 +93,9 @@
 
 
             QVBoxLayout *layout =
-                new QVBoxLayout(this);
+                new QVBoxLayout(
+                    this
+                    );
 
 
             m_infoLabel =
@@ -174,22 +179,12 @@
             /*
          * Qt/Windows può restituire lo scan code
          * extended con il prefisso 0xE000.
-         *
-         * Esempio:
-         *
-         * CTRL DESTRO
-         *
-         * nativeScanCode = 0xE01D
-         *
-         * diventa:
-         *
-         * scanCode = 0x1D
-         * extended = true
          */
 
             if((scanCode & 0xE000) == 0xE000)
             {
                 scanCode &= 0xFF;
+
                 extended = true;
             }
 
@@ -214,24 +209,17 @@
             m_saveButton->setEnabled(
                 true
                 );
-
-
-            // qDebug()
-            //     << "TASTO CONFIG:"
-            //     << "VK =" << event->nativeVirtualKey()
-            //     << "ScanCode =" << Qt::hex
-            //     << event->nativeScanCode()
-            //     << "->" << m_scanCode
-            //     << "Extended =" << m_extended;
         }
 
 
     private:
 
         int m_scanCode;
+
         bool m_extended;
 
         QLabel *m_infoLabel;
+
         QPushButton *m_saveButton;
     };
 
@@ -254,12 +242,14 @@ MainWindow::MainWindow(
 
     setFixedSize(
         420,
-        700
+        760
         );
 
 
     QWidget *central =
-        new QWidget(this);
+        new QWidget(
+            this
+            );
 
 
     setCentralWidget(
@@ -322,6 +312,81 @@ MainWindow::MainWindow(
 
     mainLayout->addWidget(
         title
+        );
+
+
+    // ========================================================
+    // OVERLAY CLICKABILITY
+    // ========================================================
+
+    QGroupBox *overlayClickabilityGroup =
+        new QGroupBox(
+            "Overlay Clickability",
+            central
+            );
+
+
+    QHBoxLayout *overlayClickabilityLayout =
+        new QHBoxLayout(
+            overlayClickabilityGroup
+            );
+
+
+    overlayClickabilityToggleButton =
+        new QPushButton(
+            "ON",
+            overlayClickabilityGroup
+            );
+
+
+    setupToggleButton(
+        overlayClickabilityToggleButton
+        );
+
+
+    overlayClickabilityToggleButton->setChecked(
+        true
+        );
+
+
+    updateToggleText(
+        overlayClickabilityToggleButton,
+        true
+        );
+
+
+    overlayClickabilityLayout->addStretch();
+
+
+    overlayClickabilityLayout->addWidget(
+        overlayClickabilityToggleButton
+        );
+
+
+    mainLayout->addWidget(
+        overlayClickabilityGroup
+        );
+
+
+    connect(
+        overlayClickabilityToggleButton,
+        &QPushButton::toggled,
+        this,
+        [this](bool enabled)
+        {
+            updateToggleText(
+                overlayClickabilityToggleButton,
+                enabled
+                );
+
+
+            emit overlayClickabilityToggled(
+                enabled
+                );
+
+
+            saveToggleStates();
+        }
         );
 
 
@@ -718,6 +783,7 @@ MainWindow::MainWindow(
     // ========================================================
 
     loadPauseKey();
+
     loadResetKey();
 
 
@@ -791,6 +857,9 @@ MainWindow::MainWindow(
             emit atmaToggled(
                 enabled
                 );
+
+
+            saveToggleStates();
         }
         );
 
@@ -822,6 +891,9 @@ MainWindow::MainWindow(
             emit classBuffToggled(
                 enabled
                 );
+
+
+            saveToggleStates();
         }
         );
 
@@ -853,6 +925,9 @@ MainWindow::MainWindow(
             emit buffTitlesToggled(
                 enabled
                 );
+
+
+            saveToggleStates();
         }
         );
 
@@ -876,6 +951,9 @@ MainWindow::MainWindow(
             emit buffTranscendenceToggled(
                 enabled
                 );
+
+
+            saveToggleStates();
         }
         );
 
@@ -915,6 +993,9 @@ MainWindow::MainWindow(
             emit specialCooldownsToggled(
                 enabled
                 );
+
+
+            saveToggleStates();
         }
         );
 
@@ -958,6 +1039,9 @@ MainWindow::MainWindow(
             emit distanceGuidesToggled(
                 enabled
                 );
+
+
+            saveToggleStates();
         }
         );
 
@@ -1222,12 +1306,6 @@ void MainWindow::saveResetKey(
     updateResetKeyButtonText();
 
 
-    // qDebug()
-    //     << "RESET KEY SALVATO:"
-    //     << "ScanCode =" << Qt::hex << scanCode
-    //     << "Extended =" << extended;
-
-
     emit resetKeyChanged(
         scanCode,
         extended
@@ -1271,4 +1349,203 @@ void MainWindow::openResetKeyDialog()
             dialog.extended()
             );
     }
+}
+
+
+// ============================================================
+// SAVE TOGGLE STATES
+// ============================================================
+
+void MainWindow::saveToggleStates()
+{
+    QSettings settings(
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
+        QSettings::IniFormat
+        );
+
+
+    settings.setValue(
+        "Toggles/Atma",
+        atmaToggleButton->isChecked()
+        );
+
+
+    settings.setValue(
+        "Toggles/ClassBuff",
+        classBuffToggleButton->isChecked()
+        );
+
+
+    settings.setValue(
+        "Toggles/DistanceGuides",
+        distanceGuidesToggleButton->isChecked()
+        );
+
+
+    settings.setValue(
+        "Toggles/BuffTitles",
+        buffTitlesToggleButton->isChecked()
+        );
+
+
+    settings.setValue(
+        "Toggles/BuffTranscendence",
+        buffTranscendenceToggleButton->isChecked()
+        );
+
+
+    settings.setValue(
+        "Toggles/SpecialCooldowns",
+        specialCooldownToggleButton->isChecked()
+        );
+
+
+    settings.setValue(
+        "Toggles/OverlayClickability",
+        overlayClickabilityToggleButton->isChecked()
+        );
+
+
+    settings.sync();
+}
+
+
+// ============================================================
+// LOAD TOGGLE STATES
+// ============================================================
+
+void MainWindow::loadToggleStates()
+{
+    QSettings settings(
+        QCoreApplication::applicationDirPath() +
+            "/ElsOverlay.ini",
+        QSettings::IniFormat
+        );
+
+
+    const bool atma =
+        settings.value(
+                    "Toggles/Atma",
+                    false
+                    ).toBool();
+
+
+    const bool classBuff =
+        settings.value(
+                    "Toggles/ClassBuff",
+                    false
+                    ).toBool();
+
+
+    const bool distanceGuides =
+        settings.value(
+                    "Toggles/DistanceGuides",
+                    false
+                    ).toBool();
+
+
+    const bool buffTitles =
+        settings.value(
+                    "Toggles/BuffTitles",
+                    false
+                    ).toBool();
+
+
+    const bool buffTranscendence =
+        settings.value(
+                    "Toggles/BuffTranscendence",
+                    false
+                    ).toBool();
+
+
+    const bool specialCooldowns =
+        settings.value(
+                    "Toggles/SpecialCooldowns",
+                    false
+                    ).toBool();
+
+
+    const bool overlayClickability =
+        settings.value(
+                    "Toggles/OverlayClickability",
+                    true
+                    ).toBool();
+
+
+    atmaToggleButton->setChecked(
+        atma
+        );
+
+
+    classBuffToggleButton->setChecked(
+        classBuff
+        );
+
+
+    distanceGuidesToggleButton->setChecked(
+        distanceGuides
+        );
+
+
+    buffTitlesToggleButton->setChecked(
+        buffTitles
+        );
+
+
+    buffTranscendenceToggleButton->setChecked(
+        buffTranscendence
+        );
+
+
+    specialCooldownToggleButton->setChecked(
+        specialCooldowns
+        );
+
+
+    overlayClickabilityToggleButton->setChecked(
+        overlayClickability
+        );
+
+
+    updateToggleText(
+        atmaToggleButton,
+        atma
+        );
+
+
+    updateToggleText(
+        classBuffToggleButton,
+        classBuff
+        );
+
+
+    updateToggleText(
+        distanceGuidesToggleButton,
+        distanceGuides
+        );
+
+
+    updateToggleText(
+        buffTitlesToggleButton,
+        buffTitles
+        );
+
+
+    updateToggleText(
+        buffTranscendenceToggleButton,
+        buffTranscendence
+        );
+
+
+    updateToggleText(
+        specialCooldownToggleButton,
+        specialCooldowns
+        );
+
+
+    updateToggleText(
+        overlayClickabilityToggleButton,
+        overlayClickability
+        );
 }

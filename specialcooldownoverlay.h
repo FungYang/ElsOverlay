@@ -2,26 +2,31 @@
 #define SPECIALCOOLDOWNOVERLAY_H
 
 #include <QList>
-#include <QPoint>
-#include <QSize>
 #include <QTimer>
 #include <QWidget>
 
-#include "specialcooldownconfiguration.h"
+#include "specialcooldownmanager.h"
+
 
     class GlobalKeyboard;
-class SpecialCooldownManager;
+class OverlayRoot;
+
 
 class SpecialCooldownOverlay : public QWidget
 {
     Q_OBJECT
 
 public:
+
     explicit SpecialCooldownOverlay(
         SpecialCooldownManager *manager,
         GlobalKeyboard *keyboard,
+        OverlayRoot *root,
         QWidget *parent = nullptr
         );
+
+
+public slots:
 
     void setEnabled(
         bool enabled
@@ -29,14 +34,15 @@ public:
 
     void resetAll();
 
-protected:
-    void paintEvent(
-        QPaintEvent *event
-        ) override;
 
-    void resizeEvent(
-        QResizeEvent *event
-        ) override;
+private slots:
+
+    void activateKey(
+        int key
+        );
+
+    void updateCooldowns();
+
 
 private:
 
@@ -45,34 +51,40 @@ private:
         SpecialCooldownConfiguration configuration;
 
         int remainingMilliseconds = 0;
+
         bool active = false;
     };
 
 
+    SpecialCooldownManager *m_manager = nullptr;
+
+    GlobalKeyboard *m_keyboard = nullptr;
+
+    OverlayRoot *m_root = nullptr;
+
+
     QList<CooldownState> m_states;
 
-    SpecialCooldownManager *m_manager = nullptr;
-    GlobalKeyboard *m_keyboard = nullptr;
+    QList<QWidget *> m_widgets;
+
 
     QTimer m_timer;
 
+
     bool m_enabled = false;
+
 
     void loadConfigurations();
 
     void createWidgets();
 
-    void clearWidgets();
-
-    void activateKey(
-        int key
-        );
-
-    void updateCooldowns();
+    void updateWidgets();
 
     void updateWidget(
         int index
         );
+
+    void clearWidgets();
 
     void savePositionsAndSizes();
 
@@ -81,4 +93,6 @@ private:
         ) const;
 };
 
+
 #endif
+

@@ -1,8 +1,14 @@
 #include "overlayroot.h"
 
-#include <QGuiApplication>
+#include <QVBoxLayout>
+#include <QApplication>
 #include <QScreen>
+#include <windows.h>
 
+
+// ============================================================
+// CONSTRUCTOR
+// ============================================================
 
 OverlayRoot::OverlayRoot(
     QWidget *parent
@@ -10,36 +16,28 @@ OverlayRoot::OverlayRoot(
     : QWidget(parent)
 {
     setWindowFlags(
-        Qt::Tool |
         Qt::FramelessWindowHint |
+        Qt::Tool |
         Qt::WindowStaysOnTopHint
         );
 
-
     setAttribute(
-        Qt::WA_TranslucentBackground
+        Qt::WA_TransparentForMouseEvents,
+        true
         );
 
-
     setAttribute(
-        Qt::WA_TransparentForMouseEvents
+        Qt::WA_TranslucentBackground,
+        true
         );
 
+    setGeometry(
+        QApplication::primaryScreen()->geometry()
+        );
 
-    QScreen *screen =
-        QGuiApplication::primaryScreen();
+    show();
 
-
-    if(screen)
-    {
-        setGeometry(
-            screen->geometry()
-            );
-    }
-
-
-    m_overlaysVisible =
-        true;
+    raise();
 }
 
 
@@ -57,9 +55,7 @@ void OverlayRoot::registerOverlay(
     }
 
 
-    if(overlays.contains(
-            overlay
-            ))
+    if(overlays.contains(overlay))
     {
         return;
     }
@@ -70,30 +66,18 @@ void OverlayRoot::registerOverlay(
         );
 
 
-    /*
-     * Se il global hide è già attivo,
-     * una nuova finestra registrata deve partire nascosta.
-     *
-     * Questo è importante per le Distance Guides,
-     * perché Line / Rectangle / Circle sono Qt::Tool
-     * e vengono create dinamicamente durante rebuild().
-     */
+    // ========================================================
+    // CLICKABILITÀ
+    // ========================================================
 
-    if(!m_overlaysVisible)
-    {
-        visibilityBeforeHide.insert(
-            overlay,
-            false
-            );
-
-        overlay->hide();
-    }
+    applyClickableState(
+        overlay
+        );
 
 
-    /*
-     * Se l'overlay viene distrutto, eliminiamolo
-     * automaticamente dalle nostre liste.
-     */
+    // ========================================================
+    // RIMOZIONE AUTOMATICA
+    // ========================================================
 
     connect(
         overlay,
@@ -110,6 +94,165 @@ void OverlayRoot::registerOverlay(
                 );
         }
         );
+
+
+    // ========================================================
+    // SE GLOBAL HIDE È ATTIVO
+    // ========================================================
+
+    if(!m_overlaysVisible)
+    {
+        visibilityBeforeHide.insert(
+            overlay,
+            false
+            );
+
+        overlay->hide();
+
+        return;
+    }
+}
+
+
+// ============================================================
+// APPLY CLICKABLE STATE
+// ============================================================
+
+
+void OverlayRoot::applyClickableState(
+    QWidget *overlay
+    )
+{
+    if(!overlay)
+    {
+        return;
+    }
+
+
+#ifdef Q_OS_WIN
+
+    HWND hwnd =
+        reinterpret_cast<HWND>(
+            overlay->winId()
+            );
+
+
+    if(!hwnd)
+    {
+        return;
+    }
+
+
+    LONG_PTR exStyle =
+        GetWindowLongPtr(
+            hwnd,
+            GWL_EXSTYLE
+            );
+
+
+    if(!m_clickable)
+    {
+        // ====================================================
+        // CLICK-THROUGH
+        // ====================================================
+
+        exStyle |= WS_EX_TRANSPARENT;
+
+
+        SetWindowLongPtr(
+            hwnd,
+            GWL_EXSTYLE,
+            exStyle
+            );
+    }
+    else
+    {
+        // ====================================================
+        // CLICKABILE
+        // ====================================================
+
+        exStyle &= ~WS_EX_TRANSPARENT;
+
+
+        SetWindowLongPtr(
+            hwnd,
+            GWL_EXSTYLE,
+            exStyle
+            );
+    }
+
+
+    // ========================================================
+    // FORZA WINDOWS A RILEGGERE LO STILE
+    // ========================================================
+
+    SetWindowPos(
+        hwnd,
+        nullptr,
+        0,
+        0,
+        0,
+        0,
+        SWP_NOMOVE |
+            SWP_NOSIZE |
+            SWP_NOZORDER |
+            SWP_NOACTIVATE |
+            SWP_FRAMECHANGED
+        );
+
+
+#else
+
+    overlay->setAttribute(
+        Qt::WA_TransparentForMouseEvents,
+        !m_clickable
+        );
+
+#endif
+}
+
+
+
+
+// ============================================================
+// IS CLICKABLE
+// ============================================================
+
+bool OverlayRoot::isClickable() const
+{
+    return m_clickable;
+}
+
+
+// ============================================================
+// SET CLICKABLE
+// ============================================================
+
+void OverlayRoot::setClickable(
+    bool enabled
+    )
+{
+    if(m_clickable == enabled)
+    {
+        return;
+    }
+
+
+    m_clickable = enabled;
+
+
+    for(QWidget *overlay : overlays)
+    {
+        if(!overlay)
+        {
+            continue;
+        }
+
+
+        applyClickableState(
+            overlay
+            );
+    }
 }
 
 
@@ -125,16 +268,8 @@ void OverlayRoot::raiseAll()
     }
 
 
-    /*
-     * OverlayRoot deve rimanere sopra.
-     */
-
     raise();
 
-
-    /*
-     * Portiamo sopra anche gli overlay registrati.
-     */
 
     for(QWidget *overlay : overlays)
     {
@@ -158,24 +293,14 @@ void OverlayRoot::raiseAll()
 
 void OverlayRoot::toggleVisibility()
 {
-    /*
-     * ========================================================
-     * HIDE
-     * ========================================================
-     */
+    // ========================================================
+    // HIDE
+    // ========================================================
 
     if(m_overlaysVisible)
     {
-        m_overlaysVisible =
-            false;
-
-
         visibilityBeforeHide.clear();
 
-
-        /*
-         * Salviamo lo stato reale di ogni overlay.
-         */
 
         for(QWidget *overlay : overlays)
         {
@@ -195,40 +320,23 @@ void OverlayRoot::toggleVisibility()
         }
 
 
-        /*
-         * Nascondiamo anche il root.
-         */
-
         hide();
 
+
+        m_overlaysVisible = false;
 
         return;
     }
 
 
-    /*
-     * ========================================================
-     * SHOW
-     * ========================================================
-     */
-
-    m_overlaysVisible =
-        true;
-
-
-    /*
-     * Prima mostriamo il root.
-     */
+    // ========================================================
+    // SHOW
+    // ========================================================
 
     show();
 
-
     raise();
 
-
-    /*
-     * Ripristiniamo esattamente la situazione precedente.
-     */
 
     for(QWidget *overlay : overlays)
     {
@@ -248,10 +356,14 @@ void OverlayRoot::toggleVisibility()
         if(wasVisible)
         {
             overlay->show();
+
             overlay->raise();
         }
     }
 
 
     visibilityBeforeHide.clear();
+
+
+    m_overlaysVisible = true;
 }

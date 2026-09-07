@@ -39,11 +39,26 @@
 
 
     // ==================================================
+    // QSETTINGS
+    // ==================================================
+
+    QCoreApplication::setOrganizationName(
+        "ElsOverlay"
+        );
+
+
+    QCoreApplication::setApplicationName(
+        "ElsOverlay"
+        );
+
+
+    // ==================================================
     // ROOT OVERLAY
     // ==================================================
 
     OverlayRoot *overlayRoot =
         new OverlayRoot();
+
 
     overlayRoot->show();
 
@@ -82,10 +97,23 @@
 
 
     // ==================================================
+    // OVERLAY CLICKABILITY
+    // ==================================================
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::overlayClickabilityToggled,
+        overlayRoot,
+        &OverlayRoot::setClickable
+        );
+
+
+    // ==================================================
     // CLASS BUFF CONFIGURATION
     // ==================================================
 
     ClassConfigurationManager classConfigManager;
+
 
     ClassBuffConfigWindow classBuffConfigWindow(
         &classConfigManager,
@@ -104,6 +132,7 @@
         &GlobalKeyboard::setPauseKey
         );
 
+
     QObject::connect(
         &mainWindow,
         &MainWindow::resetKeyChanged,
@@ -118,16 +147,19 @@
 
     DistanceGuideManager distanceGuideManager;
 
+
     DistanceGuideConfigWindow distanceGuideConfigWindow(
         &distanceGuideManager,
         &keyboard
         );
+
 
     DistanceGuideOverlay *distanceGuides =
         new DistanceGuideOverlay(
             &distanceGuideManager,
             overlayRoot
             );
+
 
     overlayRoot->registerOverlay(
         distanceGuides
@@ -175,13 +207,16 @@
                     MovementDirection::Left
                     );
 
+
                 distanceGuideManager.setCharacterFacing(
                     CharacterFacing::Left
                     );
 
+
                 distanceGuideManager.setCharacterMoving(
                     true
                     );
+
 
                 return;
             }
@@ -193,9 +228,11 @@
                     MovementDirection::Right
                     );
 
+
                 distanceGuideManager.setCharacterFacing(
                     CharacterFacing::Right
                     );
+
 
                 distanceGuideManager.setCharacterMoving(
                     true
@@ -225,17 +262,6 @@
 
 
     // ==================================================
-    // SHOW MAIN WINDOW
-    // ==================================================
-
-    mainWindow.show();
-
-    mainWindow.raise();
-
-    mainWindow.activateWindow();
-
-
-    // ==================================================
     // TRANSCENDENCE OVERLAY
     // ==================================================
 
@@ -243,6 +269,7 @@
         new Overlay(
             overlayRoot
             );
+
 
     overlayRoot->registerOverlay(
         overlay
@@ -254,6 +281,7 @@
         qDebug()
         << "MAIN: ERRORE - overlayRoot nullo";
 
+
         return -1;
     }
 
@@ -262,6 +290,7 @@
     {
         qDebug()
         << "MAIN: ERRORE - Overlay non creato";
+
 
         return -1;
     }
@@ -297,6 +326,7 @@
 
     SpecialCooldownManager specialCooldownManager;
 
+
     specialCooldownManager.load();
 
 
@@ -311,10 +341,6 @@
             &keyboard,
             overlayRoot
             );
-
-    overlayRoot->registerOverlay(
-        specialCooldowns
-        );
 
 
     QObject::connect(
@@ -376,6 +402,7 @@
             &keyboard,
             overlayRoot
             );
+
 
     overlayRoot->registerOverlay(
         skills
@@ -439,6 +466,7 @@
             overlayRoot
             );
 
+
     overlayRoot->registerOverlay(
         buffs
         );
@@ -484,6 +512,7 @@
                 buffs->loadConfiguration(
                     configuration
                     );
+
 
                 return;
             }
@@ -664,6 +693,26 @@
                 );
         }
         );
+
+
+    // ==================================================
+    // RESTORE TOGGLE STATES
+    // ==================================================
+
+    mainWindow.loadToggleStates();
+
+
+    // ==================================================
+    // SHOW MAIN WINDOW
+    // ==================================================
+
+    mainWindow.show();
+
+
+    mainWindow.raise();
+
+
+    mainWindow.activateWindow();
 
 
     // ==================================================

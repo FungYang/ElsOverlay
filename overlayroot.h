@@ -25,9 +25,16 @@ public:
     void raiseAll();
 
 
+    bool isClickable() const;
+
+
 public slots:
 
     void toggleVisibility();
+
+    void setClickable(
+        bool enabled
+        );
 
 
 private:
@@ -37,6 +44,15 @@ private:
     QHash<QWidget *, bool> visibilityBeforeHide;
 
     bool m_overlaysVisible = true;
+
+    bool m_clickable = true;
+
+
+private:
+
+    void applyClickableState(
+        QWidget *overlay
+        );
 };
 
 
