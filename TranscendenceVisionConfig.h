@@ -7,8 +7,8 @@ constexpr int ICON_HEIGHT = 28;
 
 // Dimensione del riquadro giallo mostrato nel setup.
 // Il template reale rimane sempre 28x28.
-constexpr int ICON_BOX_WIDTH  = 84;
-constexpr int ICON_BOX_HEIGHT = 84;
+constexpr int ICON_BOX_WIDTH  = 168;
+constexpr int ICON_BOX_HEIGHT = 168;
 
 // Ingrandimento della finestra di precisione.
 constexpr int PRECISION_ZOOM = 3;

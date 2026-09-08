@@ -1,12 +1,6 @@
 #include "buffvisiondetector.h"
 
-#include <QImage>
-#include <QColor>
 #include <QDebug>
-#include <QFile>
-#include <QElapsedTimer>
-#include <QCoreApplication>
-
 
 
 BuffVisionDetector::BuffVisionDetector(
@@ -14,365 +8,90 @@ BuffVisionDetector::BuffVisionDetector(
     )
     : QObject(parent)
 {
-
 }
 
 
+// ============================================================
+// LOAD MODEL
+// ============================================================
 
-void BuffVisionDetector::loadReferences()
+bool BuffVisionDetector::loadModel(
+    const QString &modelPath
+    )
 {
-
-    QString basePath =
-        QCoreApplication::applicationDirPath() +
-        "/BuffVision";
-
-    crop1Ref1.load(
-        basePath + "/Crop1_Ref1.png"
-        );
-
-
-    crop1Ref2.load(
-        basePath + "/Crop1_Ref2.png"
-        );
-
-
-    crop2Ref1.load(
-        basePath + "/Crop2_Ref1.png"
-        );
-
-
-    crop2Ref2.load(
-        basePath + "/Crop2_Ref2.png"
-        );
-
-
-
     loaded =
-        !crop1Ref1.isNull()
-        &&
-        !crop1Ref2.isNull()
-        &&
-        !crop2Ref1.isNull()
-        &&
-        !crop2Ref2.isNull();
+        digitDetector.loadModel(
+            modelPath
+            );
 
 
+    qDebug()
+        << "[BuffVisionDetector]"
+        << "Model loaded ="
+        << loaded;
 
-    // qDebug()
-    //     << "References loaded:"
-    //     << loaded;
-
-}
-
-
-
-bool BuffVisionDetector::referencesLoaded() const
-{
 
     return loaded;
-
 }
 
 
+// ============================================================
+// CROP 1
+// ============================================================
 
-VisionState BuffVisionDetector::detect(
-    const QPixmap &current,
-    const QPixmap &ref1,
-    const QPixmap &ref2,
-    double *score1,
-    double *score2
-    )
-{
-
-
-    if(current.isNull() ||
-        ref1.isNull() ||
-        ref2.isNull())
-    {
-
-        if(score1)
-            *score1 = 0.0;
-
-
-        if(score2)
-            *score2 = 0.0;
-
-
-        return VisionState::Unknown;
-
-    }
-
-
-    QElapsedTimer perfTimer;
-    perfTimer.start();
-
-    double s1 =
-        compareImages(
-            current,
-            ref1
-            );
-
-
-    // qint64 s1Ns = perfTimer.nsecsElapsed();
-    double s2 =
-        compareImages(
-            current,
-            ref2
-            );
-
-    // qint64 s2Ns = perfTimer.nsecsElapsed() - s1Ns;
-    // qDebug() << "COMPARE TIMING:"
-    //          << "S1 =" << s1Ns / 1000000.0 << "ms"
-    //          << "S2 =" << s2Ns / 1000000.0 << "ms";
-    // qDebug() << "[BuffVision] scores:"
-    //          << "State1 =" << s1
-    //          << "State2 =" << s2;
-
-
-
-    if(score1)
-        *score1 = s1;
-
-
-    if(score2)
-        *score2 = s2;
-
-
-
-    const double confidenceValue = confidence;;
-
-
-
-    if(s1 >= confidenceValue &&
-        s1 > s2)
-    {
-        return VisionState::State1;
-    }
-
-
-
-    if(s2 >= confidenceValue &&
-        s2 > s1)
-    {
-        return VisionState::State2;
-    }
-
-
-
-    return VisionState::Unknown;
-
-}
-
-
-
-VisionState BuffVisionDetector::detectCrop1(
+int BuffVisionDetector::detectCrop1(
     const QPixmap &current
     )
 {
-    VisionState state = detect(
-        current,
-        crop1Ref1,
-        crop1Ref2,
-        &lastCrop1State1Score,
-        &lastCrop1State2Score
+    if(!loaded)
+    {
+        return 1000;
+    }
+
+
+    if(current.isNull())
+    {
+        return 1000;
+    }
+
+
+    return digitDetector.detect(
+        current.toImage()
         );
-
-    // qDebug()
-    //     << "[CROP1]"
-    //     << "State1 =" << lastCrop1State1Score
-    //     << "State2 =" << lastCrop1State2Score
-    //     << "Detected =" << static_cast<int>(state);
-
-    return state;
-
 }
 
 
+// ============================================================
+// CROP 2
+// ============================================================
 
-VisionState BuffVisionDetector::detectCrop2(
+int BuffVisionDetector::detectCrop2(
     const QPixmap &current
     )
 {
+    if(!loaded)
+    {
+        return 1000;
+    }
 
-    VisionState state = detect(
-        current,
-        crop2Ref1,
-        crop2Ref2,
-        &lastCrop2State1Score,
-        &lastCrop2State2Score
+
+    if(current.isNull())
+    {
+        return 1000;
+    }
+
+
+    return digitDetector.detect(
+        current.toImage()
         );
-
-    // qDebug()
-    //     << "[CROP2]"
-    //     << "State1 =" << lastCrop2State1Score
-    //     << "State2 =" << lastCrop2State2Score
-    //     << "Detected =" << static_cast<int>(state);
-
-    return state;
-
 }
 
 
+// ============================================================
+// IS LOADED
+// ============================================================
 
-double BuffVisionDetector::compareImages(
-    const QPixmap &a,
-    const QPixmap &b
-    ) const
+bool BuffVisionDetector::isLoaded() const
 {
-
-    if(a.isNull() ||
-        b.isNull())
-    {
-        return 0.0;
-    }
-
-
-
-    QImage imgA =
-        a.toImage()
-            .convertToFormat(
-                QImage::Format_RGB32
-                );
-
-
-    QImage imgB =
-        b.toImage()
-            .convertToFormat(
-                QImage::Format_RGB32
-                );
-
-
-
-    if(imgA.size() != imgB.size())
-    {
-
-        // qDebug()
-        // << "SIZE MISMATCH"
-        // << "Current:"
-        // << imgA.size()
-        // << "Reference:"
-        // << imgB.size();
-
-
-        return 0.0;
-
-    }
-
-
-
-
-    long long totalDiff = 0;
-
-
-
-    const int width = imgA.width();
-    const int height = imgA.height();
-    const int pixels = width * height;
-
-
-
-    for(int y = 0;
-         y < height;
-         y++)
-    {
-
-        const QRgb *rowA =
-            reinterpret_cast<const QRgb *>(
-                imgA.constScanLine(y)
-                );
-
-        const QRgb *rowB =
-            reinterpret_cast<const QRgb *>(
-                imgB.constScanLine(y)
-                );
-
-        for(int x = 0;
-             x < width;
-             x++)
-        {
-
-            const QRgb ca = rowA[x];
-            const QRgb cb = rowB[x];
-
-
-
-            int redDiff =
-                abs(qRed(ca) -
-                    qRed(cb));
-
-            int greenDiff =
-                abs(qGreen(ca) -
-                    qGreen(cb));
-
-            int blueDiff =
-                abs(qBlue(ca) -
-                    qBlue(cb));
-
-
-
-            if(redDiff <= colorTolerance)
-                redDiff = 0;
-            else
-                redDiff -= colorTolerance;
-
-
-
-            if(greenDiff <= colorTolerance)
-                greenDiff = 0;
-            else
-                greenDiff -= colorTolerance;
-
-
-
-            if(blueDiff <= colorTolerance)
-                blueDiff = 0;
-            else
-                blueDiff -= colorTolerance;
-
-
-
-            totalDiff += redDiff;
-            totalDiff += greenDiff;
-            totalDiff += blueDiff;
-
-        }
-
-    }
-
-
-
-    double maxDiff =
-        pixels *
-        (255.0 - colorTolerance) *
-        3.0;
-
-
-
-    return 1.0 -
-           ((double)totalDiff / maxDiff);
-
-}
-
-void BuffVisionDetector::setColorTolerance(
-    int tolerance
-    )
-{
-    colorTolerance = tolerance;
-
-    qDebug()
-        << "[BuffVisionDetector]"
-        << "ColorTolerance ="
-        << colorTolerance;
-}
-
-
-void BuffVisionDetector::setConfidence(
-    double value
-    )
-{
-    confidence = value;
-    qDebug()
-        << "[BuffVisionDetector]"
-        << "Confidence ="
-        << confidence;
+    return loaded;
 }

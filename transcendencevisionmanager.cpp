@@ -228,6 +228,24 @@ void TranscendenceVisionManager::loadSettings()
         settings.value("Transcendence/AreaH", 150).toInt()
         );
 
+    m_iconWidth =
+        settings.value(
+                    "Transcendence/IconWidth",
+                    TranscendenceVisionConfig::ICON_WIDTH
+                    ).toInt();
+
+    m_iconHeight =
+        settings.value(
+                    "Transcendence/IconHeight",
+                    TranscendenceVisionConfig::ICON_HEIGHT
+                    ).toInt();
+
+    if (m_iconWidth < 1)
+        m_iconWidth = TranscendenceVisionConfig::ICON_WIDTH;
+
+    if (m_iconHeight < 1)
+        m_iconHeight = TranscendenceVisionConfig::ICON_HEIGHT;
+
     if (m_searchRegionId >= 0)
     {
         ScreenCapture::unregisterRegion(m_searchRegionId);
@@ -249,6 +267,16 @@ void TranscendenceVisionManager::saveSettings()
     settings.setValue("Transcendence/AreaY", m_searchArea.y());
     settings.setValue("Transcendence/AreaW", m_searchArea.width());
     settings.setValue("Transcendence/AreaH", m_searchArea.height());
+
+    settings.setValue(
+        "Transcendence/IconWidth",
+        m_iconWidth
+        );
+
+    settings.setValue(
+        "Transcendence/IconHeight",
+        m_iconHeight
+        );
 
     settings.sync();
 }
@@ -277,10 +305,8 @@ void TranscendenceVisionManager::loadIcon()
 
     m_configured =
         !m_templateIcon.isNull() &&
-        m_templateIcon.width() ==
-            TranscendenceVisionConfig::ICON_WIDTH &&
-        m_templateIcon.height() ==
-            TranscendenceVisionConfig::ICON_HEIGHT &&
+        m_templateIcon.width() == m_iconWidth &&
+        m_templateIcon.height() == m_iconHeight &&
         m_searchArea.isValid() &&
         !m_searchArea.isEmpty() &&
         m_searchRegionId >= 0;
@@ -358,15 +384,8 @@ void TranscendenceVisionManager::openPrecisionCrop()
                 return;
             }
 
-            // Cattura 84x84 per l'anteprima interattiva. Usiamo GDI
-            // (grabWindow) qui perche' e' immediatamente affidabile
-            // subito dopo l'hide del setup; DXGI in questo preciso
-            // istante puo' restituire un frame di transizione
-            // (grigio/vuoto) per via del timing dell'animazione di
-            // compositing di Windows. La cattura "vera" (coerente con
-            // la pipeline di scansione) avviene invece al salvataggio,
-            // quando l'utente conferma il ritaglio: a quel punto non
-            // c'e' piu' alcun rischio di frame di transizione.
+            // Cattura il riquadro grande per l'anteprima interattiva.
+            // La dimensione del crop iniziale viene presa dal config.
             const QImage source =
                 ScreenCapture::captureRegionReliable(
                     screen,
@@ -388,15 +407,24 @@ void TranscendenceVisionManager::openPrecisionCrop()
             }
 
             precisionCrop =
-                new TranscendencePrecisionCrop(source);
+                new TranscendencePrecisionCrop(
+                    source,
+                    QSize(
+                        m_iconWidth,
+                        m_iconHeight
+                        )
+                    );
 
             connect(
                 precisionCrop,
                 &TranscendencePrecisionCrop::accepted,
                 this,
-                [this](const QImage &image)
+                [this](const QImage &image, const QSize &size)
                 {
-                    savePreciseIcon(image);
+                    savePreciseIcon(
+                        image,
+                        size
+                        );
                 }
                 );
 
@@ -437,21 +465,33 @@ void TranscendenceVisionManager::openPrecisionCrop()
 }
 
 void TranscendenceVisionManager::savePreciseIcon(
-    const QImage &icon
+    const QImage &icon,
+    const QSize &size
     )
 {
     if (icon.isNull())
         return;
 
-    if (icon.width() != TranscendenceVisionConfig::ICON_WIDTH ||
-        icon.height() != TranscendenceVisionConfig::ICON_HEIGHT)
+    if (size.width() <= 0 ||
+        size.height() <= 0)
+    {
+        return;
+    }
+
+    if (icon.size() != size)
     {
         qDebug()
-        << "TRANSCENDENCE: ritaglio non 28x28:"
-        << icon.size();
+        << "TRANSCENDENCE: dimensione crop incoerente:"
+        << "image =" << icon.size()
+        << "size =" << size;
 
         return;
     }
+
+    m_iconWidth = size.width();
+    m_iconHeight = size.height();
+
+    saveSettings();
 
     QDir dir(
         QCoreApplication::applicationDirPath() +
@@ -496,7 +536,9 @@ void TranscendenceVisionManager::savePreciseIcon(
         captureSetup->activateWindow();
         captureSetup->setFocus();
         captureSetup->showFeedback(
-            "ICONA 28x28 SALVATA"
+            QString("ICONA %1x%2 SALVATA")
+                .arg(m_iconWidth)
+                .arg(m_iconHeight)
             );
     }
 }
@@ -639,9 +681,6 @@ void TranscendenceVisionManager::scanTick()
 
 #ifdef QT_DEBUG
     // ==== BLOCCO DIAGNOSTICO - SOLO BUILD DI DEBUG ====
-    // Log dello score ad ogni tentativo, per capire se i mancati
-    // match sono "quasi presi" (soglia troppo stretta) o "lontani"
-    // (area/colore sbagliati).
     qDebug()
         << "TRANSCENDENCE: score ="
         << score
@@ -650,12 +689,6 @@ void TranscendenceVisionManager::scanTick()
         << "found ="
         << found;
 
-    // Salva su disco l'area catturata, al massimo una volta al
-    // secondo, per poterla confrontare a occhio con
-    // transcendence_search.png e capire se il contenuto catturato e'
-    // davvero quello che ci si aspetta in quella posizione dello
-    // schermo. File salvati in /images/debug/, sovrascritti ad ogni
-    // dump (nome fisso, non si accumulano).
     {
         static QElapsedTimer dumpTimer;
 
@@ -672,11 +705,6 @@ void TranscendenceVisionManager::scanTick()
 
             QDir().mkpath(debugDir);
 
-            // Quando troviamo un match, salviamo con nome separato
-            // (non sovrascritto dai dump periodici successivi) cosi'
-            // il caso "riuscito" resta disponibile per l'ispezione
-            // anche se la prossima scansione riparte solo dopo
-            // DELAY_MS.
             const QString areaSuffix =
                 found ? "_found" : "";
 
@@ -687,14 +715,6 @@ void TranscendenceVisionManager::scanTick()
                 ".png"
                 );
 
-            // Salviamo anche il crop 28x28 esatto nella posizione di
-            // miglior punteggio trovata (anche se sotto soglia), e
-            // calcoliamo la differenza media/massima per canale
-            // colore rispetto al template. Questo dice con numeri,
-            // non a occhio, se c'e' un vero scostamento cromatico
-            // (es. canale blu sistematicamente diverso) o se il
-            // problema e' altrove (differenze minime ma sparse,
-            // magari dovute a un pixel di bordo/anti-aliasing).
             if (!foundRect.isNull() &&
                 foundRect.width() == m_templateIcon.width() &&
                 foundRect.height() == m_templateIcon.height())
@@ -717,11 +737,6 @@ void TranscendenceVisionManager::scanTick()
                 int maxG = 0;
                 int maxB = 0;
 
-                // Statistiche separate per il bordo esterno (1px)
-                // e per l'interno, per capire se le differenze
-                // grandi sono confinate ai contorni (anti-aliasing/
-                // subpixel) o se sono diffuse anche nel "cuore"
-                // dell'icona.
                 long long sumBorderR = 0;
                 long long sumBorderG = 0;
                 long long sumBorderB = 0;
@@ -894,8 +909,6 @@ bool TranscendenceVisionManager::findIcon(
     const int maxX =
         area.width() - width;
 
-    // Struttura per raccogliere il risultato parziale di ogni blocco
-    // di righe elaborato su un thread separato.
     struct ChunkResult
     {
         double score = 0.0;
@@ -903,8 +916,6 @@ bool TranscendenceVisionManager::findIcon(
         bool found = false;
     };
 
-    // Flag condiviso: appena un thread trova un match sopra soglia,
-    // gli altri smettono di scandire righe ancora da processare.
     std::atomic<bool> stopFlag{false};
 
     const int threadCount =
@@ -913,12 +924,6 @@ bool TranscendenceVisionManager::findIcon(
     const int totalRows =
         maxY + 1;
 
-    // Creiamo piu' blocchi dei thread disponibili (oversubscription):
-    // il costo di compareAt varia molto da posizione a posizione
-    // (uscita rapida al pre-check vs confronto pixel-per-pixel
-    // completo), quindi blocchi piccoli permettono al pool di
-    // ribilanciare il carico dinamicamente invece di bloccarsi
-    // sul thread piu' lento. Riduce anche la latenza dello stopFlag.
     constexpr int CHUNKS_PER_THREAD = 4;
 
     const int desiredChunks =
@@ -1035,11 +1040,6 @@ double TranscendenceVisionManager::compareAt(
     const int height =
         m_templateIcon.height();
 
-    // Ignoriamo l'anello esterno di 1px: e' rumoroso per via
-    // dell'anti-aliasing/subpixel del rendering (vedi diagnostica:
-    // media diff bordo ~20, media diff interno ~0.01). Il confronto
-    // (sia il pre-check veloce che quello completo) lavora solo
-    // sull'area interna [1, width-2] x [1, height-2].
     const int innerWidth =
         width - 2;
 
@@ -1060,9 +1060,6 @@ double TranscendenceVisionManager::compareAt(
             sampleCount
             );
 
-    // 16 campioni distribuiti su una griglia 4x4 uniforme,
-    // interamente dentro l'area interna (mai su x=0, x=width-1,
-    // y=0, y=height-1).
     int sampleX[sampleCount];
     int sampleY[sampleCount];
 

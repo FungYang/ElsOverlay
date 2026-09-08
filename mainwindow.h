@@ -6,9 +6,6 @@
 
 
 class QPushButton;
-class QSpinBox;
-class QDoubleSpinBox;
-
 
 class MainWindow : public QMainWindow
 {
@@ -29,8 +26,6 @@ public:
 
     void loadToggleStates();
     void saveToggleStates();
-    int atmaColorTolerance() const;
-    double atmaConfidence() const;
 
 
 signals:
@@ -91,9 +86,6 @@ signals:
         bool enabled
         );
 
-    void atmaColorToleranceChanged(int tolerance);
-
-    void atmaConfidenceChanged(double confidence);
 
 
 
@@ -181,8 +173,6 @@ private:
 
     QPushButton *overlayClickabilityToggleButton;
 
-    QSpinBox *atmaColorToleranceSpinBox;
-    QDoubleSpinBox *atmaConfidenceSpinBox;
 
 
     // ==================================================
@@ -246,8 +236,6 @@ private:
 
     void updateResetKeyButtonText();
 
-    void loadAtmaSettings();
-    void saveAtmaSettings();
 
 };
 

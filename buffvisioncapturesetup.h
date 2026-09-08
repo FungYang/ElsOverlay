@@ -7,7 +7,6 @@
 #include <QTimer>
 
 
-
 class BuffVisionCaptureSetup : public QWidget
 {
     Q_OBJECT
@@ -37,33 +36,27 @@ public:
         );
 
 
-
 protected:
 
     void paintEvent(
         QPaintEvent *event
         ) override;
 
-
     void mousePressEvent(
         QMouseEvent *event
         ) override;
-
 
     void mouseMoveEvent(
         QMouseEvent *event
         ) override;
 
-
     void mouseReleaseEvent(
         QMouseEvent *event
         ) override;
 
-
     void keyPressEvent(
         QKeyEvent *event
         ) override;
-
 
 
 private:
@@ -72,8 +65,6 @@ private:
 
     QTimer feedbackTimer;
 
-
-    QRect captureRect;
 
     QRect cropRect1;
 
@@ -88,7 +79,6 @@ private:
     enum DragMode
     {
         None,
-        Capture,
         Crop1,
         Crop2
     };
@@ -96,14 +86,7 @@ private:
 
     DragMode dragMode = None;
 
-
     QPoint lastMousePosition;
-
-
-
-    void moveCapture(
-        QPoint delta
-        );
 
 
     void moveCrop(
@@ -111,10 +94,11 @@ private:
         QPoint delta
         );
 
-
-    void keepInsideCapture(
+    void keepInsideScreen(
         QRect &crop
         );
+
+    int currentCropSize() const;
 
 };
 

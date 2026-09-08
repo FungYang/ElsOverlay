@@ -4,12 +4,15 @@
 #include <QRect>
 #include <QImage>
 #include <QTimer>
+#include <QSize>
+#include "transcendencevisionconfig.h"
 
 class GlobalKeyboard;
 class OverlayRoot;
 class Overlay;
 class TranscendenceCaptureSetup;
 class TranscendencePrecisionCrop;
+
 
 class TranscendenceVisionManager : public QObject
 {
@@ -47,7 +50,10 @@ private:
     void scanTick();
 
     void openPrecisionCrop();
-    void savePreciseIcon(const QImage &icon);
+    void savePreciseIcon(
+        const QImage &icon,
+        const QSize &size
+        );
     void closePrecisionCrop();
 
     void saveCurrentIcon();
@@ -76,6 +82,11 @@ private:
     int m_searchRegionId = -1;
 
     QImage m_templateIcon;
+    int m_iconWidth =
+        TranscendenceVisionConfig::ICON_WIDTH;
+
+    int m_iconHeight =
+        TranscendenceVisionConfig::ICON_HEIGHT;
 
     QTimer m_delayTimer;
     QTimer m_scanTimer;

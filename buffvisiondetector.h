@@ -4,17 +4,10 @@
 #include <QObject>
 #include <QPixmap>
 
-
-enum class VisionState
-{
-    Unknown,
-    State1,
-    State2
-};
+#include "digitdetector.h"
 
 
-
-class BuffVisionDetector : public QObject
+    class BuffVisionDetector : public QObject
 {
     Q_OBJECT
 
@@ -25,95 +18,47 @@ public:
         );
 
 
-
-    VisionState detect(
-        const QPixmap &current,
-        const QPixmap &ref1,
-        const QPixmap &ref2,
-        double *score1 = nullptr,
-        double *score2 = nullptr
+    /*
+     * Carica il modello YOLO.
+     */
+    bool loadModel(
+        const QString &modelPath
         );
 
 
-
-    VisionState detectCrop1(
+    /*
+     * Rileva il numero del Crop 1.
+     *
+     * Ritorna:
+     *   numero rilevato
+     *   1000 = Unknown
+     */
+    int detectCrop1(
         const QPixmap &current
         );
 
 
-    VisionState detectCrop2(
+    /*
+     * Rileva il numero del Crop 2.
+     *
+     * Ritorna:
+     *   numero rilevato
+     *   1000 = Unknown
+     */
+    int detectCrop2(
         const QPixmap &current
         );
 
 
-
-    void loadReferences();
-
-
-    bool referencesLoaded() const;
-
-
-
-    double getCrop1State1Score() const
-    {
-        return lastCrop1State1Score;
-    }
-
-    double getCrop1State2Score() const
-    {
-        return lastCrop1State2Score;
-    }
-
-    double getCrop2State1Score() const
-    {
-        return lastCrop2State1Score;
-    }
-
-    double getCrop2State2Score() const
-    {
-        return lastCrop2State2Score;
-    }
-    void setColorTolerance(
-        int tolerance
-        );
-
-    void setConfidence(
-        double confidence
-        );
-
+    /*
+     * Indica se il modello è stato caricato.
+     */
+    bool isLoaded() const;
 
 
 private:
 
-
-    double compareImages(
-        const QPixmap &a,
-        const QPixmap &b
-        ) const;
-
-
-
-    QPixmap crop1Ref1;
-    QPixmap crop1Ref2;
-
-
-    QPixmap crop2Ref1;
-    QPixmap crop2Ref2;
-
-
-
-    double lastCrop1State1Score = 0.0;
-    double lastCrop1State2Score = 0.0;
-
-
-    double lastCrop2State1Score = 0.0;
-    double lastCrop2State2Score = 0.0;
-
-    int colorTolerance = 5;
-
-    double confidence = 0.98;
-
-
+    DigitDetector digitDetector;
 
 
     bool loaded = false;

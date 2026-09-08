@@ -46,50 +46,64 @@ bool BuffVisionCapture::loadSettings()
         );
 
 
+    QScreen *screen =
+        QGuiApplication::primaryScreen();
+
+    if(!screen)
+        return false;
+
+
+    const QSize resolution =
+        screen->size();
+
+
+    const int cropSize =
+        BuffVisionConfig::cropSizeForScreen(
+            resolution
+            );
+
+
+    const QString suffix =
+        QString("_%1x%2")
+            .arg(resolution.width())
+            .arg(resolution.height());
+
+
     cropRect1 =
         QRect(
             settings.value(
-                        "BuffVision/Crop1X",
+                        "BuffVision/Crop1X" + suffix,
                         0
                         ).toInt(),
 
             settings.value(
-                        "BuffVision/Crop1Y",
+                        "BuffVision/Crop1Y" + suffix,
                         0
                         ).toInt(),
 
-            BuffVisionConfig::CROP_WIDTH,
-            BuffVisionConfig::CROP_HEIGHT
+            cropSize,
+            cropSize
             );
 
 
     cropRect2 =
         QRect(
             settings.value(
-                        "BuffVision/Crop2X",
+                        "BuffVision/Crop2X" + suffix,
                         0
                         ).toInt(),
 
             settings.value(
-                        "BuffVision/Crop2Y",
+                        "BuffVision/Crop2Y" + suffix,
                         0
                         ).toInt(),
 
-            BuffVisionConfig::CROP_WIDTH,
-            BuffVisionConfig::CROP_HEIGHT
+            cropSize,
+            cropSize
             );
 
 
-    // Le regioni vengono aggiornate solamente qui.
     registerRegions();
-
-
-    // qDebug()
-    //     << "BuffVision settings:"
-    //     << "crop1 =" << cropRect1
-    //     << "regionId =" << m_crop1RegionId
-    //     << "| crop2 =" << cropRect2
-    //     << "regionId =" << m_crop2RegionId;
 
 
     return

@@ -14,8 +14,6 @@
 #include <QSettings>
 #include <QVBoxLayout>
 #include <QWidget>
-#include <QSpinBox>
-#include <QDoubleSpinBox>
 
 
     namespace
@@ -450,107 +448,6 @@ MainWindow::MainWindow(
         );
 
 
-    QHBoxLayout *atmaToleranceLayout =
-        new QHBoxLayout();
-
-
-    QLabel *atmaToleranceLabel =
-        new QLabel(
-            "Color tolerance:",
-            atmaGroup
-            );
-
-
-    atmaColorToleranceSpinBox =
-        new QSpinBox(
-            atmaGroup
-            );
-
-
-    atmaColorToleranceSpinBox->setRange(
-        0,
-        254
-        );
-
-
-    atmaColorToleranceSpinBox->setValue(
-        5
-        );
-
-
-    atmaToleranceLayout->addWidget(
-        atmaToleranceLabel
-        );
-
-
-    atmaToleranceLayout->addStretch();
-
-
-    atmaToleranceLayout->addWidget(
-        atmaColorToleranceSpinBox
-        );
-
-
-    atmaLayout->addLayout(
-        atmaToleranceLayout
-        );
-
-    QHBoxLayout *atmaConfidenceLayout =
-        new QHBoxLayout();
-
-
-    QLabel *atmaConfidenceLabel =
-        new QLabel(
-            "Confidence:",
-            atmaGroup
-            );
-
-
-    atmaConfidenceSpinBox =
-        new QDoubleSpinBox(
-            atmaGroup
-            );
-
-
-    atmaConfidenceSpinBox->setRange(
-        0.0,
-        1.0
-        );
-
-
-    atmaConfidenceSpinBox->setSingleStep(
-        0.01
-        );
-
-
-    atmaConfidenceSpinBox->setDecimals(
-        3
-        );
-
-
-    atmaConfidenceSpinBox->setValue(
-        0.98
-        );
-
-
-    atmaConfidenceLayout->addWidget(
-        atmaConfidenceLabel
-        );
-
-
-    atmaConfidenceLayout->addStretch();
-
-
-    atmaConfidenceLayout->addWidget(
-        atmaConfidenceSpinBox
-        );
-
-
-    atmaLayout->addLayout(
-        atmaConfidenceLayout
-        );
-
-
     mainLayout->addWidget(
         atmaGroup
         );
@@ -946,6 +843,10 @@ MainWindow::MainWindow(
     // ATMA
     // ========================================================
 
+    // ========================================================
+    // ATMA
+    // ========================================================
+
     connect(
         atmaConfigButton,
         &QPushButton::clicked,
@@ -973,20 +874,6 @@ MainWindow::MainWindow(
 
             saveToggleStates();
         }
-        );
-    connect(
-        atmaColorToleranceSpinBox,
-        &QSpinBox::editingFinished,
-        this,
-        &MainWindow::saveAtmaSettings
-        );
-
-
-    connect(
-        atmaConfidenceSpinBox,
-        &QDoubleSpinBox::editingFinished,
-        this,
-        &MainWindow::saveAtmaSettings
         );
 
     // ========================================================
@@ -1673,87 +1560,4 @@ void MainWindow::loadToggleStates()
         overlayClickabilityToggleButton,
         overlayClickability
         );
-}
-void MainWindow::loadAtmaSettings()
-{
-    QSettings settings(
-        QCoreApplication::applicationDirPath() +
-            "/ElsOverlay.ini",
-        QSettings::IniFormat
-        );
-
-
-    const int colorTolerance =
-        settings.value(
-                    "Atma/ColorTolerance",
-                    5
-                    ).toInt();
-
-
-    const double confidence =
-        settings.value(
-                    "Atma/Confidence",
-                    0.98
-                    ).toDouble();
-
-
-    atmaColorToleranceSpinBox->setValue(
-        colorTolerance
-        );
-
-
-    atmaConfidenceSpinBox->setValue(
-        confidence
-        );
-}
-void MainWindow::saveAtmaSettings()
-{
-    const int colorTolerance =
-        atmaColorToleranceSpinBox->value();
-
-
-    const double confidence =
-        atmaConfidenceSpinBox->value();
-
-
-    QSettings settings(
-        QCoreApplication::applicationDirPath() +
-            "/ElsOverlay.ini",
-        QSettings::IniFormat
-        );
-
-
-    settings.setValue(
-        "Atma/ColorTolerance",
-        colorTolerance
-        );
-
-
-    settings.setValue(
-        "Atma/Confidence",
-        confidence
-        );
-
-
-    settings.sync();
-
-
-    emit atmaColorToleranceChanged(
-        colorTolerance
-        );
-
-
-    emit atmaConfidenceChanged(
-        confidence
-        );
-}
-int MainWindow::atmaColorTolerance() const
-{
-    return atmaColorToleranceSpinBox->value();
-}
-
-
-double MainWindow::atmaConfidence() const
-{
-    return atmaConfidenceSpinBox->value();
 }

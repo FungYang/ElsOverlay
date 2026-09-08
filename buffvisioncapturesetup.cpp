@@ -5,9 +5,9 @@
 #include <QApplication>
 #include <QScreen>
 #include <QSettings>
-#include "buffvisionconfig.h"
 #include <QKeyEvent>
 
+#include "buffvisionconfig.h"
 
 
 BuffVisionCaptureSetup::BuffVisionCaptureSetup(
@@ -15,53 +15,57 @@ BuffVisionCaptureSetup::BuffVisionCaptureSetup(
     )
     : QWidget(parent)
 {
+    QScreen *screen =
+        QApplication::primaryScreen();
 
-    setGeometry(
-        QApplication::primaryScreen()->geometry()
-        );
+    if(screen)
+    {
+        setGeometry(
+            screen->geometry()
+            );
+    }
+
     setFocusPolicy(
         Qt::StrongFocus
         );
+
     setWindowFlags(
         Qt::Tool |
         Qt::FramelessWindowHint |
         Qt::WindowStaysOnTopHint
         );
 
-
     setAttribute(
         Qt::WA_TranslucentBackground
         );
 
 
+    const int size =
+        currentCropSize();
 
-    captureRect =
+
+    // Posizioni iniziali di default.
+    cropRect1 =
         QRect(
             500,
             300,
-            100,
-            55
-            );
-
-
-
-    cropRect1 =
-        QRect(
-            505,
-            312,
-        BuffVisionConfig::CROP_WIDTH,
-        BuffVisionConfig::CROP_HEIGHT
+            size,
+            size
             );
 
 
     cropRect2 =
         QRect(
-            565,
-            312,
-        BuffVisionConfig::CROP_WIDTH,
-        BuffVisionConfig::CROP_HEIGHT
+            600,
+            300,
+            size,
+            size
             );
+
+
     loadSettings();
+
+
     connect(
         &feedbackTimer,
         &QTimer::timeout,
@@ -75,12 +79,33 @@ BuffVisionCaptureSetup::BuffVisionCaptureSetup(
 }
 
 
+// =========================================================
+// CROP SIZE
+// =========================================================
+
+int BuffVisionCaptureSetup::currentCropSize() const
+{
+    QScreen *screen =
+        QApplication::primaryScreen();
+
+    if(!screen)
+        return BuffVisionConfig::FULL_HD_CROP_SIZE;
+
+
+    return BuffVisionConfig::cropSizeForScreen(
+        screen->size()
+        );
+}
+
+
+// =========================================================
+// PAINT
+// =========================================================
 
 void BuffVisionCaptureSetup::paintEvent(
     QPaintEvent *
     )
 {
-
     QPainter p(this);
 
     p.setRenderHint(
@@ -89,34 +114,7 @@ void BuffVisionCaptureSetup::paintEvent(
 
 
     // =========================
-    // AREA SCREENSHOT COMPLETA
-    // =========================
-
-    p.setPen(
-        Qt::NoPen
-        );
-
-    p.setBrush(
-        QColor(
-            0,
-            120,
-            255,
-            70
-            )
-        );
-
-
-    if(!captureMode)
-    {
-        p.drawRect(
-            captureRect
-            );
-    }
-
-
-
-    // =========================
-    // AREA CROP 1
+    // CROP 1
     // =========================
 
     p.setBrush(
@@ -128,17 +126,20 @@ void BuffVisionCaptureSetup::paintEvent(
             )
         );
 
-    if(!captureMode)
-    {
-        p.drawRect(
-            cropRect1
-            );
-    }
+    p.setPen(
+        QPen(
+            Qt::green,
+            2
+            )
+        );
 
+    p.drawRect(
+        cropRect1
+        );
 
 
     // =========================
-    // AREA CROP 2
+    // CROP 2
     // =========================
 
     p.setBrush(
@@ -150,65 +151,64 @@ void BuffVisionCaptureSetup::paintEvent(
             )
         );
 
-    if(!captureMode)
-    {
-        p.drawRect(
-            cropRect2
-            );
-    }
+    p.setPen(
+        QPen(
+            Qt::yellow,
+            2
+            )
+        );
+
+    p.drawRect(
+        cropRect2
+        );
+
+
+    // =========================
+    // FEEDBACK
+    // =========================
+
     if(!feedbackText.isEmpty())
     {
-
         QFont font;
 
         font.setBold(true);
         font.setPointSize(18);
 
-
         p.setFont(font);
-
 
         p.setPen(
             Qt::white
             );
-
 
         p.drawText(
             rect(),
             Qt::AlignCenter,
             feedbackText
             );
-
     }
-
 }
 
+
+// =========================================================
+// MOUSE PRESS
+// =========================================================
 
 void BuffVisionCaptureSetup::mousePressEvent(
     QMouseEvent *event
     )
 {
-
-    QPoint pos =
+    const QPoint pos =
         event->position().toPoint();
-
 
 
     if(cropRect1.contains(pos))
     {
         dragMode = Crop1;
     }
-
     else if(cropRect2.contains(pos))
     {
         dragMode = Crop2;
     }
-
-    else if(captureRect.contains(pos))
-    {
-        dragMode = Capture;
-    }
-
     else
     {
         dragMode = None;
@@ -216,39 +216,31 @@ void BuffVisionCaptureSetup::mousePressEvent(
 
 
     lastMousePosition = pos;
-
 }
+
+
+// =========================================================
+// MOUSE MOVE
+// =========================================================
 
 void BuffVisionCaptureSetup::mouseMoveEvent(
     QMouseEvent *event
     )
 {
-
     if(dragMode == None)
         return;
 
 
-
-    QPoint current =
+    const QPoint current =
         event->position().toPoint();
 
 
-
-    QPoint delta =
+    const QPoint delta =
         current - lastMousePosition;
-
 
 
     switch(dragMode)
     {
-
-    case Capture:
-
-        moveCapture(delta);
-
-        break;
-
-
     case Crop1:
 
         moveCrop(
@@ -271,197 +263,233 @@ void BuffVisionCaptureSetup::mouseMoveEvent(
 
     default:
         break;
-
     }
-
 
 
     lastMousePosition = current;
 
-
     update();
-
 }
+
+
+// =========================================================
+// MOUSE RELEASE
+// =========================================================
 
 void BuffVisionCaptureSetup::mouseReleaseEvent(
     QMouseEvent *
     )
 {
-
     dragMode = None;
-
 }
 
-void BuffVisionCaptureSetup::moveCapture(
-    QPoint delta
-    )
-{
 
-    captureRect.translate(delta);
-
-
-    cropRect1.translate(delta);
-
-    cropRect2.translate(delta);
-
-}
+// =========================================================
+// MOVE CROP
+// =========================================================
 
 void BuffVisionCaptureSetup::moveCrop(
     QRect &crop,
     QPoint delta
     )
 {
+    crop.translate(
+        delta
+        );
 
-    crop.translate(delta);
-
-
-    keepInsideCapture(crop);
-
+    keepInsideScreen(
+        crop
+        );
 }
 
-void BuffVisionCaptureSetup::keepInsideCapture(
+
+// =========================================================
+// KEEP INSIDE SCREEN
+// =========================================================
+
+void BuffVisionCaptureSetup::keepInsideScreen(
     QRect &crop
     )
 {
+    const QRect screenRect =
+        rect();
 
-    if(crop.left() < captureRect.left())
+
+    if(crop.left() < screenRect.left())
     {
         crop.moveLeft(
-            captureRect.left()
+            screenRect.left()
             );
     }
 
 
-    if(crop.top() < captureRect.top())
+    if(crop.top() < screenRect.top())
     {
         crop.moveTop(
-            captureRect.top()
+            screenRect.top()
             );
     }
 
 
-    if(crop.right() > captureRect.right())
+    if(crop.right() > screenRect.right())
     {
         crop.moveRight(
-            captureRect.right()
+            screenRect.right()
             );
     }
 
 
-    if(crop.bottom() > captureRect.bottom())
+    if(crop.bottom() > screenRect.bottom())
     {
         crop.moveBottom(
-            captureRect.bottom()
+            screenRect.bottom()
             );
     }
-
 }
+
+
+// =========================================================
+// SETTINGS
+// =========================================================
 
 void BuffVisionCaptureSetup::loadSettings()
 {
-
     QSettings settings(
         "ElsOverlay.ini",
         QSettings::IniFormat
         );
 
 
-    captureRect.moveTo(
-        settings.value(
-                    "BuffVision/CaptureX",
-                    captureRect.x()
-                    ).toInt(),
+    QScreen *screen =
+        QApplication::primaryScreen();
 
-        settings.value(
-                    "BuffVision/CaptureY",
-                    captureRect.y()
-                    ).toInt()
+    if(!screen)
+        return;
+
+
+    const QSize resolution =
+        screen->size();
+
+    const QString suffix =
+        QString("_%1x%2")
+            .arg(resolution.width())
+            .arg(resolution.height());
+
+
+    const int size =
+        currentCropSize();
+
+
+    cropRect1.setSize(
+        QSize(size, size)
         );
 
+    cropRect2.setSize(
+        QSize(size, size)
+        );
 
 
     cropRect1.moveTo(
         settings.value(
-                    "BuffVision/Crop1X",
+                    "BuffVision/Crop1X" + suffix,
                     cropRect1.x()
                     ).toInt(),
 
         settings.value(
-                    "BuffVision/Crop1Y",
+                    "BuffVision/Crop1Y" + suffix,
                     cropRect1.y()
                     ).toInt()
         );
 
 
-
     cropRect2.moveTo(
         settings.value(
-                    "BuffVision/Crop2X",
+                    "BuffVision/Crop2X" + suffix,
                     cropRect2.x()
                     ).toInt(),
 
         settings.value(
-                    "BuffVision/Crop2Y",
+                    "BuffVision/Crop2Y" + suffix,
                     cropRect2.y()
                     ).toInt()
         );
 
+
+    keepInsideScreen(cropRect1);
+    keepInsideScreen(cropRect2);
 }
+
+
+// =========================================================
+// SAVE SETTINGS
+// =========================================================
 
 void BuffVisionCaptureSetup::saveSettings()
 {
-
     QSettings settings(
         "ElsOverlay.ini",
         QSettings::IniFormat
         );
 
 
-    settings.setValue(
-        "BuffVision/CaptureX",
-        captureRect.x()
-        );
+    QScreen *screen =
+        QApplication::primaryScreen();
 
-    settings.setValue(
-        "BuffVision/CaptureY",
-        captureRect.y()
-        );
+    if(!screen)
+        return;
 
 
+    const QSize resolution =
+        screen->size();
+
+
+    const QString suffix =
+        QString("_%1x%2")
+            .arg(resolution.width())
+            .arg(resolution.height());
+
+
     settings.setValue(
-        "BuffVision/Crop1X",
+        "BuffVision/Crop1X" + suffix,
         cropRect1.x()
         );
 
     settings.setValue(
-        "BuffVision/Crop1Y",
+        "BuffVision/Crop1Y" + suffix,
         cropRect1.y()
         );
 
 
     settings.setValue(
-        "BuffVision/Crop2X",
+        "BuffVision/Crop2X" + suffix,
         cropRect2.x()
         );
 
     settings.setValue(
-        "BuffVision/Crop2Y",
+        "BuffVision/Crop2Y" + suffix,
         cropRect2.y()
         );
 
 
     settings.sync();
-
 }
+
+
+// =========================================================
+// RESET
+// =========================================================
 
 void BuffVisionCaptureSetup::resetSetup()
 {
-
     configured = false;
 
     hide();
-
 }
+
+
+// =========================================================
+// GET CROP
+// =========================================================
 
 QRect BuffVisionCaptureSetup::getCropRect1() const
 {
@@ -474,29 +502,42 @@ QRect BuffVisionCaptureSetup::getCropRect2() const
     return cropRect2;
 }
 
+
+// =========================================================
+// FEEDBACK
+// =========================================================
+
 void BuffVisionCaptureSetup::showFeedback(
     const QString &text
     )
 {
-
     feedbackText = text;
 
-    feedbackTimer.start(1500);
+    feedbackTimer.start(
+        1500
+        );
 
     update();
-
 }
+
+
+// =========================================================
+// CAPTURE MODE
+// =========================================================
 
 void BuffVisionCaptureSetup::setCaptureMode(
     bool active
     )
 {
-
     captureMode = active;
 
     update();
-
 }
+
+
+// =========================================================
+// KEYBOARD
+// =========================================================
 
 void BuffVisionCaptureSetup::keyPressEvent(
     QKeyEvent *event

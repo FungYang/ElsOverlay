@@ -3,6 +3,7 @@
 #include <QWidget>
 #include <QImage>
 #include <QRect>
+#include <QSize>
 
 class TranscendencePrecisionCrop : public QWidget
 {
@@ -11,6 +12,7 @@ class TranscendencePrecisionCrop : public QWidget
 public:
     explicit TranscendencePrecisionCrop(
         const QImage &source,
+        const QSize &initialCropSize,
         QWidget *parent = nullptr
         );
 
@@ -18,7 +20,11 @@ public:
     QImage croppedImage() const;
 
 signals:
-    void accepted(const QImage &image);
+    void accepted(
+        const QImage &image,
+        const QSize &size
+        );
+
     void canceled();
 
 public slots:
@@ -37,6 +43,9 @@ private:
     void clampCrop();
     void acceptCrop();
     void updateFromMouse(const QPoint &pos);
+
+    void increaseCropSize();
+    void decreaseCropSize();
 
     QImage m_source;
     QRect m_cropRect;

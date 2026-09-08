@@ -9,7 +9,6 @@
 #include "buffvisiondetector.h"
 #include "overlayroot.h"
 
-
 class GlobalKeyboard;
 
 class BuffVisionCore;
@@ -19,7 +18,6 @@ class BuffVisionCaptureSetup;
 #ifdef QT_DEBUG
 class BuffVisionDebug;
 #endif
-
 
 class BuffVisionManager : public QObject
 {
@@ -34,26 +32,16 @@ public:
         );
 
     ~BuffVisionManager();
+
     void configure();
     void setEnabled(bool enabled);
-    void setColorTolerance(int tolerance);
-    void setConfidence(double confidence);
 
 
 private:
 
-    enum class CaptureReferenceMode
-    {
-        None,
-        Reference1,
-        Reference2
-    };
-
-
     OverlayRoot *overlayRoot = nullptr;
 
     GlobalKeyboard *keyboard = nullptr;
-
 
     BuffVisionCore *core = nullptr;
 
@@ -64,9 +52,9 @@ private:
     BuffVisionOverlay *overlay = nullptr;
 
     BuffVisionCaptureSetup *captureSetup = nullptr;
+
     void startTracking();
     void resetTracking();
-
 
 #ifdef QT_DEBUG
 
@@ -74,16 +62,12 @@ private:
 
 #endif
 
+    // Ultimo numero valido rilevato per ogni crop.
+    //
+    // 1000 = nessun valore valido.
+    int lastCrop1Number = 1000;
+    int lastCrop2Number = 1000;
 
-    CaptureReferenceMode referenceMode =
-        CaptureReferenceMode::None;
-
-
-    VisionState lastCrop1State =
-        VisionState::Unknown;
-
-    VisionState lastCrop2State =
-        VisionState::Unknown;
     QElapsedTimer eventTimer;
 
     qint64 visionCycle = 0;
@@ -94,22 +78,13 @@ private:
     qint64 crop1EventCycle = -1;
     qint64 crop2EventCycle = -1;
 
-
     bool configured = false;
 
     bool enabled = false;
 
-
     QTimer visionTimer;
 
-
-    bool hasReferences() const;
-
-
     void showSetup();
-
-    void saveCurrentReference();
-
 };
 
 #endif

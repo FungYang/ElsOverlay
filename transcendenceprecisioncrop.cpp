@@ -1,24 +1,21 @@
 #include "transcendenceprecisioncrop.h"
-#include "transcendencevisionconfig.h"
 
 #include <QPainter>
 #include <QMouseEvent>
 #include <QKeyEvent>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QHBoxLayout>
 
 TranscendencePrecisionCrop::TranscendencePrecisionCrop(
     const QImage &source,
+    const QSize &initialCropSize,
     QWidget *parent
     )
     : QWidget(parent),
     m_source(source.convertToFormat(QImage::Format_ARGB32)),
-    m_zoom(TranscendenceVisionConfig::PRECISION_ZOOM),
-    m_pixelSize(TranscendenceVisionConfig::PRECISION_ZOOM)
+    m_zoom(3),
+    m_pixelSize(3)
 {
-    setWindowTitle("Ritaglio preciso 28x28 - 300%");
+    setWindowTitle("Ritaglio preciso - 300%");
+
     setWindowFlags(
         Qt::Tool |
         Qt::WindowStaysOnTopHint |
@@ -28,19 +25,35 @@ TranscendencePrecisionCrop::TranscendencePrecisionCrop(
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
 
-    if (m_source.width() >= TranscendenceVisionConfig::ICON_WIDTH &&
-        m_source.height() >= TranscendenceVisionConfig::ICON_HEIGHT)
+    const int cropWidth =
+        qMax(1, initialCropSize.width());
+
+    const int cropHeight =
+        qMax(1, initialCropSize.height());
+
+    if (m_source.width() >= cropWidth &&
+        m_source.height() >= cropHeight)
     {
         m_cropRect =
             QRect(
-                (m_source.width() -
-                 TranscendenceVisionConfig::ICON_WIDTH) / 2,
-                (m_source.height() -
-                 TranscendenceVisionConfig::ICON_HEIGHT) / 2,
-                TranscendenceVisionConfig::ICON_WIDTH,
-                TranscendenceVisionConfig::ICON_HEIGHT
+                (m_source.width() - cropWidth) / 2,
+                (m_source.height() - cropHeight) / 2,
+                cropWidth,
+                cropHeight
                 );
     }
+    else
+    {
+        m_cropRect =
+            QRect(
+                0,
+                0,
+                qMin(cropWidth, m_source.width()),
+                qMin(cropHeight, m_source.height())
+                );
+    }
+
+    clampCrop();
 
     const int imageWidth =
         m_source.width() * m_zoom;
@@ -67,13 +80,55 @@ QRect TranscendencePrecisionCrop::cropRect() const
 QImage TranscendencePrecisionCrop::croppedImage() const
 {
     if (m_source.isNull() ||
-        m_cropRect.width() != TranscendenceVisionConfig::ICON_WIDTH ||
-        m_cropRect.height() != TranscendenceVisionConfig::ICON_HEIGHT)
+        m_cropRect.isEmpty())
     {
         return QImage();
     }
 
     return m_source.copy(m_cropRect);
+}
+
+void TranscendencePrecisionCrop::increaseCropSize()
+{
+    if (m_source.isNull())
+        return;
+
+    if (m_cropRect.right() >= m_source.width() - 1 ||
+        m_cropRect.bottom() >= m_source.height() - 1)
+    {
+        return;
+    }
+
+    m_cropRect.setWidth(
+        m_cropRect.width() + 1
+        );
+
+    m_cropRect.setHeight(
+        m_cropRect.height() + 1
+        );
+
+    clampCrop();
+    update();
+}
+
+void TranscendencePrecisionCrop::decreaseCropSize()
+{
+    if (m_cropRect.width() <= 1 ||
+        m_cropRect.height() <= 1)
+    {
+        return;
+    }
+
+    m_cropRect.setWidth(
+        m_cropRect.width() - 1
+        );
+
+    m_cropRect.setHeight(
+        m_cropRect.height() - 1
+        );
+
+    clampCrop();
+    update();
 }
 
 void TranscendencePrecisionCrop::moveLeft()
@@ -156,7 +211,9 @@ void TranscendencePrecisionCrop::paintEvent(QPaintEvent *)
 
     for (int x = 0; x <= m_source.width(); ++x)
     {
-        const int px = imageLeft + x * m_pixelSize;
+        const int px =
+            imageLeft + x * m_pixelSize;
+
         p.drawLine(
             px,
             imageTop,
@@ -167,7 +224,9 @@ void TranscendencePrecisionCrop::paintEvent(QPaintEvent *)
 
     for (int y = 0; y <= m_source.height(); ++y)
     {
-        const int py = imageTop + y * m_pixelSize;
+        const int py =
+            imageTop + y * m_pixelSize;
+
         p.drawLine(
             imageLeft,
             py,
@@ -176,7 +235,7 @@ void TranscendencePrecisionCrop::paintEvent(QPaintEvent *)
             );
     }
 
-    // Riquadro esatto di 28x28 pixel.
+    // Riquadro del crop corrente.
     const QRect cropVisual(
         imageLeft + m_cropRect.left() * m_pixelSize,
         imageTop + m_cropRect.top() * m_pixelSize,
@@ -198,7 +257,8 @@ void TranscendencePrecisionCrop::paintEvent(QPaintEvent *)
     const QString info =
         QString(
             "Ritaglio: %1 x %2 pixel    Posizione: %3,%4\n"
-            "Frecce = sposta di 1 pixel    Mouse = trascina    "
+            "Frecce = sposta    B = +1 px    V = -1 px    "
+            "Mouse = trascina\n"
             "ENTER = salva    ESC = annulla"
             )
             .arg(m_cropRect.width())
@@ -218,7 +278,9 @@ void TranscendencePrecisionCrop::paintEvent(QPaintEvent *)
         );
 }
 
-void TranscendencePrecisionCrop::mousePressEvent(QMouseEvent *event)
+void TranscendencePrecisionCrop::mousePressEvent(
+    QMouseEvent *event
+    )
 {
     if (event->button() != Qt::LeftButton)
         return;
@@ -227,15 +289,21 @@ void TranscendencePrecisionCrop::mousePressEvent(QMouseEvent *event)
     const int imageTop = 20;
 
     const QPoint local =
-        event->pos() - QPoint(imageLeft, imageTop);
+        event->pos() -
+        QPoint(imageLeft, imageTop);
 
     const QPoint sourcePixel(
         local.x() / m_pixelSize,
         local.y() / m_pixelSize
         );
 
-    if (!QRect(QPoint(0, 0), m_source.size()).contains(sourcePixel))
+    if (!QRect(
+             QPoint(0, 0),
+             m_source.size()
+             ).contains(sourcePixel))
+    {
         return;
+    }
 
     m_mousePressSource = sourcePixel;
     m_cropAtMousePress = m_cropRect.topLeft();
@@ -244,7 +312,9 @@ void TranscendencePrecisionCrop::mousePressEvent(QMouseEvent *event)
     setFocus();
 }
 
-void TranscendencePrecisionCrop::mouseMoveEvent(QMouseEvent *event)
+void TranscendencePrecisionCrop::mouseMoveEvent(
+    QMouseEvent *event
+    )
 {
     if (!m_dragging)
         return;
@@ -253,7 +323,8 @@ void TranscendencePrecisionCrop::mouseMoveEvent(QMouseEvent *event)
     const int imageTop = 20;
 
     const QPoint local =
-        event->pos() - QPoint(imageLeft, imageTop);
+        event->pos() -
+        QPoint(imageLeft, imageTop);
 
     const QPoint sourcePixel(
         local.x() / m_pixelSize,
@@ -271,7 +342,9 @@ void TranscendencePrecisionCrop::mouseMoveEvent(QMouseEvent *event)
     update();
 }
 
-void TranscendencePrecisionCrop::keyPressEvent(QKeyEvent *event)
+void TranscendencePrecisionCrop::keyPressEvent(
+    QKeyEvent *event
+    )
 {
     switch (event->key())
     {
@@ -289,6 +362,14 @@ void TranscendencePrecisionCrop::keyPressEvent(QKeyEvent *event)
 
     case Qt::Key_Down:
         moveDown();
+        return;
+
+    case Qt::Key_B:
+        increaseCropSize();
+        return;
+
+    case Qt::Key_V:
+        decreaseCropSize();
         return;
 
     case Qt::Key_Return:
@@ -315,6 +396,10 @@ void TranscendencePrecisionCrop::acceptCrop()
     if (image.isNull())
         return;
 
-    emit accepted(image);
+    emit accepted(
+        image,
+        m_cropRect.size()
+        );
+
     close();
 }
