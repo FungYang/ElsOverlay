@@ -919,3 +919,21 @@ bool BuffVisionManager::hasReferences() const
             basePath + "/Crop2_Ref2.png"
             );
 }
+void BuffVisionManager::setColorTolerance(
+    int tolerance
+    )
+{
+    detector->setColorTolerance(
+        tolerance
+        );
+}
+
+
+void BuffVisionManager::setConfidence(
+    double confidence
+    )
+{
+    detector->setConfidence(
+        confidence
+        );
+}

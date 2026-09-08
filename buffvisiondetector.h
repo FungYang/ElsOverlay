@@ -73,6 +73,13 @@ public:
     {
         return lastCrop2State2Score;
     }
+    void setColorTolerance(
+        int tolerance
+        );
+
+    void setConfidence(
+        double confidence
+        );
 
 
 
@@ -101,6 +108,11 @@ private:
 
     double lastCrop2State1Score = 0.0;
     double lastCrop2State2Score = 0.0;
+
+    int colorTolerance = 5;
+
+    double confidence = 0.98;
+
 
 
 

@@ -139,11 +139,11 @@ VisionState BuffVisionDetector::detect(
 
 
 
-    constexpr double confidence = 0.98;
+    const double confidenceValue = confidence;;
 
 
 
-    if(s1 >= confidence &&
+    if(s1 >= confidenceValue &&
         s1 > s2)
     {
         return VisionState::State1;
@@ -151,7 +151,7 @@ VisionState BuffVisionDetector::detect(
 
 
 
-    if(s2 >= confidence &&
+    if(s2 >= confidenceValue &&
         s2 > s1)
     {
         return VisionState::State2;
@@ -260,8 +260,6 @@ double BuffVisionDetector::compareImages(
 
 
 
-    constexpr int COLOR_TOLERANCE = 5;
-
 
     long long totalDiff = 0;
 
@@ -312,24 +310,24 @@ double BuffVisionDetector::compareImages(
 
 
 
-            if(redDiff <= COLOR_TOLERANCE)
+            if(redDiff <= colorTolerance)
                 redDiff = 0;
             else
-                redDiff -= COLOR_TOLERANCE;
+                redDiff -= colorTolerance;
 
 
 
-            if(greenDiff <= COLOR_TOLERANCE)
+            if(greenDiff <= colorTolerance)
                 greenDiff = 0;
             else
-                greenDiff -= COLOR_TOLERANCE;
+                greenDiff -= colorTolerance;
 
 
 
-            if(blueDiff <= COLOR_TOLERANCE)
+            if(blueDiff <= colorTolerance)
                 blueDiff = 0;
             else
-                blueDiff -= COLOR_TOLERANCE;
+                blueDiff -= colorTolerance;
 
 
 
@@ -345,7 +343,7 @@ double BuffVisionDetector::compareImages(
 
     double maxDiff =
         pixels *
-        (255.0 - COLOR_TOLERANCE) *
+        (255.0 - colorTolerance) *
         3.0;
 
 
@@ -353,4 +351,28 @@ double BuffVisionDetector::compareImages(
     return 1.0 -
            ((double)totalDiff / maxDiff);
 
+}
+
+void BuffVisionDetector::setColorTolerance(
+    int tolerance
+    )
+{
+    colorTolerance = tolerance;
+
+    qDebug()
+        << "[BuffVisionDetector]"
+        << "ColorTolerance ="
+        << colorTolerance;
+}
+
+
+void BuffVisionDetector::setConfidence(
+    double value
+    )
+{
+    confidence = value;
+    qDebug()
+        << "[BuffVisionDetector]"
+        << "Confidence ="
+        << confidence;
 }

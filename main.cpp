@@ -673,6 +673,29 @@
         &BuffVisionManager::setEnabled
         );
 
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::atmaColorToleranceChanged,
+        &atma,
+        &BuffVisionManager::setColorTolerance
+        );
+
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::atmaConfidenceChanged,
+        &atma,
+        &BuffVisionManager::setConfidence
+        );
+    atma.setColorTolerance(
+        mainWindow.atmaColorTolerance()
+        );
+
+
+    atma.setConfidence(
+        mainWindow.atmaConfidence()
+        );
+
 
     // ==================================================
     // BUFF TRACKER

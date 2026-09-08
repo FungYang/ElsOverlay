@@ -4,7 +4,10 @@
 #include <QMainWindow>
 #include <windows.h>
 
-    class QPushButton;
+
+class QPushButton;
+class QSpinBox;
+class QDoubleSpinBox;
 
 
 class MainWindow : public QMainWindow
@@ -26,6 +29,8 @@ public:
 
     void loadToggleStates();
     void saveToggleStates();
+    int atmaColorTolerance() const;
+    double atmaConfidence() const;
 
 
 signals:
@@ -85,6 +90,11 @@ signals:
     void overlayClickabilityToggled(
         bool enabled
         );
+
+    void atmaColorToleranceChanged(int tolerance);
+
+    void atmaConfidenceChanged(double confidence);
+
 
 
 private:
@@ -171,6 +181,9 @@ private:
 
     QPushButton *overlayClickabilityToggleButton;
 
+    QSpinBox *atmaColorToleranceSpinBox;
+    QDoubleSpinBox *atmaConfidenceSpinBox;
+
 
     // ==================================================
     // PAUSE KEY
@@ -232,6 +245,10 @@ private:
     void openResetKeyDialog();
 
     void updateResetKeyButtonText();
+
+    void loadAtmaSettings();
+    void saveAtmaSettings();
+
 };
 
 #endif

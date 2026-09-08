@@ -36,6 +36,8 @@ public:
     ~BuffVisionManager();
     void configure();
     void setEnabled(bool enabled);
+    void setColorTolerance(int tolerance);
+    void setConfidence(double confidence);
 
 
 private:
