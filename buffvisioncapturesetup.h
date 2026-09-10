@@ -5,6 +5,7 @@
 #include <QRect>
 #include <QPoint>
 #include <QTimer>
+#include <QSize>
 
 
 class BuffVisionCaptureSetup : public QWidget
@@ -98,7 +99,7 @@ private:
         QRect &crop
         );
 
-    int currentCropSize() const;
+    QSize currentCropSize() const;
 
 };
 

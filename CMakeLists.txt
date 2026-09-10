@@ -237,8 +237,12 @@ add_custom_command(TARGET ElsOverlay POST_BUILD
     # --------------------------------------------------------
 
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/models/best.onnx"
-    "$<TARGET_FILE_DIR:ElsOverlay>/models/best.onnx"
+    "${CMAKE_SOURCE_DIR}/models/best_1080.onnx"
+    "$<TARGET_FILE_DIR:ElsOverlay>/models/best_1080.onnx"
+
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_SOURCE_DIR}/models/best_2k.onnx"
+    "$<TARGET_FILE_DIR:ElsOverlay>/models/best_2k.onnx"
 )
 
 # ============================================================

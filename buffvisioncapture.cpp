@@ -57,7 +57,7 @@ bool BuffVisionCapture::loadSettings()
         screen->size();
 
 
-    const int cropSize =
+    const QSize cropSize =
         BuffVisionConfig::cropSizeForScreen(
             resolution
             );
@@ -81,8 +81,8 @@ bool BuffVisionCapture::loadSettings()
                         0
                         ).toInt(),
 
-            cropSize,
-            cropSize
+            cropSize.width(),
+            cropSize.height()
             );
 
 
@@ -98,8 +98,8 @@ bool BuffVisionCapture::loadSettings()
                         0
                         ).toInt(),
 
-            cropSize,
-            cropSize
+            cropSize.width(),
+            cropSize.height()
             );
 
 

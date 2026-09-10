@@ -5,9 +5,13 @@
 #include "buffvisionoverlay.h"
 #include "buffvisioncapturesetup.h"
 #include "overlayroot.h"
+#include "buffvisionconfig.h"
 
 #include <QTimer>
 #include <QDebug>
+#include <QCoreApplication>
+#include <QGuiApplication>
+#include <QScreen>
 
 
 #ifdef QT_DEBUG
@@ -69,9 +73,32 @@ BuffVisionManager::BuffVisionManager(
             );
 
 
+    QScreen *screen =
+        QGuiApplication::primaryScreen();
+
+    QString modelName =
+        "best_1080.onnx";
+
+    if(screen)
+    {
+        const QSize resolution =
+            screen->size();
+
+        if(
+            BuffVisionConfig::is2K(
+                resolution
+                )
+            )
+        {
+            modelName =
+                "best_2k.onnx";
+        }
+    }
+
     const QString modelPath =
         QCoreApplication::applicationDirPath() +
-        "/models/best.onnx";
+        "/models/" +
+        modelName;
 
 
     configured =
@@ -107,6 +134,36 @@ BuffVisionManager::BuffVisionManager(
     this->overlayRoot->registerOverlay(
         debugWindow
         );
+
+
+    // =========================
+    // RISOLUZIONE DEBUG
+    // =========================
+
+
+
+
+    if(screen)
+    {
+        const QSize resolution =
+            screen->size();
+
+
+        const QSize cropSize =
+            BuffVisionConfig::cropSizeForScreen(
+                resolution
+                );
+
+
+        debugWindow->setResolution(
+            resolution.width(),
+            resolution.height(),
+            cropSize
+            );
+    }
+
+
+    debugWindow->hide();
 
 #endif
 
@@ -237,6 +294,19 @@ BuffVisionManager::BuffVisionManager(
                 << "previous =" << lastCrop2Number;
 
 
+#ifdef QT_DEBUG
+
+            if(debugWindow)
+            {
+                debugWindow->updateNumbers(
+                    number1,
+                    number2
+                    );
+            }
+
+#endif
+
+
             // =========================
             // CROP 1 EVENT
             // =========================
@@ -272,6 +342,21 @@ BuffVisionManager::BuffVisionManager(
 
 
                 core->onCrop1Event();
+
+
+#ifdef QT_DEBUG
+
+                if(debugWindow)
+                {
+                    debugWindow->setLastEvent(
+                        QString(
+                            "Crop 1 -> %1"
+                            )
+                            .arg(number1)
+                        );
+                }
+
+#endif
             }
 
 
@@ -293,6 +378,21 @@ BuffVisionManager::BuffVisionManager(
 
 
                 core->onCrop2Event();
+
+
+#ifdef QT_DEBUG
+
+                if(debugWindow)
+                {
+                    debugWindow->setLastEvent(
+                        QString(
+                            "Crop 2 -> %1"
+                            )
+                            .arg(number2)
+                        );
+                }
+
+#endif
             }
 
 
@@ -560,6 +660,23 @@ void BuffVisionManager::resetTracking()
     }
 
 
+#ifdef QT_DEBUG
+
+    if(debugWindow)
+    {
+        debugWindow->updateNumbers(
+            1000,
+            1000
+            );
+
+        debugWindow->setLastEvent(
+            "---"
+            );
+    }
+
+#endif
+
+
     // =========================
     // RIAVVIO
     // =========================
@@ -596,6 +713,41 @@ void BuffVisionManager::configure()
     // =========================
 
     captureSetup->loadSettings();
+
+
+#ifdef QT_DEBUG
+
+    // =========================
+    // AGGIORNA RISOLUZIONE DEBUG
+    // =========================
+
+    if(debugWindow)
+    {
+        QScreen *screen =
+            QGuiApplication::primaryScreen();
+
+
+        if(screen)
+        {
+            const QSize resolution =
+                screen->size();
+
+
+            const QSize cropSize =
+                BuffVisionConfig::cropSizeForScreen(
+                    resolution
+                    );
+
+
+            debugWindow->setResolution(
+                resolution.width(),
+                resolution.height(),
+                cropSize
+                );
+        }
+    }
+
+#endif
 
 
     // =========================
@@ -657,6 +809,16 @@ void BuffVisionManager::setEnabled(
         overlay->resetOverlay();
 
 
+#ifdef QT_DEBUG
+
+        if(debugWindow)
+        {
+            debugWindow->hide();
+        }
+
+#endif
+
+
         return;
     }
 
@@ -671,6 +833,17 @@ void BuffVisionManager::setEnabled(
     this->overlayRoot->raiseAll();
 
 
+#ifdef QT_DEBUG
+
+    if(debugWindow)
+    {
+        debugWindow->show();
+        debugWindow->raise();
+    }
+
+#endif
+
+
     startTracking();
 }
 
@@ -682,5 +855,3 @@ void BuffVisionManager::setEnabled(
 BuffVisionManager::~BuffVisionManager()
 {
 }
-
-

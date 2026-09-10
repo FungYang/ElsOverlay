@@ -40,25 +40,21 @@ BuffVisionCaptureSetup::BuffVisionCaptureSetup(
         );
 
 
-    const int size =
+    const QSize size =
         currentCropSize();
 
 
     // Posizioni iniziali di default.
     cropRect1 =
         QRect(
-            500,
-            300,
-            size,
+            QPoint(500, 300),
             size
             );
 
 
     cropRect2 =
         QRect(
-            600,
-            300,
-            size,
+            QPoint(600, 300),
             size
             );
 
@@ -83,13 +79,18 @@ BuffVisionCaptureSetup::BuffVisionCaptureSetup(
 // CROP SIZE
 // =========================================================
 
-int BuffVisionCaptureSetup::currentCropSize() const
+QSize BuffVisionCaptureSetup::currentCropSize() const
 {
     QScreen *screen =
         QApplication::primaryScreen();
 
     if(!screen)
-        return BuffVisionConfig::FULL_HD_CROP_SIZE;
+    {
+        return QSize(
+            BuffVisionConfig::FULL_HD_CROP_WIDTH,
+            BuffVisionConfig::FULL_HD_CROP_HEIGHT
+            );
+    }
 
 
     return BuffVisionConfig::cropSizeForScreen(
@@ -376,16 +377,16 @@ void BuffVisionCaptureSetup::loadSettings()
             .arg(resolution.height());
 
 
-    const int size =
+    const QSize size =
         currentCropSize();
 
 
     cropRect1.setSize(
-        QSize(size, size)
+        size
         );
 
     cropRect2.setSize(
-        QSize(size, size)
+        size
         );
 
 

@@ -1,8 +1,11 @@
-#pragma once
+#ifndef BUFFVISIONDEBUG_H
+#define BUFFVISIONDEBUG_H
 
 #include <QWidget>
-#include <QLabel>
+#include <QString>
+#include <QSize>
 
+class QLabel;
 
 class BuffVisionDebug : public QWidget
 {
@@ -14,33 +17,29 @@ public:
         QWidget *parent = nullptr
         );
 
-
-public slots:
-
-    void setScores(
-        double crop1State1,
-        double crop1State2,
-        double crop2State1,
-        double crop2State2
+    void updateNumbers(
+        int crop1,
+        int crop2
         );
 
+    void setResolution(
+        int width,
+        int height,
+        const QSize &cropSize
+        );
 
-protected:
-
-    void mousePressEvent(
-        QMouseEvent *event
-        ) override;
-
-
-    void mouseMoveEvent(
-        QMouseEvent *event
-        ) override;
-
+    void setLastEvent(
+        const QString &event
+        );
 
 private:
 
-    QLabel *label;
+    QLabel *resolutionLabel;
 
-    QPoint dragPosition;
+    QLabel *crop1Label;
+    QLabel *crop2Label;
 
+    QLabel *lastEventLabel;
 };
+
+#endif

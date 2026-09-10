@@ -8,31 +8,49 @@ namespace BuffVisionConfig
 
 constexpr int FULL_HD_WIDTH  = 1920;
 constexpr int FULL_HD_HEIGHT = 1080;
-constexpr int FULL_HD_CROP_SIZE = 25;
+
+constexpr int FULL_HD_CROP_WIDTH  = 25;
+constexpr int FULL_HD_CROP_HEIGHT = 15;
+
 
 constexpr int TWO_K_WIDTH  = 2560;
 constexpr int TWO_K_HEIGHT = 1440;
-constexpr int TWO_K_CROP_SIZE = 33;
+
+constexpr int TWO_K_CROP_WIDTH  = 55;
+constexpr int TWO_K_CROP_HEIGHT = 30;
 
 
-inline int cropSizeForScreen(const QSize &screenSize)
+inline QSize cropSizeForScreen(
+    const QSize &screenSize
+    )
 {
-    if(screenSize.width() == TWO_K_WIDTH &&
-        screenSize.height() == TWO_K_HEIGHT)
+    if(
+        screenSize.width() == TWO_K_WIDTH &&
+        screenSize.height() == TWO_K_HEIGHT
+        )
     {
-        return TWO_K_CROP_SIZE;
+        return QSize(
+            TWO_K_CROP_WIDTH,
+            TWO_K_CROP_HEIGHT
+            );
     }
 
     // Full HD e fallback
-    return FULL_HD_CROP_SIZE;
+
+    return QSize(
+        FULL_HD_CROP_WIDTH,
+        FULL_HD_CROP_HEIGHT
+        );
 }
 
 
-inline QSize cropSizeForScreen(const QSize &screenSize, bool)
+inline bool is2K(
+    const QSize &screenSize
+    )
 {
-    const int size = cropSizeForScreen(screenSize);
-
-    return QSize(size, size);
+    return
+        screenSize.width() == TWO_K_WIDTH &&
+        screenSize.height() == TWO_K_HEIGHT;
 }
 
 }

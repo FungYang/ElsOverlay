@@ -2,7 +2,6 @@
 
 #include <QDebug>
 #include <QFileInfo>
-
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -59,33 +58,45 @@ bool DigitDetector::loadOrt()
         return true;
 
     const QString dllPath =
-        QCoreApplication::applicationDirPath()
-        + "/onnxruntime.dll";
+        QCoreApplication::applicationDirPath() +
+        "/onnxruntime.dll";
 
     qDebug() << "Caricamento ONNX Runtime:" << dllPath;
 
-    m_ortDll = LoadLibraryW(
-        reinterpret_cast<LPCWSTR>(dllPath.utf16())
-        );
+    m_ortDll =
+        LoadLibraryW(
+            reinterpret_cast<LPCWSTR>(
+                dllPath.utf16()
+                )
+            );
 
     if (!m_ortDll)
     {
-        qDebug() << "ERRORE: impossibile caricare onnxruntime.dll";
-        qDebug() << "Windows error:" << GetLastError();
+        qDebug()
+        << "ERRORE: impossibile caricare onnxruntime.dll";
+
+        qDebug()
+            << "Windows error:"
+            << GetLastError();
 
         return false;
     }
 
-    using OrtGetApiBaseFunc = const OrtApiBase* (ORT_API_CALL*)();
+    using OrtGetApiBaseFunc =
+        const OrtApiBase* (ORT_API_CALL*)();
 
     auto getApiBase =
         reinterpret_cast<OrtGetApiBaseFunc>(
-            GetProcAddress(m_ortDll, "OrtGetApiBase")
+            GetProcAddress(
+                m_ortDll,
+                "OrtGetApiBase"
+                )
             );
 
     if (!getApiBase)
     {
-        qDebug() << "ERRORE: OrtGetApiBase non trovata";
+        qDebug()
+        << "ERRORE: OrtGetApiBase non trovata";
 
         FreeLibrary(m_ortDll);
         m_ortDll = nullptr;
@@ -93,22 +104,30 @@ bool DigitDetector::loadOrt()
         return false;
     }
 
-    const OrtApiBase* apiBase = getApiBase();
+    const OrtApiBase* apiBase =
+        getApiBase();
 
     if (!apiBase)
     {
-        qDebug() << "ERRORE: OrtApiBase nulla";
+        qDebug()
+        << "ERRORE: OrtApiBase nulla";
+
         return false;
     }
 
-    qDebug() << "ONNX Runtime version:"
-             << apiBase->GetVersionString();
+    qDebug()
+        << "ONNX Runtime version:"
+        << apiBase->GetVersionString();
 
-    m_ort = apiBase->GetApi(ORT_API_VERSION);
+    m_ort =
+        apiBase->GetApi(
+            ORT_API_VERSION
+            );
 
     if (!m_ort)
     {
-        qDebug() << "ERRORE: impossibile ottenere OrtApi";
+        qDebug()
+        << "ERRORE: impossibile ottenere OrtApi";
 
         FreeLibrary(m_ortDll);
         m_ortDll = nullptr;
@@ -129,8 +148,9 @@ bool DigitDetector::loadOrt()
 
     if (status)
     {
-        qDebug() << "ERRORE CreateEnv:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE CreateEnv:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
@@ -148,8 +168,9 @@ bool DigitDetector::loadOrt()
 
     if (status)
     {
-        qDebug() << "ERRORE CreateSessionOptions:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE CreateSessionOptions:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
@@ -164,8 +185,9 @@ bool DigitDetector::loadOrt()
 
     if (status)
     {
-        qDebug() << "ERRORE SetIntraOpNumThreads:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE SetIntraOpNumThreads:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
@@ -180,8 +202,9 @@ bool DigitDetector::loadOrt()
 
     if (status)
     {
-        qDebug() << "ERRORE SetInterOpNumThreads:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE SetInterOpNumThreads:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
@@ -195,7 +218,9 @@ bool DigitDetector::loadOrt()
 // Load Model
 // ============================================================
 
-bool DigitDetector::loadModel(const QString& modelPath)
+bool DigitDetector::loadModel(
+    const QString& modelPath
+    )
 {
     if (m_modelLoaded)
         return true;
@@ -205,32 +230,34 @@ bool DigitDetector::loadModel(const QString& modelPath)
 
     if (!QFileInfo::exists(modelPath))
     {
-        qDebug() << "ERRORE: modello non trovato:"
-                 << modelPath;
+        qDebug()
+        << "ERRORE: modello non trovato:"
+        << modelPath;
 
         return false;
     }
 
     m_modelPath = modelPath;
 
-    qDebug() << "Caricamento modello:"
-             << m_modelPath;
-
-    QByteArray modelPathUtf8 =
-        modelPath.toUtf8();
+    qDebug()
+        << "Caricamento modello:"
+        << m_modelPath;
 
     OrtStatus* status =
         m_ort->CreateSession(
             m_env,
-            reinterpret_cast<const wchar_t*>(modelPath.utf16()),
+            reinterpret_cast<const wchar_t*>(
+                modelPath.utf16()
+                ),
             m_sessionOptions,
             &m_session
             );
 
     if (status)
     {
-        qDebug() << "ERRORE CreateSession:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE CreateSession:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
@@ -250,8 +277,9 @@ bool DigitDetector::loadModel(const QString& modelPath)
 
     if (status)
     {
-        qDebug() << "ERRORE GetAllocator:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE GetAllocator:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
@@ -270,17 +298,22 @@ bool DigitDetector::loadModel(const QString& modelPath)
 
     if (status)
     {
-        qDebug() << "ERRORE SessionGetInputName:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE SessionGetInputName:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
         return false;
     }
 
-    m_inputName = QString::fromUtf8(inputName);
+    m_inputName =
+        QString::fromUtf8(inputName);
 
-    allocator->Free(allocator, inputName);
+    allocator->Free(
+        allocator,
+        inputName
+        );
 
     // --------------------------------------------------------
     // Output name
@@ -298,17 +331,22 @@ bool DigitDetector::loadModel(const QString& modelPath)
 
     if (status)
     {
-        qDebug() << "ERRORE SessionGetOutputName:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE SessionGetOutputName:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
         return false;
     }
 
-    m_outputName = QString::fromUtf8(outputName);
+    m_outputName =
+        QString::fromUtf8(outputName);
 
-    allocator->Free(allocator, outputName);
+    allocator->Free(
+        allocator,
+        outputName
+        );
 
     // --------------------------------------------------------
     // Memory info
@@ -323,17 +361,25 @@ bool DigitDetector::loadModel(const QString& modelPath)
 
     if (status)
     {
-        qDebug() << "ERRORE CreateCpuMemoryInfo:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE CreateCpuMemoryInfo:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
         return false;
     }
 
-    qDebug() << "Modello caricato correttamente";
-    qDebug() << "Input:" << m_inputName;
-    qDebug() << "Output:" << m_outputName;
+    qDebug()
+        << "Modello caricato correttamente";
+
+    qDebug()
+        << "Input:"
+        << m_inputName;
+
+    qDebug()
+        << "Output:"
+        << m_outputName;
 
     m_modelLoaded = true;
 
@@ -345,18 +391,125 @@ bool DigitDetector::loadModel(const QString& modelPath)
 // ============================================================
 
 std::vector<float>
-DigitDetector::preprocess(const QImage& image)
+DigitDetector::preprocess(
+    const QImage& image
+    )
 {
     QImage rgbImage =
-        image.convertToFormat(QImage::Format_RGB888);
+        image.convertToFormat(
+            QImage::Format_RGB888
+            );
+
+    const int imageWidth =
+        rgbImage.width();
+
+    const int imageHeight =
+        rgbImage.height();
+
+    if (imageWidth <= 0 ||
+        imageHeight <= 0)
+    {
+        return {};
+    }
+
+    // --------------------------------------------------------
+    // Letterbox proporzionale
+    // --------------------------------------------------------
+
+    const float scale =
+        std::min(
+            static_cast<float>(INPUT_SIZE) /
+                static_cast<float>(imageWidth),
+
+            static_cast<float>(INPUT_SIZE) /
+                static_cast<float>(imageHeight)
+            );
+
+    const int resizedWidth =
+        std::max(
+            1,
+            std::min(
+                INPUT_SIZE,
+                static_cast<int>(
+                    std::round(
+                        imageWidth * scale
+                        )
+                    )
+                )
+            );
+
+    const int resizedHeight =
+        std::max(
+            1,
+            std::min(
+                INPUT_SIZE,
+                static_cast<int>(
+                    std::round(
+                        imageHeight * scale
+                        )
+                    )
+                )
+            );
 
     QImage resized =
         rgbImage.scaled(
-            INPUT_SIZE,
-            INPUT_SIZE,
+            resizedWidth,
+            resizedHeight,
             Qt::IgnoreAspectRatio,
             Qt::SmoothTransformation
             );
+
+    // --------------------------------------------------------
+    // Canvas 256x256
+    // Padding YOLO = 114
+    // --------------------------------------------------------
+
+    QImage letterboxed(
+        INPUT_SIZE,
+        INPUT_SIZE,
+        QImage::Format_RGB888
+        );
+
+    letterboxed.fill(
+        qRgb(114, 114, 114)
+        );
+
+    const int padX =
+        (INPUT_SIZE - resizedWidth) / 2;
+
+    const int padY =
+        (INPUT_SIZE - resizedHeight) / 2;
+
+    // Copia l'immagine ridimensionata
+    // al centro del canvas.
+
+    for (int y = 0;
+         y < resizedHeight;
+         ++y)
+    {
+        const uchar* sourceRow =
+            resized.constScanLine(y);
+
+        uchar* destinationRow =
+            letterboxed.scanLine(
+                y + padY
+                );
+
+        std::memcpy(
+            destinationRow +
+                padX * 3,
+
+            sourceRow,
+
+            static_cast<size_t>(
+                resizedWidth * 3
+                )
+            );
+    }
+
+    // --------------------------------------------------------
+    // RGB -> CHW
+    // --------------------------------------------------------
 
     std::vector<float> input(
         3 * INPUT_SIZE * INPUT_SIZE
@@ -365,12 +518,16 @@ DigitDetector::preprocess(const QImage& image)
     const int area =
         INPUT_SIZE * INPUT_SIZE;
 
-    for (int y = 0; y < INPUT_SIZE; ++y)
+    for (int y = 0;
+         y < INPUT_SIZE;
+         ++y)
     {
         const uchar* row =
-            resized.constScanLine(y);
+            letterboxed.constScanLine(y);
 
-        for (int x = 0; x < INPUT_SIZE; ++x)
+        for (int x = 0;
+             x < INPUT_SIZE;
+             ++x)
         {
             const int pixelIndex =
                 y * INPUT_SIZE + x;
@@ -384,20 +541,17 @@ DigitDetector::preprocess(const QImage& image)
             const uchar b =
                 row[x * 3 + 2];
 
-            // YOLO / PyTorch:
-            // RGB
-            // 0..255 -> 0..1
-            //
-            // CHW layout
-
             input[pixelIndex] =
-                static_cast<float>(r) / 255.0f;
+                static_cast<float>(r) /
+                255.0f;
 
             input[area + pixelIndex] =
-                static_cast<float>(g) / 255.0f;
+                static_cast<float>(g) /
+                255.0f;
 
             input[2 * area + pixelIndex] =
-                static_cast<float>(b) / 255.0f;
+                static_cast<float>(b) /
+                255.0f;
         }
     }
 
@@ -426,26 +580,44 @@ float DigitDetector::calculateIoU(
         std::min(a.y2, b.y2);
 
     const float width =
-        std::max(0.0f, x2 - x1);
+        std::max(
+            0.0f,
+            x2 - x1
+            );
 
     const float height =
-        std::max(0.0f, y2 - y1);
+        std::max(
+            0.0f,
+            y2 - y1
+            );
 
     const float intersection =
         width * height;
 
     const float areaA =
-        std::max(0.0f, a.x2 - a.x1)
-        *
-        std::max(0.0f, a.y2 - a.y1);
+        std::max(
+            0.0f,
+            a.x2 - a.x1
+            ) *
+        std::max(
+            0.0f,
+            a.y2 - a.y1
+            );
 
     const float areaB =
-        std::max(0.0f, b.x2 - b.x1)
-        *
-        std::max(0.0f, b.y2 - b.y1);
+        std::max(
+            0.0f,
+            b.x2 - b.x1
+            ) *
+        std::max(
+            0.0f,
+            b.y2 - b.y1
+            );
 
     const float unionArea =
-        areaA + areaB - intersection;
+        areaA +
+        areaB -
+        intersection;
 
     if (unionArea <= 0.0f)
         return 0.0f;
@@ -468,20 +640,35 @@ DigitDetector::nms(
         [](const Detection& a,
            const Detection& b)
         {
-            return a.confidence > b.confidence;
+            return
+                a.confidence >
+                b.confidence;
         }
         );
 
     std::vector<Detection> result;
 
-    for (const Detection& detection : detections)
+    for (const Detection& detection :
+         detections)
     {
         bool suppressed = false;
 
-        for (const Detection& kept : result)
+        for (const Detection& kept :
+             result)
         {
-            if (calculateIoU(detection, kept)
-                > NMS_THRESHOLD)
+            // YOLO esegue NMS per classe.
+            // Due cifre diverse non si sopprimono.
+
+            if (detection.digit !=
+                kept.digit)
+            {
+                continue;
+            }
+
+            if (calculateIoU(
+                    detection,
+                    kept
+                    ) > NMS_THRESHOLD)
             {
                 suppressed = true;
                 break;
@@ -489,7 +676,11 @@ DigitDetector::nms(
         }
 
         if (!suppressed)
-            result.push_back(detection);
+        {
+            result.push_back(
+                detection
+                );
+        }
     }
 
     return result;
@@ -512,21 +703,10 @@ DigitDetector::postprocess(
     if (!output)
         return detections;
 
-    // YOLOv8:
-    //
-    // [1, 4 + num_classes, num_predictions]
-    //
-    // 10 classi:
-    //
-    // [1, 14, N]
-    //
-    // Per 256x256:
-    // N = 1344
-    //
-    // Il codice non assume comunque N fisso.
-
     constexpr int NUM_CLASSES = 10;
-    constexpr int CHANNELS = 4 + NUM_CLASSES;
+
+    constexpr int CHANNELS =
+        4 + NUM_CLASSES;
 
     if (outputSize < CHANNELS)
         return detections;
@@ -534,31 +714,96 @@ DigitDetector::postprocess(
     const size_t numPredictions =
         outputSize / CHANNELS;
 
+    // --------------------------------------------------------
+    // Ricostruisce lo stesso letterbox usato
+    // nel preprocessing.
+    // --------------------------------------------------------
+
+    if (imageWidth <= 0 ||
+        imageHeight <= 0)
+    {
+        return detections;
+    }
+
+    const float scale =
+        std::min(
+            static_cast<float>(INPUT_SIZE) /
+                static_cast<float>(imageWidth),
+
+            static_cast<float>(INPUT_SIZE) /
+                static_cast<float>(imageHeight)
+            );
+
+    const int resizedWidth =
+        std::max(
+            1,
+            std::min(
+                INPUT_SIZE,
+                static_cast<int>(
+                    std::round(
+                        imageWidth * scale
+                        )
+                    )
+                )
+            );
+
+    const int resizedHeight =
+        std::max(
+            1,
+            std::min(
+                INPUT_SIZE,
+                static_cast<int>(
+                    std::round(
+                        imageHeight * scale
+                        )
+                    )
+                )
+            );
+
+    const float padX =
+        static_cast<float>(
+            (INPUT_SIZE - resizedWidth) / 2
+            );
+
+    const float padY =
+        static_cast<float>(
+            (INPUT_SIZE - resizedHeight) / 2
+            );
+
+    // --------------------------------------------------------
+    // Predictions
+    // --------------------------------------------------------
+
     for (size_t i = 0;
          i < numPredictions;
          ++i)
     {
-        // ----------------------------------------------------
-        // Box
-        // ----------------------------------------------------
-
         const float cx =
-            output[0 * numPredictions + i];
+            output[
+                0 * numPredictions + i
+        ];
 
         const float cy =
-            output[1 * numPredictions + i];
+            output[
+                1 * numPredictions + i
+        ];
 
         const float width =
-            output[2 * numPredictions + i];
+            output[
+                2 * numPredictions + i
+        ];
 
         const float height =
-            output[3 * numPredictions + i];
+            output[
+                3 * numPredictions + i
+        ];
 
         // ----------------------------------------------------
-        // Trova classe migliore
+        // Classe migliore
         // ----------------------------------------------------
 
         int bestClass = -1;
+
         float bestConfidence = 0.0f;
 
         for (int c = 0;
@@ -567,20 +812,28 @@ DigitDetector::postprocess(
         {
             const float confidence =
                 output[
-                    (4 + c) * numPredictions + i
+                    (4 + c) *
+                        numPredictions +
+                    i
             ];
 
-            if (confidence > bestConfidence)
+            if (confidence >
+                bestConfidence)
             {
-                bestConfidence = confidence;
-                bestClass = c;
+                bestConfidence =
+                    confidence;
+
+                bestClass =
+                    c;
             }
         }
 
         if (bestClass < 0)
             continue;
 
-        if (bestConfidence < CONF_THRESHOLD)
+        // Il tester Python usa conf=0.30.
+
+        if (bestConfidence < 0.30f)
             continue;
 
         // ----------------------------------------------------
@@ -600,67 +853,98 @@ DigitDetector::postprocess(
             cy + height * 0.5f;
 
         // ----------------------------------------------------
-        // Clamp al modello 256x256
+        // Rimuove il padding del letterbox
         // ----------------------------------------------------
 
-        x1 = std::max(0.0f,
-                      std::min(
-                          static_cast<float>(INPUT_SIZE),
-                          x1
-                          ));
+        x1 -= padX;
+        x2 -= padX;
 
-        y1 = std::max(0.0f,
-                      std::min(
-                          static_cast<float>(INPUT_SIZE),
-                          y1
-                          ));
-
-        x2 = std::max(0.0f,
-                      std::min(
-                          static_cast<float>(INPUT_SIZE),
-                          x2
-                          ));
-
-        y2 = std::max(0.0f,
-                      std::min(
-                          static_cast<float>(INPUT_SIZE),
-                          y2
-                          ));
+        y1 -= padY;
+        y2 -= padY;
 
         // ----------------------------------------------------
-        // Da coordinate 256x256 a immagine originale
+        // Riporta alle dimensioni originali
         // ----------------------------------------------------
 
-        const float scaleX =
-            static_cast<float>(imageWidth)
-            /
-            static_cast<float>(INPUT_SIZE);
+        x1 /= scale;
+        x2 /= scale;
 
-        const float scaleY =
-            static_cast<float>(imageHeight)
-            /
-            static_cast<float>(INPUT_SIZE);
+        y1 /= scale;
+        y2 /= scale;
+
+        // ----------------------------------------------------
+        // Clamp all'immagine originale
+        // ----------------------------------------------------
+
+        x1 =
+            std::max(
+                0.0f,
+                std::min(
+                    static_cast<float>(imageWidth),
+                    x1
+                    )
+                );
+
+        y1 =
+            std::max(
+                0.0f,
+                std::min(
+                    static_cast<float>(imageHeight),
+                    y1
+                    )
+                );
+
+        x2 =
+            std::max(
+                0.0f,
+                std::min(
+                    static_cast<float>(imageWidth),
+                    x2
+                    )
+                );
+
+        y2 =
+            std::max(
+                0.0f,
+                std::min(
+                    static_cast<float>(imageHeight),
+                    y2
+                    )
+                );
 
         Detection detection;
 
-        detection.digit = bestClass;
-        detection.confidence = bestConfidence;
+        detection.digit =
+            bestClass;
 
-        detection.x1 = x1 * scaleX;
-        detection.y1 = y1 * scaleY;
-        detection.x2 = x2 * scaleX;
-        detection.y2 = y2 * scaleY;
+        detection.confidence =
+            bestConfidence;
 
-        detections.push_back(detection);
+        detection.x1 =
+            x1;
+
+        detection.y1 =
+            y1;
+
+        detection.x2 =
+            x2;
+
+        detection.y2 =
+            y2;
+
+        detections.push_back(
+            detection
+            );
     }
 
     // --------------------------------------------------------
     // NMS
     // --------------------------------------------------------
 
-    detections = nms(
-        std::move(detections)
-        );
+    detections =
+        nms(
+            std::move(detections)
+            );
 
     // --------------------------------------------------------
     // Ordina da sinistra a destra
@@ -686,9 +970,12 @@ DigitDetector::postprocess(
     // Massimo 3 cifre
     // --------------------------------------------------------
 
-    if (detections.size() > MAX_DIGITS)
+    if (detections.size() >
+        MAX_DIGITS)
     {
-        detections.resize(MAX_DIGITS);
+        detections.resize(
+            MAX_DIGITS
+            );
     }
 
     return detections;
@@ -698,17 +985,23 @@ DigitDetector::postprocess(
 // Detect
 // ============================================================
 
-int DigitDetector::detect(const QImage& image)
+int DigitDetector::detect(
+    const QImage& image
+    )
 {
     if (!m_modelLoaded)
     {
-        qDebug() << "ERRORE: modello non caricato";
+        qDebug()
+        << "ERRORE: modello non caricato";
+
         return 1000;
     }
 
     if (image.isNull())
     {
-        qDebug() << "ERRORE: QImage nulla";
+        qDebug()
+        << "ERRORE: QImage nulla";
+
         return 1000;
     }
 
@@ -718,6 +1011,14 @@ int DigitDetector::detect(const QImage& image)
 
     std::vector<float> input =
         preprocess(image);
+
+    if (input.empty())
+    {
+        qDebug()
+        << "ERRORE: preprocessing fallito";
+
+        return 1000;
+    }
 
     // --------------------------------------------------------
     // Shape NCHW
@@ -750,8 +1051,9 @@ int DigitDetector::detect(const QImage& image)
 
     if (status)
     {
-        qDebug() << "ERRORE CreateTensor:"
-                 << m_ort->GetErrorMessage(status);
+        qDebug()
+        << "ERRORE CreateTensor:"
+        << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
 
@@ -792,12 +1094,15 @@ status =
         &outputTensor
         );
 
-m_ort->ReleaseValue(inputTensor);
+m_ort->ReleaseValue(
+    inputTensor
+    );
 
 if (status)
 {
-    qDebug() << "ERRORE OrtRun:"
-             << m_ort->GetErrorMessage(status);
+    qDebug()
+    << "ERRORE OrtRun:"
+    << m_ort->GetErrorMessage(status);
 
     m_ort->ReleaseStatus(status);
 
@@ -808,11 +1113,8 @@ if (status)
 // Output tensor info
 // --------------------------------------------------------
 
-// --------------------------------------------------------
-// Output tensor info
-// --------------------------------------------------------
-
-OrtTensorTypeAndShapeInfo* outputInfo = nullptr;
+OrtTensorTypeAndShapeInfo*
+    outputInfo = nullptr;
 
 status =
     m_ort->GetTensorTypeAndShape(
@@ -822,11 +1124,15 @@ status =
 
 if (status)
 {
-    qDebug() << "ERRORE GetTensorTypeAndShape:"
-             << m_ort->GetErrorMessage(status);
+    qDebug()
+    << "ERRORE GetTensorTypeAndShape:"
+    << m_ort->GetErrorMessage(status);
 
     m_ort->ReleaseStatus(status);
-    m_ort->ReleaseValue(outputTensor);
+
+    m_ort->ReleaseValue(
+        outputTensor
+        );
 
     return 1000;
 }
@@ -841,33 +1147,48 @@ status =
 
 if (status)
 {
-    qDebug() << "ERRORE output size:"
-             << m_ort->GetErrorMessage(status);
+    qDebug()
+    << "ERRORE output size:"
+    << m_ort->GetErrorMessage(status);
 
     m_ort->ReleaseStatus(status);
-    m_ort->ReleaseTensorTypeAndShapeInfo(outputInfo);
-    m_ort->ReleaseValue(outputTensor);
+
+    m_ort->ReleaseTensorTypeAndShapeInfo(
+        outputInfo
+        );
+
+    m_ort->ReleaseValue(
+        outputTensor
+        );
 
     return 1000;
 }
 
-m_ort->ReleaseTensorTypeAndShapeInfo(outputInfo);
+m_ort->ReleaseTensorTypeAndShapeInfo(
+    outputInfo
+    );
 
 float* outputData = nullptr;
 
 status =
     m_ort->GetTensorMutableData(
         outputTensor,
-        reinterpret_cast<void**>(&outputData)
+        reinterpret_cast<void**>(
+            &outputData
+            )
         );
 
 if (status)
 {
-    qDebug() << "ERRORE output data:"
-             << m_ort->GetErrorMessage(status);
+    qDebug()
+    << "ERRORE output data:"
+    << m_ort->GetErrorMessage(status);
 
     m_ort->ReleaseStatus(status);
-    m_ort->ReleaseValue(outputTensor);
+
+    m_ort->ReleaseValue(
+        outputTensor
+        );
 
     return 1000;
 }
@@ -888,7 +1209,9 @@ std::vector<Detection> detections =
 // Release output
 // --------------------------------------------------------
 
-m_ort->ReleaseValue(outputTensor);
+m_ort->ReleaseValue(
+    outputTensor
+    );
 
 // --------------------------------------------------------
 // Nessun risultato
@@ -896,7 +1219,8 @@ m_ort->ReleaseValue(outputTensor);
 
 if (detections.empty())
 {
-    qDebug() << "Nessuna cifra rilevata";
+    qDebug()
+    << "Nessuna cifra rilevata";
 
     return 1000;
 }
@@ -907,9 +1231,11 @@ if (detections.empty())
 
 int number = 0;
 
-qDebug() << "Cifre rilevate:";
+qDebug()
+    << "Cifre rilevate:";
 
-for (const Detection& detection : detections)
+for (const Detection& detection :
+     detections)
 {
     qDebug()
     << "Digit="
@@ -917,15 +1243,18 @@ for (const Detection& detection : detections)
     << "confidence="
     << detection.confidence
     << "x="
-    << (detection.x1 + detection.x2) * 0.5f;
+    << (detection.x1 +
+        detection.x2) *
+            0.5f;
 
     number =
-        number * 10
-        +
+        number * 10 +
         detection.digit;
 }
 
-qDebug() << "Numero finale:" << number;
+qDebug()
+    << "Numero finale:"
+    << number;
 
 return number;
 }
