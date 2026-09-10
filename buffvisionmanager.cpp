@@ -331,7 +331,7 @@ BuffVisionManager::BuffVisionManager(
             if(
                 number1 != 1000 &&
                 lastCrop1Number != 1000 &&
-                number1 < lastCrop1Number
+                number1 == lastCrop1Number - 1
                 )
             {
                 crop1EventTime =
@@ -367,7 +367,7 @@ BuffVisionManager::BuffVisionManager(
             if(
                 number2 != 1000 &&
                 lastCrop2Number != 1000 &&
-                number2 < lastCrop2Number
+                number2 == lastCrop2Number - 1
                 )
             {
                 crop2EventTime =
