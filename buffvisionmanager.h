@@ -4,10 +4,13 @@
 #include <QObject>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QThread>
 
 #include "buffvisioncapture.h"
 #include "buffvisiondetector.h"
 #include "overlayroot.h"
+
+class BuffVisionDetectionWorker;
 
 class GlobalKeyboard;
 
@@ -33,8 +36,17 @@ public:
 
     ~BuffVisionManager();
 
+    void startTracking();
+    void resetTracking();
     void configure();
     void setEnabled(bool enabled);
+
+private slots:
+    // NUOVO: sostituiscono la lambda dentro visionTimer.
+    void onCrop1FrameReady(QImage frame);
+    void onCrop2FrameReady(QImage frame);
+    void onNumberDetected(int cropId, int number);
+    void onModelLoaded(bool ok);
 
 
 private:
@@ -53,8 +65,6 @@ private:
 
     BuffVisionCaptureSetup *captureSetup = nullptr;
 
-    void startTracking();
-    void resetTracking();
 
 #ifdef QT_DEBUG
 
@@ -62,27 +72,25 @@ private:
 
 #endif
 
+    // NUOVO
+    QThread *m_detectionThread = nullptr;
+    BuffVisionDetectionWorker *m_detectionWorker = nullptr;
+
     // Ultimo numero valido rilevato per ogni crop.
     //
     // 1000 = nessun valore valido.
+    bool enabled = false;
+    bool configured = false;
+
     int lastCrop1Number = 1000;
     int lastCrop2Number = 1000;
 
-    QElapsedTimer eventTimer;
-
-    qint64 visionCycle = 0;
-
+    int visionCycle = 0;
     qint64 crop1EventTime = -1;
     qint64 crop2EventTime = -1;
-
-    qint64 crop1EventCycle = -1;
-    qint64 crop2EventCycle = -1;
-
-    bool configured = false;
-
-    bool enabled = false;
-
-    QTimer visionTimer;
+    int crop1EventCycle = -1;
+    int crop2EventCycle = -1;
+    QElapsedTimer eventTimer;
 
     void showSetup();
 };

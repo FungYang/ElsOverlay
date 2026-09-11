@@ -4,6 +4,7 @@
 #include <QRect>
 #include <QImage>
 #include <QTimer>
+#include <QThread>
 #include <QSize>
 #include "transcendencevisionconfig.h"
 
@@ -12,6 +13,7 @@ class OverlayRoot;
 class Overlay;
 class TranscendenceCaptureSetup;
 class TranscendencePrecisionCrop;
+class TranscendenceVisionWorker;   // NUOVO
 
 
 class TranscendenceVisionManager : public QObject
@@ -36,6 +38,16 @@ public slots:
     void onCooldownStarted();
     void onCooldownReset();
 
+private slots:
+    // NUOVO: sostituisce scanTick(). Arriva dal CaptureCoordinator
+    // (Qt::QueuedConnection), gira sul thread GUI, ma non fa più
+    // nessun calcolo pesante: inoltra solo il frame al worker.
+    void onFrameReady(QImage area);
+
+    // NUOVO: arriva dal TranscendenceVisionWorker (cross-thread,
+    // quindi automaticamente in coda sul thread GUI).
+    void onScanResult(bool found, QRect foundRect, double score, QImage area);
+
 private:
     void loadSettings();
     void saveSettings();
@@ -47,7 +59,7 @@ private:
     void startScanning();
     void stopAll();
     void stopScanning();
-    void scanTick();
+    // scanTick() RIMOSSO: sostituito da onFrameReady()/onScanResult().
 
     void openPrecisionCrop();
     void savePreciseIcon(
@@ -58,17 +70,8 @@ private:
 
     void saveCurrentIcon();
 
-    bool findIcon(
-        const QImage &area,
-        QRect &foundRect,
-        double &score
-        ) const;
-
-    double compareAt(
-        const QImage &area,
-        int offsetX,
-        int offsetY
-        ) const;
+    // findIcon()/compareAt() RIMOSSI da qui: si spostano interamente
+    // in TranscendenceVisionWorker, che gira su thread dedicato.
 
 private:
     GlobalKeyboard *keyboard = nullptr;
@@ -89,8 +92,12 @@ private:
         TranscendenceVisionConfig::ICON_HEIGHT;
 
     QTimer m_delayTimer;
-    QTimer m_scanTimer;
+    // m_scanTimer RIMOSSO: il tick lo guida CaptureCoordinator.
 
     bool m_enabled = false;
     bool m_configured = false;
+
+    // NUOVO: thread + worker dedicati al calcolo pesante.
+    QThread *m_workerThread = nullptr;
+    TranscendenceVisionWorker *m_worker = nullptr;
 };

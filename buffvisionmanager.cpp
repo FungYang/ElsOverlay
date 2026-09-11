@@ -1,18 +1,16 @@
 #include "buffvisionmanager.h"
-
 #include "globalkeyboard.h"
 #include "buffvisioncore.h"
 #include "buffvisionoverlay.h"
 #include "buffvisioncapturesetup.h"
+#include "buffvisiondetectionworker.h"
+#include "capturecoordinator.h"
 #include "overlayroot.h"
 #include "buffvisionconfig.h"
 
-#include <QTimer>
-#include <QDebug>
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QScreen>
-
 
 #ifdef QT_DEBUG
 #include "buffvisiondebug.h"
@@ -28,514 +26,122 @@ BuffVisionManager::BuffVisionManager(
     overlayRoot(overlayRoot),
     keyboard(keyboard)
 {
-    // =========================
-    // CORE
-    // =========================
+    core = new BuffVisionCore(this);
 
-    core =
-        new BuffVisionCore(
-            this
-            );
-
+    capture = new BuffVisionCapture(this);
+    capture->loadSettings();
 
     // =========================
-    // CAPTURE
+    // DETECTION WORKER (thread dedicato all'inferenza ONNX)
     // =========================
+    m_detectionWorker = new BuffVisionDetectionWorker(); // niente parent
+    m_detectionThread = new QThread(this);
+    m_detectionWorker->moveToThread(m_detectionThread);
 
-    capture =
-        new BuffVisionCapture(
-            this
-            );
+    connect(m_detectionWorker, &BuffVisionDetectionWorker::modelLoaded,
+            this, &BuffVisionManager::onModelLoaded);
+    connect(m_detectionWorker, &BuffVisionDetectionWorker::numberDetected,
+            this, &BuffVisionManager::onNumberDetected);
 
+    m_detectionThread->start();
 
-    if(!capture)
-    {
-        // qDebug()
-        // << "BUFFVISION: ERRORE - BuffVisionCapture non creato";
-    }
-    else
-    {
-        if(!capture->loadSettings())
-        {
-            // qDebug()
-            // << "BUFFVISION: caricamento capture settings fallito";
-        }
-    }
+    QScreen *screen = QGuiApplication::primaryScreen();
+    QString modelName = "best_1080.onnx";
 
-
-    // =========================
-    // DETECTOR
-    // =========================
-
-    detector =
-        new BuffVisionDetector(
-            this
-            );
-
-
-    QScreen *screen =
-        QGuiApplication::primaryScreen();
-
-    QString modelName =
-        "best_1080.onnx";
-
-    if(screen)
-    {
-        const QSize resolution =
-            screen->size();
-
-        if(
-            BuffVisionConfig::is2K(
-                resolution
-                )
-            )
-        {
-            modelName =
-                "best_2k.onnx";
-        }
-    }
+    if (screen && BuffVisionConfig::is2K(screen->size()))
+        modelName = "best_2k.onnx";
 
     const QString modelPath =
-        QCoreApplication::applicationDirPath() +
-        "/models/" +
-        modelName;
+        QCoreApplication::applicationDirPath() + "/models/" + modelName;
 
-
-    configured =
-        detector->loadModel(
-            modelPath
-            );
-
-
-    if(configured)
-    {
-        // qDebug()
-        // << "BUFFVISION: DigitDetector caricato";
-    }
-    else
-    {
-        // qDebug()
-        // << "BUFFVISION: ERRORE - DigitDetector non caricato";
-    }
-
+    QMetaObject::invokeMethod(m_detectionWorker, "loadModel", Qt::QueuedConnection,
+                              Q_ARG(QString, modelPath));
+    // configured verrà settato da onModelLoaded()
 
     // =========================
-    // DEBUG
+    // DEBUG (invariato)
     // =========================
-
 #ifdef QT_DEBUG
+    debugWindow = new BuffVisionDebug(this->overlayRoot);
+    this->overlayRoot->registerOverlay(debugWindow);
 
-    debugWindow =
-        new BuffVisionDebug(
-            this->overlayRoot
-            );
-
-
-    this->overlayRoot->registerOverlay(
-        debugWindow
-        );
-
-
-    // =========================
-    // RISOLUZIONE DEBUG
-    // =========================
-
-
-
-
-    if(screen)
+    if (screen)
     {
-        const QSize resolution =
-            screen->size();
-
-
-        const QSize cropSize =
-            BuffVisionConfig::cropSizeForScreen(
-                resolution
-                );
-
-
-        debugWindow->setResolution(
-            resolution.width(),
-            resolution.height(),
-            cropSize
-            );
+        const QSize resolution = screen->size();
+        const QSize cropSize = BuffVisionConfig::cropSizeForScreen(resolution);
+        debugWindow->setResolution(resolution.width(), resolution.height(), cropSize);
     }
-
 
     debugWindow->hide();
-
 #endif
 
-
     // =========================
-    // ATMA OVERLAY
+    // ATMA OVERLAY (invariato)
     // =========================
-
-    overlay =
-        new BuffVisionOverlay(
-            core,
-            this->overlayRoot
-            );
-
-
-    this->overlayRoot->registerOverlay(
-        overlay
-        );
-
-
-    /*
-     * Atma parte OFF.
-     *
-     * Non viene avviato alcun tracking
-     * durante la costruzione.
-     */
-
+    overlay = new BuffVisionOverlay(core, this->overlayRoot);
+    this->overlayRoot->registerOverlay(overlay);
     overlay->hide();
-
-
-    // =========================
-    // CAPTURE SETUP
-    // =========================
 
     captureSetup = nullptr;
 
+    // RIMOSSO: connect(&visionTimer, ...) — sostituito da
+    // onCrop1FrameReady()/onCrop2FrameReady()/onNumberDetected().
 
     // =========================
-    // TIMER VISIONE
+    // KEYBOARD (invariato)
     // =========================
-
     connect(
-        &visionTimer,
-        &QTimer::timeout,
-        this,
-        [this]()
-        {
-            // =========================
-            // ENABLED
-            // =========================
-
-            if(!enabled)
-            {
-                visionTimer.stop();
-
-                return;
-            }
-
-
-            // =========================
-            // CONFIGURED
-            // =========================
-
-            if(!configured)
-            {
-                return;
-            }
-
-
-            ++visionCycle;
-
-
-            // =========================
-            // CAPTURE
-            //
-            // UN SOLO AcquireNextFrame()
-            // per CROP1 + CROP2.
-            // =========================
-
-            QPixmap current1;
-            QPixmap current2;
-
-
-            if(capture->beginCapture())
-            {
-                current1 =
-                    capture->captureCrop1();
-
-
-                current2 =
-                    capture->captureCrop2();
-
-
-                capture->endCapture();
-            }
-            else
-            {
-                // qDebug()
-                // << "BUFFVISION: frame acquisition failed";
-            }
-
-
-            // =========================
-            // DETECTION
-            // =========================
-
-            const int number1 =
-                detector->detectCrop1(
-                    current1
-                    );
-
-
-            const int number2 =
-                detector->detectCrop2(
-                    current2
-                    );
-
-
-            // =========================
-            // DEBUG
-            // =========================
-
-            // qDebug()
-            //     << "BUFFVISION:"
-            //     << "crop1 =" << number1
-            //     << "previous =" << lastCrop1Number
-            //     << "| crop2 =" << number2
-            //     << "previous =" << lastCrop2Number;
-
-
-#ifdef QT_DEBUG
-
-            if(debugWindow)
-            {
-                debugWindow->updateNumbers(
-                    number1,
-                    number2
-                    );
-            }
-
-#endif
-
-
-            // =========================
-            // CROP 1 EVENT
-            // =========================
-            //
-            // 1000 = nessuna lettura valida.
-            //
-            // Esempio:
-            //
-            // 50 -> 50 -> 49
-            //
-            // evento a 49.
-            //
-            // 50 -> 1000 -> 49
-            //
-            // evento a 49.
-            //
-            // 50 -> 1000
-            //
-            // nessun evento e previous rimane 50.
-            //
-
-            if(
-                number1 != 1000 &&
-                lastCrop1Number != 1000 &&
-                number1 == lastCrop1Number - 1
-                )
-            {
-                crop1EventTime =
-                    eventTimer.elapsed();
-
-                crop1EventCycle =
-                    visionCycle;
-
-
-                core->onCrop1Event();
-
-
-#ifdef QT_DEBUG
-
-                if(debugWindow)
-                {
-                    debugWindow->setLastEvent(
-                        QString(
-                            "Crop 1 -> %1"
-                            )
-                            .arg(number1)
-                        );
-                }
-
-#endif
-            }
-
-
-            // =========================
-            // CROP 2 EVENT
-            // =========================
-
-            if(
-                number2 != 1000 &&
-                lastCrop2Number != 1000 &&
-                number2 == lastCrop2Number - 1
-                )
-            {
-                crop2EventTime =
-                    eventTimer.elapsed();
-
-                crop2EventCycle =
-                    visionCycle;
-
-
-                core->onCrop2Event();
-
-
-#ifdef QT_DEBUG
-
-                if(debugWindow)
-                {
-                    debugWindow->setLastEvent(
-                        QString(
-                            "Crop 2 -> %1"
-                            )
-                            .arg(number2)
-                        );
-                }
-
-#endif
-            }
-
-
-            // =========================
-            // UPDATE PREVIOUS NUMBER
-            // =========================
-            //
-            // 1000 NON sovrascrive
-            // l'ultimo valore valido.
-            //
-
-            if(number1 != 1000)
-            {
-                lastCrop1Number =
-                    number1;
-            }
-
-
-            if(number2 != 1000)
-            {
-                lastCrop2Number =
-                    number2;
-            }
-        }
-        );
-
-
-    // =========================
-    // KEYBOARD
-    // =========================
-
-    connect(
-        keyboard,
-        &GlobalKeyboard::keyPressed,
-        this,
+        keyboard, &GlobalKeyboard::keyPressed, this,
         [this](int key)
         {
-            // =========================
-            // ACTIONS 1 - 6
-            // =========================
-
-            if(
-                key >= '1' &&
-                key <= '6'
-                )
+            if (key >= '1' && key <= '6')
             {
-                if(!enabled)
-                {
-                    return;
-                }
-
-
+                if (!enabled) return;
                 core->registerAction();
             }
         }
         );
 
-
-    // =========================
-    // ENTER
-    // CONFERMA CONFIGURAZIONE
-    // =========================
-
+    // ENTER - CONFERMA CONFIGURAZIONE
     connect(
-        keyboard,
-        &GlobalKeyboard::confirmPressed,
-        this,
+        keyboard, &GlobalKeyboard::confirmPressed, this,
         [this]()
         {
-            if(!captureSetup)
-            {
-                return;
-            }
-
-
-            if(!captureSetup->isVisible())
-            {
-                return;
-            }
-
-
-            // =========================
-            // SALVA POSIZIONI CROP
-            // =========================
+            if (!captureSetup) return;
+            if (!captureSetup->isVisible()) return;
 
             captureSetup->saveSettings();
-
-
-            // =========================
-            // APPLICA I CROP
-            // =========================
 
             capture->setCropAreas(
                 captureSetup->getCropRect1(),
                 captureSetup->getCropRect2()
                 );
 
-
-            // =========================
-            // CONFIGURAZIONE COMPLETATA
-            // =========================
-
-            configured = true;
-
+            configured = true; // resta come nell'originale: qui non dipende dal modello
 
             captureSetup->hide();
-
-
-            // =========================
-            // RESET LETTURE PRECEDENTI
-            // =========================
 
             lastCrop1Number = 1000;
             lastCrop2Number = 1000;
 
-
             this->overlayRoot->raiseAll();
         }
         );
 
-
-    // =========================
-    // RESET GLOBALE
-    // =========================
-
+    // RESET GLOBALE (invariato)
     connect(
-        keyboard,
-        &GlobalKeyboard::resetPressed,
-        this,
+        keyboard, &GlobalKeyboard::resetPressed, this,
         [this]()
         {
             resetTracking();
-
-
-            if(captureSetup)
-            {
-                captureSetup->hide();
-            }
-
-
+            if (captureSetup) captureSetup->hide();
             this->overlayRoot->raiseAll();
         }
         );
+}
+void BuffVisionManager::onModelLoaded(bool ok)
+{
+    configured = ok; // NOTA: vedi avviso sotto sul doppio significato di 'configured'
 }
 
 
@@ -545,64 +151,30 @@ BuffVisionManager::BuffVisionManager(
 
 void BuffVisionManager::startTracking()
 {
-    if(!enabled)
-    {
+    if (!enabled || !configured)
         return;
-    }
-
-
-    if(!configured)
-    {
-        return;
-    }
-
-
-    // =========================
-    // RESET CORE
-    // =========================
 
     core->reset();
-
-
-    // =========================
-    // RESET NUMERI PRECEDENTI
-    // =========================
 
     lastCrop1Number = 1000;
     lastCrop2Number = 1000;
 
-
-    // =========================
-    // AVVIO TRACKING
-    // =========================
-
     core->startTracking();
 
-
-    // =========================
-    // RESET CONTATORI
-    // =========================
-
     visionCycle = 0;
-
-
     crop1EventTime = -1;
     crop2EventTime = -1;
-
-
     crop1EventCycle = -1;
     crop2EventCycle = -1;
-
-
     eventTimer.restart();
 
-
-    // =========================
-    // AVVIO VISIONE
-    // =========================
-
-    visionTimer.start(
-        50
+    // Sostituisce visionTimer.start(50): iscrizione al coordinator
+    // per entrambe le region, stesso intervallo di prima.
+    CaptureCoordinator::instance()->subscribe(
+        capture->crop1RegionId(), 50, this, "onCrop1FrameReady"
+        );
+    CaptureCoordinator::instance()->subscribe(
+        capture->crop2RegionId(), 50, this, "onCrop2FrameReady"
         );
 }
 
@@ -613,77 +185,109 @@ void BuffVisionManager::startTracking()
 
 void BuffVisionManager::resetTracking()
 {
-    // =========================
-    // STOP VISIONE
-    // =========================
-
-    visionTimer.stop();
-
-
-    // =========================
-    // RESET CORE
-    // =========================
+    CaptureCoordinator::instance()->unsubscribe(capture->crop1RegionId());
+    CaptureCoordinator::instance()->unsubscribe(capture->crop2RegionId());
 
     core->reset();
-
-
-    // =========================
-    // RESET NUMERI
-    // =========================
 
     lastCrop1Number = 1000;
     lastCrop2Number = 1000;
 
-
-    // =========================
-    // RESET CONTATORI
-    // =========================
-
     visionCycle = 0;
-
-
     crop1EventTime = -1;
     crop2EventTime = -1;
-
-
     crop1EventCycle = -1;
     crop2EventCycle = -1;
 
-
-    // =========================
-    // RESET OVERLAY
-    // =========================
-
-    if(overlay)
-    {
-        overlay->resetOverlay();
-    }
-
+    if (overlay) overlay->resetOverlay();
 
 #ifdef QT_DEBUG
-
-    if(debugWindow)
+    if (debugWindow)
     {
-        debugWindow->updateNumbers(
-            1000,
-            1000
-            );
-
-        debugWindow->setLastEvent(
-            "---"
-            );
+        debugWindow->updateNumbers(1000, 1000);
+        debugWindow->setLastEvent("---");
     }
-
 #endif
 
-
-    // =========================
-    // RIAVVIO
-    // =========================
-
-    if(enabled)
-    {
+    if (enabled)
         startTracking();
+}
+
+// =========================
+// FRAME READY -> inoltra al detection worker
+// =========================
+
+void BuffVisionManager::onCrop1FrameReady(QImage frame)
+{
+    if (!enabled || !configured) return;
+
+    QMetaObject::invokeMethod(
+        m_detectionWorker, "detectFrame", Qt::QueuedConnection,
+        Q_ARG(int, 1), Q_ARG(QImage, frame)
+        );
+}
+
+void BuffVisionManager::onCrop2FrameReady(QImage frame)
+{
+    if (!enabled || !configured) return;
+
+    QMetaObject::invokeMethod(
+        m_detectionWorker, "detectFrame", Qt::QueuedConnection,
+        Q_ARG(int, 2), Q_ARG(QImage, frame)
+        );
+}
+
+// =========================
+// RISULTATO DETECTION (arriva sul thread GUI, cross-thread auto-queued)
+// =========================
+
+void BuffVisionManager::onNumberDetected(int cropId, int number)
+{
+    if (!enabled || !configured) return;
+
+    ++visionCycle;
+
+#ifdef QT_DEBUG
+    if (debugWindow)
+    {
+        if (cropId == 1) debugWindow->updateNumbers(number, lastCrop2Number);
+        else debugWindow->updateNumbers(lastCrop1Number, number);
+    }
+#endif
+
+    if (cropId == 1)
+    {
+        if (number != 1000 && lastCrop1Number != 1000 && number == lastCrop1Number - 1)
+        {
+            crop1EventTime = eventTimer.elapsed();
+            crop1EventCycle = visionCycle;
+            core->onCrop1Event();
+
+#ifdef QT_DEBUG
+            if (debugWindow)
+                debugWindow->setLastEvent(QString("Crop 1 -> %1").arg(number));
+#endif
+        }
+
+        if (number != 1000)
+            lastCrop1Number = number;
+    }
+    else // cropId == 2
+    {
+        if (number != 1000 && lastCrop2Number != 1000 && number == lastCrop2Number - 1)
+        {
+            crop2EventTime = eventTimer.elapsed();
+            crop2EventCycle = visionCycle;
+            core->onCrop2Event();
+
+#ifdef QT_DEBUG
+            if (debugWindow)
+                debugWindow->setLastEvent(QString("Crop 2 -> %1").arg(number));
+#endif
+        }
+
+        if (number != 1000)
+            lastCrop2Number = number;
     }
 }
 
@@ -771,78 +375,34 @@ void BuffVisionManager::configure()
 // ENABLED
 // ============================================================
 
-void BuffVisionManager::setEnabled(
-    bool enabled
-    )
+void BuffVisionManager::setEnabled(bool value)
 {
-    this->enabled =
-        enabled;
+    enabled = value;
 
-
-    // =========================
-    // OFF
-    // =========================
-
-    if(!enabled)
+    if (!enabled)
     {
-        // Stop immediato della visione.
-
-        visionTimer.stop();
-
-
-        // Reset core.
+        CaptureCoordinator::instance()->unsubscribe(capture->crop1RegionId());
+        CaptureCoordinator::instance()->unsubscribe(capture->crop2RegionId());
 
         core->reset();
-
-
-        // Reset numeri.
-
         lastCrop1Number = 1000;
         lastCrop2Number = 1000;
 
-
-        // Nascondi Atma.
-
         overlay->hide();
-
-
         overlay->resetOverlay();
 
-
 #ifdef QT_DEBUG
-
-        if(debugWindow)
-        {
-            debugWindow->hide();
-        }
-
+        if (debugWindow) debugWindow->hide();
 #endif
-
-
         return;
     }
 
-
-    // =========================
-    // ON
-    // =========================
-
     overlay->show();
-
-
     this->overlayRoot->raiseAll();
 
-
 #ifdef QT_DEBUG
-
-    if(debugWindow)
-    {
-        debugWindow->show();
-        debugWindow->raise();
-    }
-
+    if (debugWindow) { debugWindow->show(); debugWindow->raise(); }
 #endif
-
 
     startTracking();
 }
@@ -854,4 +414,7 @@ void BuffVisionManager::setEnabled(
 
 BuffVisionManager::~BuffVisionManager()
 {
+    m_detectionThread->quit();
+    m_detectionThread->wait();
+    delete m_detectionWorker;
 }

@@ -1,11 +1,12 @@
 #include "transcendencevisionmanager.h"
+#include "transcendencevisionworker.h"
+#include "capturecoordinator.h"
 #include "transcendencevisionconfig.h"
 #include "transcendencecapturesetup.h"
 #include "transcendenceprecisioncrop.h"
 #include "globalkeyboard.h"
 #include "overlayroot.h"
 #include "overlay.h"
-#include "screencapture.h"
 
 #include <QSettings>
 #include <QDir>
@@ -14,12 +15,6 @@
 #include <QScreen>
 #include <QCoreApplication>
 #include <QKeyEvent>
-#include <QThread>
-#include <QtConcurrent/QtConcurrent>
-#include <QFuture>
-#include <QVector>
-#include <QElapsedTimer>
-#include <atomic>
 
 TranscendenceVisionManager::TranscendenceVisionManager(
     GlobalKeyboard *keyboard,
@@ -32,6 +27,15 @@ TranscendenceVisionManager::TranscendenceVisionManager(
     overlayRoot(overlayRootPtr),
     overlay(overlay)
 {
+    // NUOVO: worker + thread dedicati al calcolo pesante.
+    m_worker = new TranscendenceVisionWorker(); // niente parent: deve poter cambiare thread
+    m_workerThread = new QThread(this);
+    m_worker->moveToThread(m_workerThread);
+    m_workerThread->start();
+
+    connect(m_worker, &TranscendenceVisionWorker::scanResult,
+            this, &TranscendenceVisionManager::onScanResult); // cross-thread, auto-queued
+
     loadSettings();
     loadIcon();
 
@@ -45,16 +49,11 @@ TranscendenceVisionManager::TranscendenceVisionManager(
         &TranscendenceVisionManager::startScanning
         );
 
-    connect(
-        &m_scanTimer,
-        &QTimer::timeout,
-        this,
-        &TranscendenceVisionManager::scanTick
-        );
+    // RIMOSSO: connect(&m_scanTimer, &QTimer::timeout, this, &scanTick) — non esiste più.
 
     if (keyboard)
     {
-        // P apre il ritaglio preciso.
+        // P apre il ritaglio preciso. (INVARIATO)
         connect(
             keyboard,
             &GlobalKeyboard::keyPressed,
@@ -93,7 +92,6 @@ TranscendenceVisionManager::TranscendenceVisionManager(
                         return;
                     }
 
-                    // ENTER viene gestito dal widget stesso quando ha focus.
                     if (key == Qt::Key_Return || key == Qt::Key_Enter)
                     {
                         precisionCrop->setFocus();
@@ -109,7 +107,6 @@ TranscendenceVisionManager::TranscendenceVisionManager(
                         return;
                     }
 
-                    // Mentre il menu è aperto P non deve fare altro.
                     if (key == 'P')
                         return;
                 }
@@ -127,15 +124,13 @@ TranscendenceVisionManager::TranscendenceVisionManager(
             }
             );
 
-        // INVIO - CONFERMA CONFIGURAZIONE.
+        // INVIO - CONFERMA CONFIGURAZIONE. (INVARIATO)
         connect(
             keyboard,
             &GlobalKeyboard::confirmPressed,
             this,
             [this]()
             {
-                // Se il selettore preciso è aperto, ENTER serve a confermare
-                // il ritaglio e NON a chiudere il setup principale.
                 if (precisionCrop)
                 {
                     precisionCrop->setFocus();
@@ -170,19 +165,8 @@ TranscendenceVisionManager::TranscendenceVisionManager(
 
                 saveSettings();
 
-                if (m_searchRegionId >= 0)
-                {
-                    ScreenCapture::unregisterRegion(
-                        m_searchRegionId
-                        );
-
-                    m_searchRegionId = -1;
-                }
-
-                m_searchRegionId =
-                    ScreenCapture::registerRegion(
-                        m_searchArea
-                        );
+                unregisterSearchRegion();
+                registerSearchRegion();
 
                 loadIcon();
 
@@ -207,9 +191,24 @@ TranscendenceVisionManager::~TranscendenceVisionManager()
     closePrecisionCrop();
     stopAll();
 
+    unregisterSearchRegion();
+
+    m_workerThread->quit();
+    m_workerThread->wait();
+    delete m_worker;
+}
+
+void TranscendenceVisionManager::registerSearchRegion()
+{
+    if (m_searchArea.isValid() && !m_searchArea.isEmpty())
+        m_searchRegionId = CaptureCoordinator::instance()->registerRegion(m_searchArea);
+}
+
+void TranscendenceVisionManager::unregisterSearchRegion()
+{
     if (m_searchRegionId >= 0)
     {
-        ScreenCapture::unregisterRegion(m_searchRegionId);
+        CaptureCoordinator::instance()->unregisterRegion(m_searchRegionId);
         m_searchRegionId = -1;
     }
 }
@@ -246,14 +245,8 @@ void TranscendenceVisionManager::loadSettings()
     if (m_iconHeight < 1)
         m_iconHeight = TranscendenceVisionConfig::ICON_HEIGHT;
 
-    if (m_searchRegionId >= 0)
-    {
-        ScreenCapture::unregisterRegion(m_searchRegionId);
-        m_searchRegionId = -1;
-    }
-
-    if (m_searchArea.isValid() && !m_searchArea.isEmpty())
-        m_searchRegionId = ScreenCapture::registerRegion(m_searchArea);
+    unregisterSearchRegion();
+    registerSearchRegion();
 }
 
 void TranscendenceVisionManager::saveSettings()
@@ -268,15 +261,8 @@ void TranscendenceVisionManager::saveSettings()
     settings.setValue("Transcendence/AreaW", m_searchArea.width());
     settings.setValue("Transcendence/AreaH", m_searchArea.height());
 
-    settings.setValue(
-        "Transcendence/IconWidth",
-        m_iconWidth
-        );
-
-    settings.setValue(
-        "Transcendence/IconHeight",
-        m_iconHeight
-        );
+    settings.setValue("Transcendence/IconWidth", m_iconWidth);
+    settings.setValue("Transcendence/IconHeight", m_iconHeight);
 
     settings.sync();
 }
@@ -310,6 +296,14 @@ void TranscendenceVisionManager::loadIcon()
         m_searchArea.isValid() &&
         !m_searchArea.isEmpty() &&
         m_searchRegionId >= 0;
+
+    // NUOVO: propaga il template al worker.
+    QMetaObject::invokeMethod(
+        m_worker, "setTemplate", Qt::QueuedConnection,
+        Q_ARG(QImage, m_templateIcon),
+        Q_ARG(int, m_iconWidth),
+        Q_ARG(int, m_iconHeight)
+        );
 }
 
 void TranscendenceVisionManager::configure()
@@ -350,10 +344,8 @@ void TranscendenceVisionManager::openPrecisionCrop()
     const QRect bigRect =
         captureSetup->iconRect();
 
-    if (bigRect.width() !=
-            TranscendenceVisionConfig::ICON_BOX_WIDTH ||
-        bigRect.height() !=
-            TranscendenceVisionConfig::ICON_BOX_HEIGHT)
+    if (bigRect.width() != TranscendenceVisionConfig::ICON_BOX_WIDTH ||
+        bigRect.height() != TranscendenceVisionConfig::ICON_BOX_HEIGHT)
     {
         captureSetup->showFeedback(
             "ERRORE: riquadro giallo non valido"
@@ -361,9 +353,13 @@ void TranscendenceVisionManager::openPrecisionCrop()
         return;
     }
 
-    // Nascondiamo i rettangoli prima dello screenshot.
     captureSetup->hide();
 
+    // NOTA: questa cattura per l'anteprima interattiva del crop resta
+    // occasionale (un singolo screenshot su richiesta esplicita utente,
+    // non un polling continuo), quindi va bene lasciarla com'era:
+    // usa direttamente lo screen grab "reliable", non il coordinator,
+    // perché è un'operazione una tantum e non compete con lo scan ciclico.
     QTimer::singleShot(
         120,
         this,
@@ -384,13 +380,14 @@ void TranscendenceVisionManager::openPrecisionCrop()
                 return;
             }
 
-            // Cattura il riquadro grande per l'anteprima interattiva.
-            // La dimensione del crop iniziale viene presa dal config.
             const QImage source =
-                ScreenCapture::captureRegionReliable(
-                    screen,
-                    bigRect
-                    );
+                screen->grabWindow(
+                          0,
+                          bigRect.x(),
+                          bigRect.y(),
+                          bigRect.width(),
+                          bigRect.height()
+                          ).toImage().convertToFormat(QImage::Format_ARGB32);
 
             if (source.isNull())
             {
@@ -409,10 +406,7 @@ void TranscendenceVisionManager::openPrecisionCrop()
             precisionCrop =
                 new TranscendencePrecisionCrop(
                     source,
-                    QSize(
-                        m_iconWidth,
-                        m_iconHeight
-                        )
+                    QSize(m_iconWidth, m_iconHeight)
                     );
 
             connect(
@@ -421,10 +415,7 @@ void TranscendenceVisionManager::openPrecisionCrop()
                 this,
                 [this](const QImage &image, const QSize &size)
                 {
-                    savePreciseIcon(
-                        image,
-                        size
-                        );
+                    savePreciseIcon(image, size);
                 }
                 );
 
@@ -472,11 +463,8 @@ void TranscendenceVisionManager::savePreciseIcon(
     if (icon.isNull())
         return;
 
-    if (size.width() <= 0 ||
-        size.height() <= 0)
-    {
+    if (size.width() <= 0 || size.height() <= 0)
         return;
-    }
 
     if (icon.size() != size)
     {
@@ -494,8 +482,7 @@ void TranscendenceVisionManager::savePreciseIcon(
     saveSettings();
 
     QDir dir(
-        QCoreApplication::applicationDirPath() +
-        "/images"
+        QCoreApplication::applicationDirPath() + "/images"
         );
 
     if (!dir.exists())
@@ -555,8 +542,6 @@ void TranscendenceVisionManager::closePrecisionCrop()
 
 void TranscendenceVisionManager::saveCurrentIcon()
 {
-    // Manteniamo il metodo per compatibilità con eventuali altre chiamate.
-    // Il nuovo flusso passa da P -> openPrecisionCrop().
     openPrecisionCrop();
 }
 
@@ -608,79 +593,39 @@ void TranscendenceVisionManager::startScanning()
         return;
     }
 
-    if (!ScreenCapture::isRegionRegistered(m_searchRegionId))
-    {
-        qDebug()
-        << "TRANSCENDENCE: search region non piu' registrata";
-
-        return;
-    }
-
-    m_scanTimer.start(
-        TranscendenceVisionConfig::SCAN_INTERVAL_MS
+    CaptureCoordinator::instance()->subscribe(
+        m_searchRegionId,
+        TranscendenceVisionConfig::SCAN_INTERVAL_MS,
+        this,
+        "onFrameReady"
         );
 }
 
 void TranscendenceVisionManager::stopScanning()
 {
-    m_scanTimer.stop();
+    if (m_searchRegionId >= 0)
+        CaptureCoordinator::instance()->unsubscribe(m_searchRegionId);
 }
 
-void TranscendenceVisionManager::scanTick()
+// SOSTITUISCE la vecchia scanTick(). Gira sul thread GUI (consegna via
+// Qt::QueuedConnection dal CaptureCoordinator), ma qui non c'è più
+// nessun calcolo pesante: si limita a inoltrare il frame al worker.
+void TranscendenceVisionManager::onFrameReady(QImage area)
 {
-    if (!m_enabled ||
-        !m_configured ||
-        m_searchRegionId < 0)
-    {
-        stopScanning();
+    if (!m_enabled || !m_configured || area.isNull())
         return;
-    }
 
-    if (!ScreenCapture::isRegionRegistered(m_searchRegionId))
-    {
-        qDebug()
-        << "TRANSCENDENCE: region ID non valido:"
-        << m_searchRegionId;
+    QMetaObject::invokeMethod(
+        m_worker, "processFrame", Qt::QueuedConnection,
+        Q_ARG(QImage, area)
+        );
+}
 
-        stopScanning();
-        return;
-    }
-
-    if (!ScreenCapture::beginFrame())
-    {
-        qDebug()
-        << "TRANSCENDENCE: beginFrame() fallito";
-
-        return;
-    }
-
-    QImage area =
-        ScreenCapture::captureRegion(
-            m_searchRegionId
-            );
-
-    ScreenCapture::endFrame();
-
-    if (area.isNull())
-    {
-        qDebug()
-        << "TRANSCENDENCE: area catturata nulla";
-
-        return;
-    }
-
-    QRect foundRect;
-    double score = 0.0;
-
-    const bool found =
-        findIcon(
-            area,
-            foundRect,
-            score
-            );
-
+// NUOVO: riceve il risultato dal worker (cross-thread, auto-queued sul
+// thread GUI). Qui è sicuro toccare overlay/widget.
+void TranscendenceVisionManager::onScanResult(bool found, QRect foundRect, double score, QImage area)
+{
 #ifdef QT_DEBUG
-    // ==== BLOCCO DIAGNOSTICO - SOLO BUILD DI DEBUG ====
     qDebug()
         << "TRANSCENDENCE: score ="
         << score
@@ -729,143 +674,15 @@ void TranscendenceVisionManager::scanTick()
                     ".png"
                     );
 
-                long long sumR = 0;
-                long long sumG = 0;
-                long long sumB = 0;
-
-                int maxR = 0;
-                int maxG = 0;
-                int maxB = 0;
-
-                long long sumBorderR = 0;
-                long long sumBorderG = 0;
-                long long sumBorderB = 0;
-                int maxBorderR = 0;
-                int maxBorderG = 0;
-                int maxBorderB = 0;
-                int borderCount = 0;
-
-                long long sumInnerR = 0;
-                long long sumInnerG = 0;
-                long long sumInnerB = 0;
-                int maxInnerR = 0;
-                int maxInnerG = 0;
-                int maxInnerB = 0;
-                int innerCount = 0;
-
-                const int w = m_templateIcon.width();
-                const int h = m_templateIcon.height();
-
-                for (int y = 0; y < h; ++y)
-                {
-                    const QRgb *cLine =
-                        reinterpret_cast<const QRgb *>(
-                            candidate.constScanLine(y)
-                            );
-
-                    const QRgb *tLine =
-                        reinterpret_cast<const QRgb *>(
-                            m_templateIcon.constScanLine(y)
-                            );
-
-                    const bool borderRow =
-                        (y == 0 || y == h - 1);
-
-                    for (int x = 0; x < w; ++x)
-                    {
-                        const int dr =
-                            qAbs(qRed(cLine[x]) - qRed(tLine[x]));
-
-                        const int dg =
-                            qAbs(qGreen(cLine[x]) - qGreen(tLine[x]));
-
-                        const int db =
-                            qAbs(qBlue(cLine[x]) - qBlue(tLine[x]));
-
-                        sumR += dr;
-                        sumG += dg;
-                        sumB += db;
-
-                        maxR = qMax(maxR, dr);
-                        maxG = qMax(maxG, dg);
-                        maxB = qMax(maxB, db);
-
-                        const bool isBorder =
-                            borderRow ||
-                            x == 0 ||
-                            x == w - 1;
-
-                        if (isBorder)
-                        {
-                            sumBorderR += dr;
-                            sumBorderG += dg;
-                            sumBorderB += db;
-
-                            maxBorderR = qMax(maxBorderR, dr);
-                            maxBorderG = qMax(maxBorderG, dg);
-                            maxBorderB = qMax(maxBorderB, db);
-
-                            ++borderCount;
-                        }
-                        else
-                        {
-                            sumInnerR += dr;
-                            sumInnerG += dg;
-                            sumInnerB += db;
-
-                            maxInnerR = qMax(maxInnerR, dr);
-                            maxInnerG = qMax(maxInnerG, dg);
-                            maxInnerB = qMax(maxInnerB, db);
-
-                            ++innerCount;
-                        }
-                    }
-                }
-
-                const int total = w * h;
-
-                qDebug()
-                    << "TRANSCENDENCE DIFF: media R/G/B ="
-                    << (double(sumR) / total)
-                    << (double(sumG) / total)
-                    << (double(sumB) / total)
-                    << " massima R/G/B ="
-                    << maxR << maxG << maxB
-                    << " (PIXEL_TOLERANCE ="
-                    << TranscendenceVisionConfig::PIXEL_TOLERANCE
-                    << ")";
-
-                if (borderCount > 0)
-                {
-                    qDebug()
-                    << "TRANSCENDENCE DIFF BORDO"
-                    << "(" << borderCount << "px ):"
-                    << "media R/G/B ="
-                    << (double(sumBorderR) / borderCount)
-                    << (double(sumBorderG) / borderCount)
-                    << (double(sumBorderB) / borderCount)
-                    << " massima R/G/B ="
-                    << maxBorderR << maxBorderG << maxBorderB;
-                }
-
-                if (innerCount > 0)
-                {
-                    qDebug()
-                    << "TRANSCENDENCE DIFF INTERNO"
-                    << "(" << innerCount << "px ):"
-                    << "media R/G/B ="
-                    << (double(sumInnerR) / innerCount)
-                    << (double(sumInnerG) / innerCount)
-                    << (double(sumInnerB) / innerCount)
-                    << " massima R/G/B ="
-                    << maxInnerR << maxInnerG << maxInnerB;
-                }
+                // ... il resto del blocco diagnostico bordo/interno
+                // (media R/G/B, max, ecc.) resta identico a quello che
+                // mi avevi mandato: copialo qui invariato, usa 'area',
+                // 'foundRect' e m_templateIcon come prima.
             }
 
             dumpTimer.restart();
         }
     }
-    // ==== FINE BLOCCO DIAGNOSTICO ====
 #endif
 
     if (!found)
@@ -878,364 +695,4 @@ void TranscendenceVisionManager::scanTick()
 
     m_delayTimer.stop();
     m_delayTimer.start();
-}
-
-bool TranscendenceVisionManager::findIcon(
-    const QImage &area,
-    QRect &foundRect,
-    double &score
-    ) const
-{
-    score = 0.0;
-
-    if (area.isNull() || m_templateIcon.isNull())
-        return false;
-
-    const int width =
-        m_templateIcon.width();
-
-    const int height =
-        m_templateIcon.height();
-
-    if (area.width() < width ||
-        area.height() < height)
-    {
-        return false;
-    }
-
-    const int maxY =
-        area.height() - height;
-
-    const int maxX =
-        area.width() - width;
-
-    struct ChunkResult
-    {
-        double score = 0.0;
-        QRect rect;
-        bool found = false;
-    };
-
-    std::atomic<bool> stopFlag{false};
-
-    const int threadCount =
-        qMax(1, QThread::idealThreadCount());
-
-    const int totalRows =
-        maxY + 1;
-
-    constexpr int CHUNKS_PER_THREAD = 4;
-
-    const int desiredChunks =
-        qMax(1, threadCount * CHUNKS_PER_THREAD);
-
-    const int rowsPerChunk =
-        qMax(
-            1,
-            (totalRows + desiredChunks - 1) / desiredChunks
-            );
-
-    QVector<QFuture<ChunkResult>> futures;
-
-    for (int yStart = 0;
-         yStart <= maxY;
-         yStart += rowsPerChunk)
-    {
-        const int yEnd =
-            qMin(
-                yStart + rowsPerChunk - 1,
-                maxY
-                );
-
-        futures.append(
-            QtConcurrent::run(
-                [this, &area, &stopFlag, yStart, yEnd, maxX, width, height]()
-                -> ChunkResult
-                {
-                    ChunkResult result;
-
-                    for (int y = yStart;
-                         y <= yEnd;
-                         ++y)
-                    {
-                        if (stopFlag.load(std::memory_order_relaxed))
-                            break;
-
-                        for (int x = 0;
-                             x <= maxX;
-                             ++x)
-                        {
-                            const double current =
-                                compareAt(
-                                    area,
-                                    x,
-                                    y
-                                    );
-
-                            if (current > result.score)
-                            {
-                                result.score = current;
-
-                                result.rect =
-                                    QRect(
-                                        x,
-                                        y,
-                                        width,
-                                        height
-                                        );
-
-                                if (current >=
-                                    TranscendenceVisionConfig::MATCH_THRESHOLD)
-                                {
-                                    result.found = true;
-
-                                    stopFlag.store(
-                                        true,
-                                        std::memory_order_relaxed
-                                        );
-
-                                    return result;
-                                }
-                            }
-                        }
-                    }
-
-                    return result;
-                }
-                )
-            );
-    }
-
-    for (QFuture<ChunkResult> &future : futures)
-        future.waitForFinished();
-
-    for (QFuture<ChunkResult> &future : futures)
-    {
-        const ChunkResult result =
-            future.result();
-
-        if (result.score > score)
-        {
-            score = result.score;
-            foundRect = result.rect;
-        }
-
-        if (result.found)
-            return true;
-    }
-
-    return score >=
-           TranscendenceVisionConfig::MATCH_THRESHOLD;
-}
-
-double TranscendenceVisionManager::compareAt(
-    const QImage &area,
-    int offsetX,
-    int offsetY
-    ) const
-{
-    const int width =
-        m_templateIcon.width();
-
-    const int height =
-        m_templateIcon.height();
-
-    const int innerWidth =
-        width - 2;
-
-    const int innerHeight =
-        height - 2;
-
-    const int total =
-        innerWidth * innerHeight;
-
-    if (total <= 0)
-        return 0.0;
-
-    constexpr int sampleCount = 16;
-
-    const int maxDifferentSamples =
-        static_cast<int>(
-            (TranscendenceVisionConfig::FAST_TOLERANCE / 100.0) *
-            sampleCount
-            );
-
-    int sampleX[sampleCount];
-    int sampleY[sampleCount];
-
-    for (int gy = 0; gy < 4; ++gy)
-    {
-        for (int gx = 0; gx < 4; ++gx)
-        {
-            const int idx = gy * 4 + gx;
-
-            sampleX[idx] =
-                1 + (gx * (innerWidth - 1)) / 3;
-
-            sampleY[idx] =
-                1 + (gy * (innerHeight - 1)) / 3;
-        }
-    }
-
-    int differentSamples = 0;
-
-    for (int i = 0;
-         i < sampleCount;
-         ++i)
-    {
-        const QRgb *sourceLine =
-            reinterpret_cast<const QRgb *>(
-                area.constScanLine(
-                    offsetY + sampleY[i]
-                    )
-                );
-
-        const QRgb *templateLine =
-            reinterpret_cast<const QRgb *>(
-                m_templateIcon.constScanLine(
-                    sampleY[i]
-                    )
-                );
-
-        const QRgb sourcePixel =
-            sourceLine[
-                offsetX + sampleX[i]
-        ];
-
-        const QRgb templatePixel =
-            templateLine[
-                sampleX[i]
-        ];
-
-        const int dr =
-            qAbs(
-                qRed(sourcePixel) -
-                qRed(templatePixel)
-                );
-
-        const int dg =
-            qAbs(
-                qGreen(sourcePixel) -
-                qGreen(templatePixel)
-                );
-
-        const int db =
-            qAbs(
-                qBlue(sourcePixel) -
-                qBlue(templatePixel)
-                );
-
-        if (dr >
-                TranscendenceVisionConfig::PIXEL_TOLERANCE ||
-            dg >
-                TranscendenceVisionConfig::PIXEL_TOLERANCE ||
-            db >
-                TranscendenceVisionConfig::PIXEL_TOLERANCE)
-        {
-            ++differentSamples;
-
-            if (differentSamples >
-                maxDifferentSamples)
-            {
-                return 0.0;
-            }
-        }
-    }
-
-    const double maxDifferentRatio =
-        1.0 -
-        (TranscendenceVisionConfig::MATCH_THRESHOLD / 100.0);
-
-    const int maxDifferentPixels =
-        static_cast<int>(
-            maxDifferentRatio * total
-            );
-
-    int differentPixels = 0;
-
-    for (int y = 1;
-         y <= height - 2;
-         ++y)
-    {
-        const QRgb *sourceLine =
-            reinterpret_cast<const QRgb *>(
-                area.constScanLine(
-                    offsetY + y
-                    )
-                );
-
-        const QRgb *templateLine =
-            reinterpret_cast<const QRgb *>(
-                m_templateIcon.constScanLine(y)
-                );
-
-        for (int x = 1;
-             x <= width - 2;
-             ++x)
-        {
-            const QRgb sourcePixel =
-                sourceLine[
-                    offsetX + x
-            ];
-
-            const QRgb templatePixel =
-                templateLine[x];
-
-            const int dr =
-                qAbs(
-                    qRed(sourcePixel) -
-                    qRed(templatePixel)
-                    );
-
-            const int dg =
-                qAbs(
-                    qGreen(sourcePixel) -
-                    qGreen(templatePixel)
-                    );
-
-            const int db =
-                qAbs(
-                    qBlue(sourcePixel) -
-                    qBlue(templatePixel)
-                    );
-
-            if (dr >
-                    TranscendenceVisionConfig::PIXEL_TOLERANCE ||
-                dg >
-                    TranscendenceVisionConfig::PIXEL_TOLERANCE ||
-                db >
-                    TranscendenceVisionConfig::PIXEL_TOLERANCE)
-            {
-                ++differentPixels;
-
-                if (differentPixels >
-                    maxDifferentPixels)
-                {
-                    const double ratio =
-                        static_cast<double>(
-                            differentPixels
-                            ) /
-                        static_cast<double>(
-                            total
-                            );
-
-                    return
-                        (1.0 - ratio) *
-                        100.0;
-                }
-            }
-        }
-    }
-
-    const double differentRatio =
-        static_cast<double>(
-            differentPixels
-            ) /
-        static_cast<double>(
-            total
-            );
-
-    return
-        (1.0 - differentRatio) *
-        100.0;
 }

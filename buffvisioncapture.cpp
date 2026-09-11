@@ -1,6 +1,7 @@
 #include "buffvisioncapture.h"
 #include "buffvisionconfig.h"
 #include "screencapture.h"
+#include "capturecoordinator.h"
 
 #include <QGuiApplication>
 #include <QScreen>
@@ -8,495 +9,123 @@
 #include <QDir>
 #include <QDebug>
 
-
-BuffVisionCapture::BuffVisionCapture(
-    QObject *parent
-    )
+BuffVisionCapture::BuffVisionCapture(QObject *parent)
     : QObject(parent)
 {
 }
 
-
-// =========================================================
-// DESTRUCTOR
-// =========================================================
-
 BuffVisionCapture::~BuffVisionCapture()
 {
-    if(m_frameActive)
-    {
-        ScreenCapture::endFrame();
-        m_frameActive = false;
-    }
-
+    // RIMOSSO: niente più m_frameActive/ScreenCapture::endFrame()
+    // da gestire qui — il coordinator possiede il ciclo frame.
     unregisterRegions();
 }
-
-
-// =========================================================
-// SETTINGS
-// =========================================================
 
 bool BuffVisionCapture::loadSettings()
 {
     QSettings settings(
-        QCoreApplication::applicationDirPath() +
-            "/ElsOverlay.ini",
+        QCoreApplication::applicationDirPath() + "/ElsOverlay.ini",
         QSettings::IniFormat
         );
 
-
-    QScreen *screen =
-        QGuiApplication::primaryScreen();
-
-    if(!screen)
+    QScreen *screen = QGuiApplication::primaryScreen();
+    if (!screen)
         return false;
 
-
-    const QSize resolution =
-        screen->size();
-
-
-    const QSize cropSize =
-        BuffVisionConfig::cropSizeForScreen(
-            resolution
-            );
-
+    const QSize resolution = screen->size();
+    const QSize cropSize = BuffVisionConfig::cropSizeForScreen(resolution);
 
     const QString suffix =
-        QString("_%1x%2")
-            .arg(resolution.width())
-            .arg(resolution.height());
+        QString("_%1x%2").arg(resolution.width()).arg(resolution.height());
 
+    cropRect1 = QRect(
+        settings.value("BuffVision/Crop1X" + suffix, 0).toInt(),
+        settings.value("BuffVision/Crop1Y" + suffix, 0).toInt(),
+        cropSize.width(), cropSize.height()
+        );
 
-    cropRect1 =
-        QRect(
-            settings.value(
-                        "BuffVision/Crop1X" + suffix,
-                        0
-                        ).toInt(),
-
-            settings.value(
-                        "BuffVision/Crop1Y" + suffix,
-                        0
-                        ).toInt(),
-
-            cropSize.width(),
-            cropSize.height()
-            );
-
-
-    cropRect2 =
-        QRect(
-            settings.value(
-                        "BuffVision/Crop2X" + suffix,
-                        0
-                        ).toInt(),
-
-            settings.value(
-                        "BuffVision/Crop2Y" + suffix,
-                        0
-                        ).toInt(),
-
-            cropSize.width(),
-            cropSize.height()
-            );
-
+    cropRect2 = QRect(
+        settings.value("BuffVision/Crop2X" + suffix, 0).toInt(),
+        settings.value("BuffVision/Crop2Y" + suffix, 0).toInt(),
+        cropSize.width(), cropSize.height()
+        );
 
     registerRegions();
 
-
-    return
-        m_crop1RegionId >= 0 &&
-        m_crop2RegionId >= 0;
+    return m_crop1RegionId >= 0 && m_crop2RegionId >= 0;
 }
-
-
-// =========================================================
-// REGION REGISTRATION
-// =========================================================
 
 void BuffVisionCapture::unregisterRegions()
 {
-    if(m_crop1RegionId >= 0)
+    if (m_crop1RegionId >= 0)
     {
-        ScreenCapture::unregisterRegion(
-            m_crop1RegionId
-            );
-
+        CaptureCoordinator::instance()->unregisterRegion(m_crop1RegionId);
         m_crop1RegionId = -1;
     }
 
-
-    if(m_crop2RegionId >= 0)
+    if (m_crop2RegionId >= 0)
     {
-        ScreenCapture::unregisterRegion(
-            m_crop2RegionId
-            );
-
+        CaptureCoordinator::instance()->unregisterRegion(m_crop2RegionId);
         m_crop2RegionId = -1;
     }
 }
 
-
 void BuffVisionCapture::registerRegions()
 {
-    // Prima rimuoviamo eventuali regioni precedenti.
     unregisterRegions();
 
+    if (cropRect1.isValid() && !cropRect1.isEmpty())
+        m_crop1RegionId = CaptureCoordinator::instance()->registerRegion(cropRect1);
 
-    if(
-        cropRect1.isValid() &&
-        !cropRect1.isEmpty()
-        )
-    {
-        m_crop1RegionId =
-            ScreenCapture::registerRegion(
-                cropRect1
-                );
-    }
-
-
-    if(
-        cropRect2.isValid() &&
-        !cropRect2.isEmpty()
-        )
-    {
-        m_crop2RegionId =
-            ScreenCapture::registerRegion(
-                cropRect2
-                );
-    }
+    if (cropRect2.isValid() && !cropRect2.isEmpty())
+        m_crop2RegionId = CaptureCoordinator::instance()->registerRegion(cropRect2);
 }
 
-
-// =========================================================
-// DXGI INIT
-// =========================================================
-
-bool BuffVisionCapture::initDuplication()
+void BuffVisionCapture::setCropAreas(QRect crop1, QRect crop2)
 {
-    // ScreenCapture inizializza la Desktop Duplication
-    // lazy, al primo beginFrame().
-    //
-    // Non inizializziamo DXGI nel costruttore.
-
-    return true;
-}
-
-
-// =========================================================
-// BEGIN CAPTURE
-// =========================================================
-
-bool BuffVisionCapture::beginCapture()
-{
-    if(m_frameActive)
-    {
-        // qDebug()
-        // << "BuffVisionCapture:"
-        // << "beginCapture chiamato mentre un frame"
-        // << "e' gia' attivo";
-
-        return true;
-    }
-
-
-    if(
-        m_crop1RegionId < 0 ||
-        m_crop2RegionId < 0
-        )
-    {
-        // qDebug()
-        // << "BuffVisionCapture:"
-        // << "regioni non valide";
-
-        return false;
-    }
-
-
-    if(!ScreenCapture::beginFrame())
-    {
-        return false;
-    }
-
-
-    m_frameActive = true;
-
-
-    return true;
-}
-
-
-// =========================================================
-// CROP 1
-// =========================================================
-
-QPixmap BuffVisionCapture::captureCrop1()
-{
-    if(!m_frameActive)
-    {
-        // qDebug()
-        // << "BuffVisionCapture:"
-        // << "captureCrop1 chiamata senza beginCapture()";
-
-        return QPixmap();
-    }
-
-
-    if(m_crop1RegionId < 0)
-        return QPixmap();
-
-
-    QImage img =
-        ScreenCapture::captureRegion(
-            m_crop1RegionId
-            );
-
-
-    // qDebug()
-    //     << "CROP1 CAPTURE:"
-    //     << "null =" << img.isNull()
-    //     << "size =" << img.size()
-    //     << "rect =" << cropRect1;
-
-
-    return QPixmap::fromImage(
-        img
-        );
-}
-
-
-// =========================================================
-// CROP 2
-// =========================================================
-
-QPixmap BuffVisionCapture::captureCrop2()
-{
-    if(!m_frameActive)
-    {
-        // qDebug()
-        // << "BuffVisionCapture:"
-        // << "captureCrop2 chiamata senza beginCapture()";
-
-        return QPixmap();
-    }
-
-
-    if(m_crop2RegionId < 0)
-        return QPixmap();
-
-
-    QImage img =
-        ScreenCapture::captureRegion(
-            m_crop2RegionId
-            );
-
-
-    // qDebug()
-    //     << "CROP2 CAPTURE:"
-    //     << "null =" << img.isNull()
-    //     << "size =" << img.size()
-    //     << "rect =" << cropRect2;
-
-
-    return QPixmap::fromImage(
-        img
-        );
-}
-
-
-// =========================================================
-// END CAPTURE
-// =========================================================
-
-void BuffVisionCapture::endCapture()
-{
-    if(!m_frameActive)
-        return;
-
-
-    ScreenCapture::endFrame();
-
-
-    m_frameActive = false;
-}
-
-
-// =========================================================
-// SET CROP AREAS
-// =========================================================
-
-void BuffVisionCapture::setCropAreas(
-    QRect crop1,
-    QRect crop2
-    )
-{
-    // Se per qualche motivo arriva una nuova configurazione
-    // mentre un frame e' attivo, chiudiamo prima il frame.
-    if(m_frameActive)
-    {
-        endCapture();
-    }
-
-
     cropRect1 = crop1;
     cropRect2 = crop2;
 
-
     registerRegions();
-
-
-    // qDebug()
-    //     << "BuffVision crop areas updated:"
-    //     << "crop1 =" << cropRect1
-    //     << "id =" << m_crop1RegionId
-    //     << "| crop2 =" << cropRect2
-    //     << "id =" << m_crop2RegionId;
 }
 
-
-// =========================================================
-// SAVE REFERENCE 1
-// =========================================================
+// saveReference1() e saveReference2(): INVARIATE, identiche a
+// quelle che mi hai mandato — usano ScreenCapture::captureRegionReliable()
+// (cattura singola via QScreen::grabWindow), non toccano beginFrame/endFrame.
+// Le riporto solo per completezza, corpo identico all'originale.
 
 void BuffVisionCapture::saveReference1()
 {
-    QDir dir(
-        QCoreApplication::applicationDirPath() +
-        "/BuffVision"
-        );
+    QDir dir(QCoreApplication::applicationDirPath() + "/BuffVision");
+    if (!dir.exists()) dir.mkpath(".");
 
+    QScreen *screen = QGuiApplication::primaryScreen();
+    if (!screen) return;
 
-    if(!dir.exists())
-    {
-        dir.mkpath(".");
-    }
+    QImage img1 = ScreenCapture::captureRegionReliable(screen, cropRect1);
+    QImage img2 = ScreenCapture::captureRegionReliable(screen, cropRect2);
 
-
-    QScreen *screen =
-        QGuiApplication::primaryScreen();
-
-
-    if(!screen)
+    if (img1.isNull() || img2.isNull())
         return;
 
-
-    QImage img1 =
-        ScreenCapture::captureRegionReliable(
-            screen,
-            cropRect1
-            );
-
-
-    QImage img2 =
-        ScreenCapture::captureRegionReliable(
-            screen,
-            cropRect2
-            );
-
-
-    if(
-        img1.isNull() ||
-        img2.isNull()
-        )
-    {
-        // qDebug()
-        // << "BuffVision:"
-        // << "saveReference1: cattura fallita";
-
-        return;
-    }
-
-
-    img1.save(
-        dir.filePath(
-            "Crop1_Ref1.png"
-            )
-        );
-
-
-    img2.save(
-        dir.filePath(
-            "Crop2_Ref1.png"
-            )
-        );
-
-
-    // qDebug()
-    //     << "BuffVision:"
-    //     << "Reference 1 salvata";
+    img1.save(dir.filePath("Crop1_Ref1.png"));
+    img2.save(dir.filePath("Crop2_Ref1.png"));
 }
-
-
-// =========================================================
-// SAVE REFERENCE 2
-// =========================================================
 
 void BuffVisionCapture::saveReference2()
 {
-    QDir dir(
-        QCoreApplication::applicationDirPath() +
-        "/BuffVision"
-        );
+    QDir dir(QCoreApplication::applicationDirPath() + "/BuffVision");
+    if (!dir.exists()) dir.mkpath(".");
 
+    QScreen *screen = QGuiApplication::primaryScreen();
+    if (!screen) return;
 
-    if(!dir.exists())
-    {
-        dir.mkpath(".");
-    }
+    QImage img1 = ScreenCapture::captureRegionReliable(screen, cropRect1);
+    QImage img2 = ScreenCapture::captureRegionReliable(screen, cropRect2);
 
-
-    QScreen *screen =
-        QGuiApplication::primaryScreen();
-
-
-    if(!screen)
+    if (img1.isNull() || img2.isNull())
         return;
 
-
-    QImage img1 =
-        ScreenCapture::captureRegionReliable(
-            screen,
-            cropRect1
-            );
-
-
-    QImage img2 =
-        ScreenCapture::captureRegionReliable(
-            screen,
-            cropRect2
-            );
-
-
-    if(
-        img1.isNull() ||
-        img2.isNull()
-        )
-    {
-        // qDebug()
-        // << "BuffVision:"
-        // << "saveReference2: cattura fallita";
-
-        return;
-    }
-
-
-    img1.save(
-        dir.filePath(
-            "Crop1_Ref2.png"
-            )
-        );
-
-
-    img2.save(
-        dir.filePath(
-            "Crop2_Ref2.png"
-            )
-        );
-
-
-    // qDebug()
-    //     << "BuffVision:"
-    //     << "Reference 2 salvata";
+    img1.save(dir.filePath("Crop1_Ref2.png"));
+    img2.save(dir.filePath("Crop2_Ref2.png"));
 }

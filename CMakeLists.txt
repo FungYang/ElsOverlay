@@ -159,6 +159,10 @@ qt_add_executable(ElsOverlay
 
     digitdetector.h
     digitdetector.cpp
+    capturecoordinator.h capturecoordinator.cpp
+    transcendencevisionworker.h transcendencevisionworker.cpp
+
+    buffvisiondetectionworker.h buffvisiondetectionworker.cpp
 )
 
 # ============================================================

@@ -2,83 +2,44 @@
 
 #include <QObject>
 #include <QRect>
-#include <QPixmap>
 
 class BuffVisionCapture : public QObject
 {
     Q_OBJECT
 
 public:
-
-    explicit BuffVisionCapture(
-        QObject *parent = nullptr
-        );
-
+    explicit BuffVisionCapture(QObject *parent = nullptr);
     ~BuffVisionCapture();
-
-
-    // =====================================================
-    // SETTINGS
-    // =====================================================
 
     bool loadSettings();
 
-    bool initDuplication();
+    void setCropAreas(QRect crop1, QRect crop2);
 
-    void setCropAreas(
-        QRect crop1,
-        QRect crop2
-        );
+    // NUOVO: accessor per il manager, che deve iscriversi
+    // direttamente al CaptureCoordinator con questi id.
+    int crop1RegionId() const { return m_crop1RegionId; }
+    int crop2RegionId() const { return m_crop2RegionId; }
 
-
-    // =====================================================
-    // SHARED FRAME
-    //
-    // beginCapture()
-    //      -> cattura UN frame DXGI
-    //
-    // captureCrop1()
-    //      -> estrae crop1 dal frame
-    //
-    // captureCrop2()
-    //      -> estrae crop2 dal frame
-    //
-    // endCapture()
-    //      -> rilascia il frame DXGI
-    // =====================================================
-
-    bool beginCapture();
-
-    QPixmap captureCrop1();
-
-    QPixmap captureCrop2();
-
-    void endCapture();
-
-
-    // =====================================================
-    // REFERENCES
-    // =====================================================
-
+    // saveReference1/2 restano INVARIATI: sono catture singole,
+    // una tantum, non cicliche — non toccano ScreenCapture::beginFrame,
+    // usano captureRegionReliable() come già fanno oggi.
     void saveReference1();
-
     void saveReference2();
 
+    // RIMOSSI: initDuplication(), beginCapture(), captureCrop1(),
+    // captureCrop2(), endCapture(). Il ciclo cattura ora è
+    // interamente gestito da CaptureCoordinator::tick(), che
+    // chiama ScreenCapture::captureRegion() direttamente sugli
+    // id restituiti da crop1RegionId()/crop2RegionId().
 
 private:
-
     void unregisterRegions();
-
     void registerRegions();
 
-
 private:
-
     QRect cropRect1;
     QRect cropRect2;
 
     int m_crop1RegionId = -1;
     int m_crop2RegionId = -1;
-
-    bool m_frameActive = false;
 };
