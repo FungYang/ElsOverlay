@@ -1219,8 +1219,8 @@ m_ort->ReleaseValue(
 
 if (detections.empty())
 {
-    qDebug()
-    << "Nessuna cifra rilevata";
+    // qDebug()
+    // << "Nessuna cifra rilevata";
 
     return 1000;
 }

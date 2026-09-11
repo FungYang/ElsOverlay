@@ -50,15 +50,15 @@ BuffVisionManager::BuffVisionManager(
 
     if(!capture)
     {
-        qDebug()
-        << "BUFFVISION: ERRORE - BuffVisionCapture non creato";
+        // qDebug()
+        // << "BUFFVISION: ERRORE - BuffVisionCapture non creato";
     }
     else
     {
         if(!capture->loadSettings())
         {
-            qDebug()
-            << "BUFFVISION: caricamento capture settings fallito";
+            // qDebug()
+            // << "BUFFVISION: caricamento capture settings fallito";
         }
     }
 
@@ -109,13 +109,13 @@ BuffVisionManager::BuffVisionManager(
 
     if(configured)
     {
-        qDebug()
-        << "BUFFVISION: DigitDetector caricato";
+        // qDebug()
+        // << "BUFFVISION: DigitDetector caricato";
     }
     else
     {
-        qDebug()
-        << "BUFFVISION: ERRORE - DigitDetector non caricato";
+        // qDebug()
+        // << "BUFFVISION: ERRORE - DigitDetector non caricato";
     }
 
 
@@ -261,8 +261,8 @@ BuffVisionManager::BuffVisionManager(
             }
             else
             {
-                qDebug()
-                << "BUFFVISION: frame acquisition failed";
+                // qDebug()
+                // << "BUFFVISION: frame acquisition failed";
             }
 
 
@@ -286,12 +286,12 @@ BuffVisionManager::BuffVisionManager(
             // DEBUG
             // =========================
 
-            qDebug()
-                << "BUFFVISION:"
-                << "crop1 =" << number1
-                << "previous =" << lastCrop1Number
-                << "| crop2 =" << number2
-                << "previous =" << lastCrop2Number;
+            // qDebug()
+            //     << "BUFFVISION:"
+            //     << "crop1 =" << number1
+            //     << "previous =" << lastCrop1Number
+            //     << "| crop2 =" << number2
+            //     << "previous =" << lastCrop2Number;
 
 
 #ifdef QT_DEBUG
