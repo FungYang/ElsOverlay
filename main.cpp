@@ -1,6 +1,8 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QProcess>
+#include <QThreadPool>
+#include <QThread>
 
 #include <windows.h>
 
@@ -36,6 +38,20 @@
         argc,
         argv
         );
+    // ==================================================
+    // THREAD POOL CAP
+    // ==================================================
+    //
+    // QtConcurrent::run() (usato da TranscendenceVisionManager
+    // per findIcon()) pesca da questo pool globale condiviso.
+    // Limitiamo quanti core può occupare, per lasciare margine
+    // al resto del sistema e ridurre il carico/calore sostenuto.
+
+    QThreadPool::globalInstance()->setMaxThreadCount(
+        qMax(2, QThread::idealThreadCount() / 2)
+        );
+
+
 
 
     // ==================================================

@@ -71,12 +71,12 @@ bool TranscendenceVisionWorker::findIcon(
     std::atomic<bool> stopFlag{false};
 
     const int threadCount =
-        qMax(1, QThread::idealThreadCount());
+        qMax(1, QThread::idealThreadCount()/2);
 
     const int totalRows =
         maxY + 1;
 
-    constexpr int CHUNKS_PER_THREAD = 4;
+    constexpr int CHUNKS_PER_THREAD = 1;
 
     const int desiredChunks =
         qMax(1, threadCount * CHUNKS_PER_THREAD);

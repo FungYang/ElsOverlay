@@ -171,10 +171,10 @@ void BuffVisionManager::startTracking()
     // Sostituisce visionTimer.start(50): iscrizione al coordinator
     // per entrambe le region, stesso intervallo di prima.
     CaptureCoordinator::instance()->subscribe(
-        capture->crop1RegionId(), 50, this, "onCrop1FrameReady"
+        capture->crop1RegionId(), intervalms, this, "onCrop1FrameReady"
         );
     CaptureCoordinator::instance()->subscribe(
-        capture->crop2RegionId(), 50, this, "onCrop2FrameReady"
+        capture->crop2RegionId(), intervalms, this, "onCrop2FrameReady"
         );
 }
 

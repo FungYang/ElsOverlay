@@ -84,6 +84,7 @@ private:
 
     int lastCrop1Number = 1000;
     int lastCrop2Number = 1000;
+    static constexpr int intervalms = 250;
 
     int visionCycle = 0;
     qint64 crop1EventTime = -1;
