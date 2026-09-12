@@ -87,6 +87,7 @@ private:
 
     int m_resetScanCode = 0x1D;
     bool m_resetExtended = true;
+    static bool s_keyDown[256]; // stato dei tasti attualmente premuti
 
 
     // =====================================================

@@ -12,6 +12,8 @@ HHOOK GlobalKeyboard::hook =
 GlobalKeyboard *GlobalKeyboard::instance =
     nullptr;
 
+bool GlobalKeyboard::s_keyDown[256] = { false };
+
 
 // =========================================================
 // CONSTRUCTOR
@@ -224,6 +226,49 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
         wParam == WM_SYSKEYUP;
 
 
+    // =====================================================
+    // SOPPRESSIONE AUTO-REPEAT
+    // =====================================================
+    //
+    // KBDLLHOOKSTRUCT non espone un flag di "repeat" come
+    // il vecchio lParam dei messaggi a finestra: se un tasto
+    // resta premuto, Windows continua a inviarci WM_KEYDOWN
+    // ripetuti. Li filtriamo qui, PRIMA di mettere in coda,
+    // così ogni pressione fisica genera un solo evento verso
+    // Qt. Il gioco continua comunque a ricevere OGNI evento
+    // reale tramite CallNextHookEx più sotto: qui filtriamo
+    // solo cosa arriva alla NOSTRA coda, non all'input reale.
+    //
+    // Solo accesso ad array: nessuna chiamata Qt, nessun
+    // costo misurabile per l'hook.
+    // =====================================================
+
+    if(key->vkCode < 256)
+    {
+        if(isKeyDown)
+        {
+            if(s_keyDown[key->vkCode])
+            {
+                // Auto-repeat: il gioco lo riceve comunque
+                // (CallNextHookEx più sotto), ma non lo
+                // mettiamo in coda per Qt.
+                return CallNextHookEx(
+                    hook,
+                    nCode,
+                    wParam,
+                    lParam
+                    );
+            }
+
+            s_keyDown[key->vkCode] = true;
+        }
+        else if(isKeyUp)
+        {
+            s_keyDown[key->vkCode] = false;
+        }
+    }
+
+
     if(isKeyDown || isKeyUp)
     {
         KeyEvent event;
@@ -232,6 +277,9 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
             static_cast<int>(
                 key->vkCode
                 );
+
+
+
 
         event.scanCode =
             static_cast<int>(
