@@ -143,6 +143,16 @@ void SpecialCooldownManager::load()
                         0
                         ).toInt();
 
+        // ====================================================
+        // VISIBILITÀ
+        // ====================================================
+
+        configuration.visible =
+            settings.value(
+                        prefix + "visible",
+                        true
+                        ).toBool();
+
 
         // ====================================================
         // POSITION
@@ -307,6 +317,15 @@ void SpecialCooldownManager::save() const
         settings.setValue(
             "cooldown",
             configuration.cooldown
+            );
+
+        // ====================================================
+        // VISIBILITÀ
+        // ====================================================
+
+        settings.setValue(
+            "visible",
+            configuration.visible
             );
 
 

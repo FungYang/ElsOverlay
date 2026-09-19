@@ -23,6 +23,8 @@ struct SpecialCooldownConfiguration
         42,
         42
         );
+
+    bool visible = true;
 };
 
 

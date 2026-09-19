@@ -616,6 +616,10 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
             );
 
 
+    configuration.visible =
+        true;
+
+
     m_configurations.append(
         configuration
         );
@@ -1181,6 +1185,38 @@ void SpecialCooldownConfigWindow::saveConfiguration()
     }
 
 
+    // ========================================================
+    // AGGIORNA VISIBILITÀ
+    // ========================================================
+
+    for(
+        int i = 0;
+        i < m_configurations.size();
+        ++i
+        )
+    {
+        QListWidgetItem *item =
+            m_listWidget->item(
+                i
+                );
+
+
+        if(!item)
+        {
+            continue;
+        }
+
+
+        m_configurations[i].visible =
+            item->checkState() ==
+            Qt::Checked;
+    }
+
+
+    // ========================================================
+    // SALVA
+    // ========================================================
+
     m_manager->setConfigurations(
         m_configurations
         );
@@ -1214,6 +1250,27 @@ void SpecialCooldownConfigWindow::refreshList()
             new QListWidgetItem();
 
 
+        // ====================================================
+        // VISIBILITÀ
+        // ====================================================
+
+        item->setFlags(
+            item->flags() |
+            Qt::ItemIsUserCheckable
+            );
+
+
+        item->setCheckState(
+            configuration.visible
+                ? Qt::Checked
+                : Qt::Unchecked
+            );
+
+
+        // ====================================================
+        // IMMAGINE
+        // ====================================================
+
         QPixmap pixmap(
             configuration.imagePath
             );
@@ -1237,6 +1294,10 @@ void SpecialCooldownConfigWindow::refreshList()
                 );
         }
 
+
+        // ====================================================
+        // TESTO
+        // ====================================================
 
         item->setText(
             displayName(

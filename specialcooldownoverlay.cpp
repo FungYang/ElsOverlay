@@ -156,7 +156,6 @@
 
     protected:
 
-
         void paintEvent(
             QPaintEvent *
             ) override
@@ -1067,6 +1066,12 @@ void SpecialCooldownOverlay::createWidgets()
                 );
 
 
+        if(!widget)
+        {
+            continue;
+        }
+
+
         widget->setConfiguration(
             m_states[i].configuration
             );
@@ -1080,6 +1085,24 @@ void SpecialCooldownOverlay::createWidgets()
         widget->setActive(
             m_states[i].active
             );
+
+
+        // ========================================================
+        // VISIBILITÀ
+        // ========================================================
+
+        if(
+            m_enabled &&
+            m_states[i].configuration.visible
+            )
+        {
+            widget->show();
+            widget->raise();
+        }
+        else
+        {
+            widget->hide();
+        }
     }
 }
 
@@ -1134,6 +1157,21 @@ void SpecialCooldownOverlay::updateWidget(
     }
 
 
+    // ========================================================
+    // VISIBILITÀ
+    // ========================================================
+
+    if(
+        !m_enabled ||
+        !m_states[index].configuration.visible
+        )
+    {
+        widget->hide();
+
+        return;
+    }
+
+
     widget->setRemainingMilliseconds(
         m_states[index].remainingMilliseconds
         );
@@ -1142,6 +1180,9 @@ void SpecialCooldownOverlay::updateWidget(
     widget->setActive(
         m_states[index].active
         );
+
+
+    widget->show();
 }
 
 
@@ -1193,14 +1234,32 @@ void SpecialCooldownOverlay::setEnabled(
 
 
         for(
-            QWidget *widget :
-            m_widgets
+            int i = 0;
+            i < m_widgets.size() &&
+            i < m_states.size();
+            ++i
             )
         {
-            if(widget)
+            QWidget *widget =
+                m_widgets[i];
+
+
+            if(!widget)
+            {
+                continue;
+            }
+
+
+            if(
+                m_states[i].configuration.visible
+                )
             {
                 widget->show();
                 widget->raise();
+            }
+            else
+            {
+                widget->hide();
             }
         }
 
@@ -1272,6 +1331,16 @@ void SpecialCooldownOverlay::activateKey(
     {
         const SpecialCooldownConfiguration &configuration =
             m_states[i].configuration;
+
+
+        // ========================================================
+        // NASCOSTO = NON ATTIVO
+        // ========================================================
+
+        if(!configuration.visible)
+        {
+            continue;
+        }
 
 
         if(
