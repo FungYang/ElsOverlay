@@ -83,11 +83,11 @@ private:
     QString m_inputName;
     QString m_outputName;
 
-    size_t m_inputSize = 256 * 256 * 3;
+    size_t m_inputSize = 320 * 320 * 3;
 
-    static constexpr int INPUT_SIZE = 256;
+    static constexpr int INPUT_SIZE = 320;
 
-    static constexpr float CONF_THRESHOLD = 0.15f;
+    static constexpr float CONF_THRESHOLD = 0.5f;
     static constexpr float NMS_THRESHOLD = 0.45f;
 
     static constexpr int MAX_DIGITS = 3;

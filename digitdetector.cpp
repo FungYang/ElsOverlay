@@ -460,8 +460,7 @@ DigitDetector::preprocess(
             );
 
     // --------------------------------------------------------
-    // Canvas 256x256
-    // Padding YOLO = 114
+    // Canvas 320x320
     // --------------------------------------------------------
 
     QImage letterboxed(
@@ -833,7 +832,7 @@ DigitDetector::postprocess(
 
         // Il tester Python usa conf=0.30.
 
-        if (bestConfidence < 0.30f)
+        if (bestConfidence <  CONF_THRESHOLD)
             continue;
 
         // ----------------------------------------------------

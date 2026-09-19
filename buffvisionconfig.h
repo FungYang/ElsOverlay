@@ -16,8 +16,8 @@ constexpr int FULL_HD_CROP_HEIGHT = 15;
 constexpr int TWO_K_WIDTH  = 2560;
 constexpr int TWO_K_HEIGHT = 1440;
 
-constexpr int TWO_K_CROP_WIDTH  = 55;
-constexpr int TWO_K_CROP_HEIGHT = 30;
+constexpr int TWO_K_CROP_WIDTH  = 32;
+constexpr int TWO_K_CROP_HEIGHT = 18;
 
 
 inline QSize cropSizeForScreen(
