@@ -1175,77 +1175,33 @@ void SpecialCooldownConfigWindow::saveConfiguration()
 {
     if(!m_manager)
     {
-        QMessageBox::warning(
-            this,
-            "Errore",
-            "SpecialCooldownManager non disponibile."
-            );
-
+        QMessageBox::warning(this, "Errore", "SpecialCooldownManager non disponibile.");
         return;
     }
 
-
     // ========================================================
-    // PRENDI LA CONFIGURAZIONE PIÙ RECENTE DAL MANAGER
-    // ========================================================
-
-    QList<SpecialCooldownConfiguration> configurations =
-        m_manager->configurations();
-
-
-    // ========================================================
-    // AGGIORNA SOLO LA VISIBILITÀ
+    // APPLICA LO STATO DI VISIBILITÀ ALLA LISTA LOCALE
+    // (quella già aggiornata da add/remove/edit)
     // ========================================================
 
-    const int count =
-        qMin(
-            configurations.size(),
-            m_listWidget->count()
-            );
+    const int count = qMin(m_configurations.size(), m_listWidget->count());
 
-
-    for(
-        int i = 0;
-        i < count;
-        ++i
-        )
+    for(int i = 0; i < count; ++i)
     {
-        QListWidgetItem *item =
-            m_listWidget->item(
-                i
-                );
+        QListWidgetItem *item = m_listWidget->item(i);
+        if(!item) continue;
 
-
-        if(!item)
-        {
-            continue;
-        }
-
-
-        configurations[i].visible =
-            item->checkState() ==
-            Qt::Checked;
+        m_configurations[i].visible = (item->checkState() == Qt::Checked);
     }
 
-
     // ========================================================
-    // SALVA
+    // SALVA LA LISTA LOCALE (quella corretta)
     // ========================================================
 
-    m_configurations =
-        configurations;
-
-
-    m_manager->setConfigurations(
-        configurations
-        );
-
-
+    m_manager->setConfigurations(m_configurations);
     m_manager->save();
 
-
     emit configurationSaved();
-
 
     accept();
 }

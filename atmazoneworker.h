@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QImage>
+#include <QVector>
 #include <array>
 
 class AtmaZoneWorker : public QObject
@@ -11,6 +12,18 @@ class AtmaZoneWorker : public QObject
 public:
     static constexpr int RED_COUNT = 6;
     static constexpr int TOLERANCE = 35;
+
+    // Percentuale minima di pixel di foreground (testo/icona) che
+    // devono combaciare entro TOLERANCE perché la zona sia "Match".
+    static constexpr double MATCH_RATIO = 0.92;
+
+    // Un pixel della reference è "foreground" (testo/icona da
+    // controllare) se sufficientemente saturo o luminoso da
+    // distinguersi dallo sfondo grigio/nero variabile del pannello
+    // semitrasparente. Pixel che non superano queste soglie sono
+    // considerati sfondo e vengono ignorati nel confronto.
+    static constexpr int FOREGROUND_SATURATION_THRESHOLD = 40;
+    static constexpr int FOREGROUND_BRIGHTNESS_THRESHOLD = 170;
 
     explicit AtmaZoneWorker(QObject *parent = nullptr);
 
@@ -39,5 +52,23 @@ private:
     std::array<QImage, RED_COUNT> m_redReferences;
     QImage m_blueReference;
 
-    static bool matches(const QImage &current, const QImage &reference, int tolerance);
+    // Maschera di foreground per ciascuna reference: true = pixel
+    // di testo/icona da controllare, false = sfondo da ignorare.
+    // Stessa dimensione dell'immagine corrispondente (layout riga per riga).
+    std::array<QVector<bool>, RED_COUNT> m_redMasks;
+    QVector<bool> m_blueMask;
+
+    static QVector<bool> buildForegroundMask(const QImage &reference);
+    static bool isForegroundPixel(QRgb pixel);
+
+    // Confronto con maschera: conta solo i pixel di foreground,
+    // richiede che almeno MATCH_RATIO di essi combaci entro tolerance.
+    // Se la maschera è vuota (nessun foreground rilevato), ripiega
+    // sul confronto pixel-perfect completo come fallback di sicurezza.
+    static bool matches(
+        const QImage &current,
+        const QImage &reference,
+        const QVector<bool> &mask,
+        int tolerance
+        );
 };
