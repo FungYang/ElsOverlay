@@ -1186,12 +1186,27 @@ void SpecialCooldownConfigWindow::saveConfiguration()
 
 
     // ========================================================
-    // AGGIORNA VISIBILITÀ
+    // PRENDI LA CONFIGURAZIONE PIÙ RECENTE DAL MANAGER
     // ========================================================
+
+    QList<SpecialCooldownConfiguration> configurations =
+        m_manager->configurations();
+
+
+    // ========================================================
+    // AGGIORNA SOLO LA VISIBILITÀ
+    // ========================================================
+
+    const int count =
+        qMin(
+            configurations.size(),
+            m_listWidget->count()
+            );
+
 
     for(
         int i = 0;
-        i < m_configurations.size();
+        i < count;
         ++i
         )
     {
@@ -1207,7 +1222,7 @@ void SpecialCooldownConfigWindow::saveConfiguration()
         }
 
 
-        m_configurations[i].visible =
+        configurations[i].visible =
             item->checkState() ==
             Qt::Checked;
     }
@@ -1217,8 +1232,12 @@ void SpecialCooldownConfigWindow::saveConfiguration()
     // SALVA
     // ========================================================
 
+    m_configurations =
+        configurations;
+
+
     m_manager->setConfigurations(
-        m_configurations
+        configurations
         );
 
 
@@ -1230,6 +1249,7 @@ void SpecialCooldownConfigWindow::saveConfiguration()
 
     accept();
 }
+
 
 
 // ============================================================
