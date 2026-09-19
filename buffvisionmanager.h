@@ -34,12 +34,21 @@ public:
         QObject *parent = nullptr
         );
 
+
     ~BuffVisionManager();
 
     void startTracking();
     void resetTracking();
     void configure();
     void setEnabled(bool enabled);
+    BuffVisionCore *visionCore() const
+    {
+        return core;
+    }
+    BuffVisionOverlay *visionOverlay() const
+    {
+        return overlay;
+    }
 
 private slots:
     // NUOVO: sostituiscono la lambda dentro visionTimer.

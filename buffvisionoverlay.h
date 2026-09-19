@@ -31,6 +31,9 @@ public:
         double s2
         );
 
+    void pauseAtmaCooldown();
+    void resumeAtmaCooldown();
+
 
 protected:
 
@@ -70,7 +73,7 @@ private:
         BottomRight
     };
 
-
+    bool atmaCooldownPaused = false;
     QPoint dragPosition;
 
     BuffVisionCore *core;

@@ -4,6 +4,7 @@
 #include <QColor>
 #include <QFont>
 #include <QPainter>
+#include <QtMath>
 
 
 BuffVisionOverlay::BuffVisionOverlay(
@@ -163,31 +164,15 @@ BuffVisionOverlay::BuffVisionOverlay(
         this,
         [this]()
         {
-            refreshCounter +=
-                100;
-
-
-            if(refreshCounter >= 1000)
-            {
-                refreshCounter =
-                    0;
-
-
-                if(cooldown15 > 0)
-                {
-                    cooldown15--;
-                }
-            }
-
+            cooldown15 =
+                qCeil(
+                    this->core->buff15RemainingTime() / 1000.0
+                    );
 
             update();
         }
         );
-
-
-    timer.start(
-        100
-        );
+    timer.start(100);
 }
 
 
@@ -1077,5 +1062,26 @@ void BuffVisionOverlay::setScores(
 
 void BuffVisionOverlay::updateBuffColor()
 {
+    update();
+}
+
+void BuffVisionOverlay::pauseAtmaCooldown()
+{
+    if (atmaCooldownPaused)
+        return;
+
+    atmaCooldownPaused = true;
+
+    update();
+}
+
+
+void BuffVisionOverlay::resumeAtmaCooldown()
+{
+    if (!atmaCooldownPaused)
+        return;
+
+    atmaCooldownPaused = false;
+
     update();
 }

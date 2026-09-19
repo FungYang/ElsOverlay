@@ -27,6 +27,9 @@
 #include "specialcooldownmanager.h"
 #include "specialcooldownconfigwindow.h"
 #include "specialcooldownoverlay.h"
+#include "atmazonemanager.h"
+#include "buffvisionoverlay.h"
+#include "buffvisioncore.h"
 
 
     int main(
@@ -688,6 +691,83 @@
         &atma,
         &BuffVisionManager::setEnabled
         );
+
+    // ==================================================
+    // ATMA ZONES (nuovo sistema a 7 regioni)
+    // ==================================================
+
+    AtmaZoneManager atmaZones(
+        &keyboard,
+        overlayRoot,
+        atma.visionCore(), // vedi nota sotto: serve un getter pubblico
+        nullptr
+        );
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::atmaZonesConfigRequested, // NUOVO segnale, vedi sotto
+        &atmaZones,
+        &AtmaZoneManager::configure
+        );
+
+    // Stesso toggle "Atma" attiva/disattiva ENTRAMBI i sistemi insieme.
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::atmaToggled,
+        &atmaZones,
+        &AtmaZoneManager::setEnabled
+        );
+
+    // ==================================================
+    // ATMA GATE — pausa globale su invariante
+    // ==================================================
+
+    QObject::connect(
+        &atmaZones,
+        &AtmaZoneManager::invariantEntered,
+        atma.visionCore(),
+        &BuffVisionCore::pauseAtmaCooldowns
+        );
+
+    QObject::connect(
+        &atmaZones,
+        &AtmaZoneManager::invariantExited,
+        atma.visionCore(),
+        &BuffVisionCore::resumeAtmaCooldowns
+        );
+
+    QObject::connect(
+        &atmaZones,
+        &AtmaZoneManager::invariantEntered,
+        atma.visionOverlay(),
+        &BuffVisionOverlay::pauseAtmaCooldown
+        );
+
+    QObject::connect(
+        &atmaZones,
+        &AtmaZoneManager::invariantExited,
+        atma.visionOverlay(),
+        &BuffVisionOverlay::resumeAtmaCooldown
+        );
+    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
+    //                  overlay, &Overlay::pauseAtmaGate);
+    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
+    //                  overlay, &Overlay::resumeAtmaGate);
+
+    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
+    //                  skills, &SkillOverlay::pauseAtmaGate);
+    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
+    //                  skills, &SkillOverlay::resumeAtmaGate);
+
+    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
+    //                  specialCooldowns, &SpecialCooldownOverlay::pauseAll);
+    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
+    //                  specialCooldowns, &SpecialCooldownOverlay::resumeAll);
+
+    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
+    //                  buffs, &BuffOverlay::pauseAll);
+    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
+    //                  buffs, &BuffOverlay::resumeAll);
 
 
 

@@ -31,6 +31,7 @@ public:
 signals:
 
     void atmaConfigRequested();
+    void atmaZonesConfigRequested();
     void atmaToggled(
         bool enabled
         );
@@ -96,6 +97,7 @@ private:
     // ==================================================
 
     QPushButton *atmaConfigButton;
+    QPushButton *atmaZonesConfigButton;
     QPushButton *atmaToggleButton;
 
 

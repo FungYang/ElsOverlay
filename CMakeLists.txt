@@ -163,6 +163,11 @@ qt_add_executable(ElsOverlay
     transcendencevisionworker.h transcendencevisionworker.cpp
 
     buffvisiondetectionworker.h buffvisiondetectionworker.cpp
+    atmazonecapturesetup.h atmazonecapturesetup.cpp
+    atmazonemanager.h atmazonemanager.cpp
+    atmaredzoneproxy.h
+    atmazoneworker.h atmazoneworker.cpp
+    atmadebugwindow.h atmadebugwindow.cpp
 )
 
 # ============================================================

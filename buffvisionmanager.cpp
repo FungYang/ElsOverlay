@@ -90,17 +90,17 @@ BuffVisionManager::BuffVisionManager(
     // =========================
     // KEYBOARD (invariato)
     // =========================
-    connect(
-        keyboard, &GlobalKeyboard::keyPressed, this,
-        [this](int key)
-        {
-            if (key >= '1' && key <= '6')
-            {
-                if (!enabled) return;
-                core->registerAction();
-            }
-        }
-        );
+    // connect(
+    //     keyboard, &GlobalKeyboard::keyPressed, this,
+    //     [this](int key)
+    //     {
+    //         if (key >= '1' && key <= '6')
+    //         {
+    //             if (!enabled) return;
+    //             core->registerAction();
+    //         }
+    //     }
+    //     );
 
     // ENTER - CONFERMA CONFIGURAZIONE
     connect(

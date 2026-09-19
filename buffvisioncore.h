@@ -34,6 +34,11 @@ public:
     void onVisionEvent();
     void onCrop1Event();
     void onCrop2Event();
+    void pauseAtmaCooldowns();
+    void resumeAtmaCooldowns();
+
+    int buff15RemainingTime() const;
+    int buff60RemainingTime() const;
 
 
 
@@ -56,6 +61,12 @@ signals:
 
 
 private:
+
+    bool atmaCooldownPaused = false;
+
+    int buff15RemainingMs = 0;
+    int buff60RemainingMs = 0;
+
 
 
     bool tracking = false;

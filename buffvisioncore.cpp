@@ -54,7 +54,12 @@ BuffVisionCore::BuffVisionCore(QObject *parent)
 void BuffVisionCore::startTracking()
 {
 
+
     tracking = true;
+
+    atmaCooldownPaused = false;
+    buff15RemainingMs = 0;
+    buff60RemainingMs = 0;
 
     actionCounter = 0;
 
@@ -74,6 +79,10 @@ void BuffVisionCore::reset()
 {
 
     tracking = false;
+
+    atmaCooldownPaused = false;
+    buff15RemainingMs = 0;
+    buff60RemainingMs = 0;
 
     actionCounter = 0;
 
@@ -218,3 +227,78 @@ void BuffVisionCore::onCrop2Event()
 
     onVisionEvent();
 }
+
+void BuffVisionCore::pauseAtmaCooldowns()
+{
+    if (atmaCooldownPaused)
+        return;
+
+    atmaCooldownPaused = true;
+
+    if (buff15Timer.isActive())
+    {
+        buff15RemainingMs = buff15Timer.remainingTime();
+        buff15Timer.stop();
+    }
+    else
+    {
+        buff15RemainingMs = 0;
+    }
+
+    if (buff60Timer.isActive())
+    {
+        buff60RemainingMs = buff60Timer.remainingTime();
+        buff60Timer.stop();
+    }
+    else
+    {
+        buff60RemainingMs = 0;
+    }
+
+}
+
+
+void BuffVisionCore::resumeAtmaCooldowns()
+{
+    if (!atmaCooldownPaused)
+        return;
+
+    atmaCooldownPaused = false;
+
+    if (buff15RemainingMs > 0)
+    {
+        buff15Timer.start(buff15RemainingMs);
+    }
+
+    if (buff60RemainingMs > 0)
+    {
+        buff60Timer.start(buff60RemainingMs);
+    }
+
+    buff15RemainingMs = 0;
+    buff60RemainingMs = 0;
+}
+
+int BuffVisionCore::buff15RemainingTime() const
+{
+    if (atmaCooldownPaused)
+        return buff15RemainingMs;
+
+    if (buff15Timer.isActive())
+        return buff15Timer.remainingTime();
+
+    return 0;
+}
+
+
+int BuffVisionCore::buff60RemainingTime() const
+{
+    if (atmaCooldownPaused)
+        return buff60RemainingMs;
+
+    if (buff60Timer.isActive())
+        return buff60Timer.remainingTime();
+
+    return 0;
+}
+

@@ -417,6 +417,12 @@ MainWindow::MainWindow(
             atmaGroup
             );
 
+    atmaZonesConfigButton =
+        new QPushButton(
+            "Configura Zone",
+            atmaGroup
+            );
+
 
     atmaToggleButton =
         new QPushButton(
@@ -434,9 +440,11 @@ MainWindow::MainWindow(
         atmaConfigButton
         );
 
+    atmaTopLayout->addWidget(
+        atmaZonesConfigButton
+        );
 
     atmaTopLayout->addStretch();
-
 
     atmaTopLayout->addWidget(
         atmaToggleButton
@@ -852,6 +860,13 @@ MainWindow::MainWindow(
         &QPushButton::clicked,
         this,
         &MainWindow::atmaConfigRequested
+        );
+
+    connect(
+        atmaZonesConfigButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::atmaZonesConfigRequested
         );
 
 
