@@ -606,19 +606,13 @@
         &keyboard,
         &GlobalKeyboard::keyPressed,
         overlay,
-        [overlay,&transcendenceVision](int key)
+        [overlay, &transcendenceVision, skills](int key)
         {
-            if(key == '6')
+            if(key == skills->cipollaKey())
             {
                 overlay->startCooldown();
 
                 transcendenceVision.onCooldownStarted();
-            }
-
-
-            if(key == '8')
-            {
-                overlay->togglePause();
             }
         },
         Qt::QueuedConnection
@@ -800,10 +794,19 @@
             atmaZones.setGateOpen(true);
         }
         );
-    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
-    //                  overlay, &Overlay::pauseAtmaGate);
-    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
-    //                  overlay, &Overlay::resumeAtmaGate);
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateClosed,
+        overlay,
+        &Overlay::pauseAtmaGate
+        );
+
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateOpened,
+        overlay,
+        &Overlay::resumeAtmaGate
+        );
 
     QObject::connect(
         &resonanceGate,
@@ -817,6 +820,19 @@
         &ResonanceGateManager::gateOpened,
         skills,
         &SkillOverlay::resumeAtmaGate
+        );
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateClosed,
+        &transcendenceVision,
+        &TranscendenceVisionManager::pauseAtmaGate
+        );
+
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateOpened,
+        &transcendenceVision,
+        &TranscendenceVisionManager::resumeAtmaGate
         );
 
     // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,

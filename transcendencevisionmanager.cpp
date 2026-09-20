@@ -573,6 +573,8 @@ void TranscendenceVisionManager::onCooldownStarted()
 {
     if (!m_enabled || !m_configured)
         return;
+    if (!m_atmaGateOpen)
+        return;
 
     stopScanning();
     m_delayTimer.stop();
@@ -695,4 +697,14 @@ void TranscendenceVisionManager::onScanResult(bool found, QRect foundRect, doubl
 
     m_delayTimer.stop();
     m_delayTimer.start();
+}
+void TranscendenceVisionManager::pauseAtmaGate()
+{
+    m_atmaGateOpen = false;
+
+    stopAll();
+}
+void TranscendenceVisionManager::resumeAtmaGate()
+{
+    m_atmaGateOpen = true;
 }

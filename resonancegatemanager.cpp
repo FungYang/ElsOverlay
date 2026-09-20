@@ -7,6 +7,7 @@
 
 #include <QCoreApplication>
 #include <QMessageBox>
+#include <QDebug>
 
 ResonanceGateManager::ResonanceGateManager(
     GlobalKeyboard *keyboard,
@@ -82,56 +83,81 @@ void ResonanceGateManager::setEnabled(bool value)
     if (!m_enabled)
     {
         unregisterRegion();
+
+        m_configured = false;
         m_state = State::Unknown;
 
-        // Rilasciamo eventuale pausa in corso se disattiviamo il gate.
         if (!m_gateOpen)
         {
             m_gateOpen = true;
             emit gateOpened();
         }
+
         return;
     }
 
     if (!ResonanceGateCaptureSetup::referenceExists())
     {
-        QMessageBox::warning(nullptr, "Resonance Gate",
-                             "La zona di controllo non è stata configurata. "
-                             "Disattiva e completa la configurazione.");
+        QMessageBox::warning(
+            nullptr,
+            "Resonance Gate",
+            "La zona di controllo non è stata configurata. "
+            "Disattiva e completa la configurazione."
+            );
+
         m_enabled = false;
         return;
     }
 
+    // Il Gate è abilitato ma il riferimento
+    // deve ancora essere caricato.
+    m_configured = false;
     m_state = State::Unknown;
 
-    const QString imagesDir = QCoreApplication::applicationDirPath() + "/images/";
-    QMetaObject::invokeMethod(m_worker, "loadReference", Qt::QueuedConnection,
-                              Q_ARG(QString, imagesDir));
-}
+    const QString imagesDir =
+        QCoreApplication::applicationDirPath() + "/images/";
 
+    QMetaObject::invokeMethod(
+        m_worker,
+        "loadReference",
+        Qt::QueuedConnection,
+        Q_ARG(QString, imagesDir)
+        );
+}
 void ResonanceGateManager::onReferenceLoaded(bool ok)
 {
-    if (!m_enabled) return;
+    if (!m_enabled)
+        return;
 
     if (!ok)
     {
-        QMessageBox::warning(nullptr, "Resonance Gate",
-                             "Errore nel caricamento del riferimento. Riprova a configurare la zona.");
+        QMessageBox::warning(
+            nullptr,
+            "Resonance Gate",
+            "Errore nel caricamento del riferimento. "
+            "Riprova a configurare la zona."
+            );
+
         m_enabled = false;
         return;
     }
 
     m_configured = true;
+
     registerRegion();
 
     if (m_regionId >= 0)
-        CaptureCoordinator::instance()->subscribe(m_regionId, 150, m_worker, "compareFrame");
-    // NOTA: qui il coordinator chiama direttamente lo slot del worker,
-    // NON serve un proxy: non c'è un indice multiplo da distinguere,
-    // è un'unica region.
+    {
+        CaptureCoordinator::instance()->subscribe(
+            m_regionId,
+            150,
+            m_worker,
+            "compareFrame"
+            );
+    }
 }
-
 void ResonanceGateManager::onCompared(bool isMatch)
+
 {
     if (!m_enabled || !m_configured) return;
 

@@ -9,37 +9,30 @@
 Overlay::Overlay(QWidget *parent)
     : QWidget(parent)
 {
-
     setWindowFlags(
         Qt::Tool |
         Qt::FramelessWindowHint |
         Qt::WindowStaysOnTopHint
         );
 
-
     setAttribute(
         Qt::WA_TranslucentBackground
         );
 
-
-    resize(130,40);
-
+    resize(130, 40);
 
     QSettings settings(
         "ElsOverlay.ini",
         QSettings::IniFormat
         );
 
-
     QPoint savedPosition =
         settings.value(
                     "Overlay/Transcendence/position",
-                    QPoint(500,300)
+                    QPoint(500, 300)
                     ).toPoint();
 
-
     move(savedPosition);
-
 
 
     // =========================
@@ -52,18 +45,15 @@ Overlay::Overlay(QWidget *parent)
         this,
         [this]()
         {
-
             if(!running)
                 return;
 
-
             // =========================
-            // PAUSA
+            // RESONANCE GATE PAUSA
             // =========================
 
-            if(paused)
+            if(atmaGatePaused)
                 return;
-
 
 
             // =========================
@@ -73,7 +63,6 @@ Overlay::Overlay(QWidget *parent)
             qint64 elapsed =
                 pausedElapsed +
                 elapsedTimer.elapsed();
-
 
 
             // =========================
@@ -87,37 +76,26 @@ Overlay::Overlay(QWidget *parent)
                     );
 
 
-
             // =========================
             // RESET
             // =========================
 
             if(remaining <= 0)
             {
-
                 cooldown = 20;
 
                 pausedElapsed = 0;
 
                 elapsedTimer.restart();
-
             }
-
             else
             {
-
-                cooldown =
-                    remaining;
-
+                cooldown = remaining;
             }
 
-
-
             update();
-
         }
         );
-
 
 
     // Il QTimer serve soltanto per
@@ -127,23 +105,18 @@ Overlay::Overlay(QWidget *parent)
     // da QElapsedTimer.
 
     timer.start(100);
-
 }
-
 
 
 void Overlay::paintEvent(
     QPaintEvent *
     )
 {
-
     QPainter p(this);
-
 
     p.setRenderHint(
         QPainter::Antialiasing
         );
-
 
     p.setBrush(
         QColor(
@@ -154,11 +127,9 @@ void Overlay::paintEvent(
             )
         );
 
-
     p.setPen(
         Qt::NoPen
         );
-
 
     p.drawRoundedRect(
         rect(),
@@ -167,21 +138,17 @@ void Overlay::paintEvent(
         );
 
 
-
     QFont font;
 
     font.setPointSize(18);
 
     font.setBold(true);
 
-
     p.setFont(font);
-
 
     p.setPen(
         Qt::white
         );
-
 
     p.drawText(
         rect(),
@@ -190,30 +157,24 @@ void Overlay::paintEvent(
             "Trasc: %1"
             ).arg(cooldown)
         );
-
 }
-
 
 
 void Overlay::mousePressEvent(
     QMouseEvent *event
     )
 {
-
     dragPosition =
         event->globalPosition().toPoint()
         -
         frameGeometry().topLeft();
-
 }
-
 
 
 void Overlay::mouseMoveEvent(
     QMouseEvent *event
     )
 {
-
     move(
         event->globalPosition().toPoint()
         -
@@ -226,22 +187,18 @@ void Overlay::mouseMoveEvent(
         QSettings::IniFormat
         );
 
-
     settings.setValue(
         "Overlay/Transcendence/position",
         pos()
         );
-
 }
-
 
 
 void Overlay::resetCooldown()
 {
-
     running = false;
 
-    paused = false;
+    atmaGatePaused = false;
 
     cooldown = 20;
 
@@ -250,9 +207,7 @@ void Overlay::resetCooldown()
     elapsedTimer.invalidate();
 
     update();
-
 }
-
 
 
 bool Overlay::startCooldown()
@@ -260,14 +215,18 @@ bool Overlay::startCooldown()
     if(!enabled)
         return false;
 
+    if(atmaGatePaused)
+        return false;
+
     if(running)
         return false;
 
     running = true;
 
-    paused = false;
     cooldown = 20;
+
     pausedElapsed = 0;
+
     elapsedTimer.restart();
 
     update();
@@ -276,33 +235,6 @@ bool Overlay::startCooldown()
 }
 
 
-
-void Overlay::togglePause()
-{
-    if(!enabled)
-        return;
-
-    if(!running)
-        return;
-
-    if(!paused)
-    {
-        pausedElapsed +=
-            elapsedTimer.elapsed();
-
-        elapsedTimer.invalidate();
-
-        paused = true;
-    }
-    else
-    {
-        elapsedTimer.restart();
-
-        paused = false;
-    }
-
-    update();
-}
 void Overlay::restartCooldown()
 {
     if(!enabled)
@@ -311,7 +243,7 @@ void Overlay::restartCooldown()
     if(!running)
         return;
 
-    if(paused)
+    if(atmaGatePaused)
         return;
 
     cooldown = 20;
@@ -323,6 +255,7 @@ void Overlay::restartCooldown()
     update();
 }
 
+
 void Overlay::setEnabled(bool value)
 {
     enabled = value;
@@ -330,7 +263,6 @@ void Overlay::setEnabled(bool value)
     if(!enabled)
     {
         running = false;
-        paused = false;
 
         cooldown = 0;
 
@@ -343,11 +275,10 @@ void Overlay::setEnabled(bool value)
         return;
     }
 
-    // Quando viene riattivato NON parte automaticamente.
-    // Rimane semplicemente pronto per una nuova attivazione.
+    // NON tocchiamo atmaGatePaused.
+    // Il suo stato appartiene al Resonance Gate.
 
     running = false;
-    paused = false;
 
     cooldown = 0;
 
@@ -356,4 +287,40 @@ void Overlay::setEnabled(bool value)
     elapsedTimer.invalidate();
 
     update();
+}
+
+
+void Overlay::pauseAtmaGate()
+{
+    if(!enabled)
+        return;
+
+    if(atmaGatePaused)
+        return;
+
+    atmaGatePaused = true;
+
+    if(!running)
+        return;
+
+    pausedElapsed += elapsedTimer.elapsed();
+
+    elapsedTimer.invalidate();
+}
+
+
+void Overlay::resumeAtmaGate()
+{
+    if(!enabled)
+        return;
+
+    if(!atmaGatePaused)
+        return;
+
+    atmaGatePaused = false;
+
+    if(!running)
+        return;
+
+    elapsedTimer.restart();
 }

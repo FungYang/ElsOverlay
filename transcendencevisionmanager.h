@@ -37,6 +37,8 @@ public:
 public slots:
     void onCooldownStarted();
     void onCooldownReset();
+    void pauseAtmaGate();
+    void resumeAtmaGate();
 
 private slots:
     // NUOVO: sostituisce scanTick(). Arriva dal CaptureCoordinator
@@ -96,6 +98,7 @@ private:
 
     bool m_enabled = false;
     bool m_configured = false;
+    bool m_atmaGateOpen = true;
 
     // NUOVO: thread + worker dedicati al calcolo pesante.
     QThread *m_workerThread = nullptr;

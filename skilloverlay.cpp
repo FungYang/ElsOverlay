@@ -1397,3 +1397,8 @@ void SkillOverlay::resumeAtmaGate()
     downSkill->resumeCooldown();
     rightSkill->resumeCooldown();
 }
+
+int SkillOverlay::cipollaKey() const
+{
+    return config.cipollaKey;
+}

@@ -191,18 +191,13 @@ void SkillBox::paintEvent(
 void SkillBox::startCooldown()
 {
     if(activeCooldown)
-    {
         return;
-    }
 
+    if(cooldownPaused)
+        return;
 
-    currentCooldown =
-        cooldown;
-
-
-    activeCooldown =
-        true;
-
+    currentCooldown = cooldown;
+    activeCooldown = true;
 
     update();
 }

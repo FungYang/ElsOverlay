@@ -37,6 +37,7 @@ public:
 
 
     double getScale() const;
+    int cipollaKey() const;
 
 
 public slots:
