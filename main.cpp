@@ -30,6 +30,7 @@
 #include "atmazonemanager.h"
 #include "buffvisionoverlay.h"
 #include "buffvisioncore.h"
+#include "resonancegatemanager.h"
 
 
     int main(
@@ -722,32 +723,82 @@
     // ATMA GATE — pausa globale su invariante
     // ==================================================
 
+    // ==================================================
+    // RESONANCE GATE
+    // ==================================================
+
+    ResonanceGateManager resonanceGate(
+        &keyboard,
+        overlayRoot
+        );
     QObject::connect(
+        &mainWindow,
+        &MainWindow::resonanceGateConfigRequested,
+        &resonanceGate,
+        &ResonanceGateManager::configure
+        );
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::resonanceGateToggled,
+        &resonanceGate,
+        &ResonanceGateManager::setEnabled
+        );
+#ifdef QT_DEBUG
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::debugFrame,
         &atmaZones,
-        &AtmaZoneManager::invariantEntered,
+        &AtmaZoneManager::updateBlueDebug
+        );
+#endif
+
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateClosed,
         atma.visionCore(),
         &BuffVisionCore::pauseAtmaCooldowns
         );
 
     QObject::connect(
-        &atmaZones,
-        &AtmaZoneManager::invariantExited,
+        &resonanceGate,
+        &ResonanceGateManager::gateOpened,
         atma.visionCore(),
         &BuffVisionCore::resumeAtmaCooldowns
         );
 
     QObject::connect(
-        &atmaZones,
-        &AtmaZoneManager::invariantEntered,
+        &resonanceGate,
+        &ResonanceGateManager::gateClosed,
         atma.visionOverlay(),
         &BuffVisionOverlay::pauseAtmaCooldown
         );
 
     QObject::connect(
-        &atmaZones,
-        &AtmaZoneManager::invariantExited,
+        &resonanceGate,
+        &ResonanceGateManager::gateOpened,
         atma.visionOverlay(),
         &BuffVisionOverlay::resumeAtmaCooldown
+        );
+    // Resonance Gate -> Atma Zones
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateClosed,
+        &atmaZones,
+        [&atmaZones]()
+        {
+            atmaZones.setGateOpen(false);
+        }
+        );
+
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateOpened,
+        &atmaZones,
+        [&atmaZones]()
+        {
+            atmaZones.setGateOpen(true);
+        }
         );
     // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
     //                  overlay, &Overlay::pauseAtmaGate);

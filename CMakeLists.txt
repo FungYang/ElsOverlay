@@ -168,6 +168,10 @@ qt_add_executable(ElsOverlay
     atmaredzoneproxy.h
     atmazoneworker.h atmazoneworker.cpp
     atmadebugwindow.h atmadebugwindow.cpp
+    resonancegateworker.h resonancegateworker.cpp
+    resonancegatecapturesetup.h resonancegatecapturesetup.cpp
+    resonancegatemanager.h resonancegatemanager.cpp
+
 )
 
 # ============================================================

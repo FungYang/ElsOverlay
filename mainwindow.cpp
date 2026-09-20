@@ -388,6 +388,46 @@ MainWindow::MainWindow(
             saveToggleStates();
         }
         );
+    // ========================================================
+    // RESONANCE GATE
+    // ========================================================
+    QGroupBox *resonanceGateGroup = new QGroupBox("Gate", central);
+    QHBoxLayout *resonanceGateLayout = new QHBoxLayout(resonanceGateGroup);
+
+    resonanceGateConfigButton = new QPushButton("Configura", resonanceGateGroup);
+
+    resonanceGateToggleButton = new QPushButton("OFF", resonanceGateGroup);
+    setupToggleButton(resonanceGateToggleButton);
+    resonanceGateToggleButton->setChecked(false);
+    updateToggleText(resonanceGateToggleButton, false);
+
+    resonanceGateLayout->addWidget(resonanceGateConfigButton);
+    resonanceGateLayout->addStretch();
+    resonanceGateLayout->addWidget(resonanceGateToggleButton);
+
+    mainLayout->addWidget(resonanceGateGroup);
+
+    connect(
+        resonanceGateConfigButton,
+        &QPushButton::clicked,
+        this,
+        [this]()
+        {
+            emit resonanceGateConfigRequested();
+        }
+        );
+
+    connect(
+        resonanceGateToggleButton,
+        &QPushButton::toggled,
+        this,
+        [this](bool enabled)
+        {
+            updateToggleText(resonanceGateToggleButton, enabled);
+            emit resonanceGateToggled(enabled);
+            saveToggleStates();
+        }
+        );
 
 
     // ========================================================
@@ -1432,6 +1472,8 @@ void MainWindow::saveToggleStates()
         "Toggles/OverlayClickability",
         overlayClickabilityToggleButton->isChecked()
         );
+    settings.setValue("Toggles/ResonanceGate",
+                      resonanceGateToggleButton->isChecked());
 
 
     settings.sync();
@@ -1498,6 +1540,8 @@ void MainWindow::loadToggleStates()
                     "Toggles/OverlayClickability",
                     true
                     ).toBool();
+    const bool resonanceGateEnabled =
+        settings.value("Toggles/ResonanceGate", false).toBool();
 
 
     atmaToggleButton->setChecked(
@@ -1533,6 +1577,8 @@ void MainWindow::loadToggleStates()
     overlayClickabilityToggleButton->setChecked(
         overlayClickability
         );
+    resonanceGateToggleButton->setChecked(resonanceGateEnabled);
+    updateToggleText(resonanceGateToggleButton, resonanceGateEnabled);
 
 
     updateToggleText(

@@ -10,8 +10,7 @@
 #include <QDir>
 #include <QCoreApplication>
 #include <QTimer>
-
-
+#include <QFile>
 
 AtmaZoneCaptureSetup::AtmaZoneCaptureSetup(QWidget *parent)
     : QWidget(parent)
@@ -30,11 +29,8 @@ AtmaZoneCaptureSetup::AtmaZoneCaptureSetup(QWidget *parent)
 
     const QSize size = defaultZoneSize();
 
-    // Posizioni iniziali di default, sfalsate per non sovrapporsi.
     for (int i = 0; i < RED_COUNT; ++i)
         m_redRects[i] = QRect(QPoint(400 + i * (size.width() + 20), 300), size);
-
-    m_blueRect = QRect(QPoint(400, 500), size);
 
     loadSettings();
 
@@ -44,13 +40,12 @@ AtmaZoneCaptureSetup::AtmaZoneCaptureSetup(QWidget *parent)
 
 QSize AtmaZoneCaptureSetup::defaultZoneSize() const
 {
-    return QSize(60, 60); // dimensione di partenza ragionevole, l'utente la adatta
+    return QSize(60, 60);
 }
 
 // =========================================================
 // PAINT
 // =========================================================
-
 
 void AtmaZoneCaptureSetup::drawHandles(QPainter &p, const QRect &zone)
 {
@@ -59,10 +54,10 @@ void AtmaZoneCaptureSetup::drawHandles(QPainter &p, const QRect &zone)
     p.setBrush(Qt::white);
     p.setPen(Qt::NoPen);
 
-    p.drawRect(QRect(zone.left(),  zone.top(),    s, s));               // TopLeft
-    p.drawRect(QRect(zone.right() - s + 1, zone.top(),    s, s));       // TopRight
-    p.drawRect(QRect(zone.left(),  zone.bottom() - s + 1, s, s));       // BottomLeft
-    p.drawRect(QRect(zone.right() - s + 1, zone.bottom() - s + 1, s, s)); // BottomRight
+    p.drawRect(QRect(zone.left(),  zone.top(),    s, s));
+    p.drawRect(QRect(zone.right() - s + 1, zone.top(),    s, s));
+    p.drawRect(QRect(zone.left(),  zone.bottom() - s + 1, s, s));
+    p.drawRect(QRect(zone.right() - s + 1, zone.bottom() - s + 1, s, s));
 }
 
 void AtmaZoneCaptureSetup::paintEvent(QPaintEvent *)
@@ -81,12 +76,6 @@ void AtmaZoneCaptureSetup::paintEvent(QPaintEvent *)
 
         drawHandles(p, m_redRects[i]);
     }
-
-    p.setBrush(QColor(0, 0, 255, 230));
-    p.setPen(QPen(QColor(0, 0, 255), 2));
-    p.drawRect(m_blueRect);
-
-    drawHandles(p, m_blueRect);
 
     if (!feedbackText.isEmpty())
     {
@@ -121,7 +110,6 @@ AtmaZoneCaptureSetup::cornerAt(const QRect &zone, const QPoint &pos) const
     return ResizeCorner::None;
 }
 
-
 // =========================================================
 // MOUSE
 // =========================================================
@@ -134,7 +122,6 @@ void AtmaZoneCaptureSetup::mousePressEvent(QMouseEvent *event)
     m_dragRedIndex = -1;
     m_dragCorner = ResizeCorner::None;
 
-    // Prima gli angoli di resize (rossi)
     for (int i = 0; i < RED_COUNT; ++i)
     {
         const ResizeCorner c = cornerAt(m_redRects[i], pos);
@@ -146,18 +133,6 @@ void AtmaZoneCaptureSetup::mousePressEvent(QMouseEvent *event)
         }
     }
 
-    // Poi l'angolo del blu
-    {
-        const ResizeCorner c = cornerAt(m_blueRect, pos);
-        if (c != ResizeCorner::None)
-        {
-            m_dragMode = DragMode::ResizeBlue;
-            m_dragCorner = c;
-            return;
-        }
-    }
-
-    // Poi il corpo (spostamento)
     for (int i = 0; i < RED_COUNT; ++i)
     {
         if (m_redRects[i].contains(pos))
@@ -167,14 +142,7 @@ void AtmaZoneCaptureSetup::mousePressEvent(QMouseEvent *event)
             return;
         }
     }
-
-    if (m_blueRect.contains(pos))
-        m_dragMode = DragMode::MoveBlue;
 }
-
-// =========================================================
-// MOUSE MOVE
-// =========================================================
 
 void AtmaZoneCaptureSetup::mouseMoveEvent(QMouseEvent *event)
 {
@@ -194,21 +162,8 @@ void AtmaZoneCaptureSetup::mouseMoveEvent(QMouseEvent *event)
         }
         break;
 
-    case DragMode::MoveBlue:
-        m_blueRect.translate(delta);
-        keepInsideScreen(m_blueRect);
-        break;
-
     case DragMode::ResizeRed:
-        // Stesso angolo, stesso delta applicato a TUTTI i rossi:
-        // ciascuno si ridimensiona identicamente, ancorato al
-        // proprio angolo opposto (posizione individuale preservata).
         resizeAllRed(m_dragCorner, delta);
-        break;
-
-    case DragMode::ResizeBlue:
-        applyCornerResize(m_blueRect, m_dragCorner, delta);
-        keepInsideScreen(m_blueRect);
         break;
 
     default:
@@ -241,32 +196,13 @@ void AtmaZoneCaptureSetup::applyCornerResize(
 
     switch (corner)
     {
-    case ResizeCorner::TopLeft:
-        left += delta.x();
-        top += delta.y();
-        break;
-
-    case ResizeCorner::TopRight:
-        right += delta.x();
-        top += delta.y();
-        break;
-
-    case ResizeCorner::BottomLeft:
-        left += delta.x();
-        bottom += delta.y();
-        break;
-
-    case ResizeCorner::BottomRight:
-        right += delta.x();
-        bottom += delta.y();
-        break;
-
-    default:
-        return;
+    case ResizeCorner::TopLeft:     left += delta.x(); top += delta.y(); break;
+    case ResizeCorner::TopRight:    right += delta.x(); top += delta.y(); break;
+    case ResizeCorner::BottomLeft:  left += delta.x(); bottom += delta.y(); break;
+    case ResizeCorner::BottomRight: right += delta.x(); bottom += delta.y(); break;
+    default: return;
     }
 
-    // Clamp dimensione minima, mantenendo l'angolo OPPOSTO a quello
-    // trascinato come punto fisso.
     if (right - left < MIN_ZONE_SIZE)
     {
         if (corner == ResizeCorner::TopLeft || corner == ResizeCorner::BottomLeft)
@@ -323,8 +259,6 @@ void AtmaZoneCaptureSetup::loadSettings()
     const QString suffix =
         QString("_%1x%2").arg(resolution.width()).arg(resolution.height());
 
-    // Dimensione condivisa dai 6 rossi: la leggiamo una volta
-    // (associata al primo rosso) e la applichiamo a tutti.
     const int sharedW = settings.value("AtmaZones/RedW" + suffix, defaultZoneSize().width()).toInt();
     const int sharedH = settings.value("AtmaZones/RedH" + suffix, defaultZoneSize().height()).toInt();
 
@@ -340,15 +274,6 @@ void AtmaZoneCaptureSetup::loadSettings()
 
         keepInsideScreen(m_redRects[i]);
     }
-
-    m_blueRect.setWidth(settings.value("AtmaZones/BlueW" + suffix, m_blueRect.width()).toInt());
-    m_blueRect.setHeight(settings.value("AtmaZones/BlueH" + suffix, m_blueRect.height()).toInt());
-    m_blueRect.moveTo(
-        settings.value("AtmaZones/BlueX" + suffix, m_blueRect.x()).toInt(),
-        settings.value("AtmaZones/BlueY" + suffix, m_blueRect.y()).toInt()
-        );
-
-    keepInsideScreen(m_blueRect);
 }
 
 void AtmaZoneCaptureSetup::saveSettings()
@@ -365,8 +290,6 @@ void AtmaZoneCaptureSetup::saveSettings()
     const QString suffix =
         QString("_%1x%2").arg(resolution.width()).arg(resolution.height());
 
-    // Dimensione condivisa: salviamo quella del primo rosso,
-    // sono comunque tutte uguali per costruzione (resize agganciato).
     settings.setValue("AtmaZones/RedW" + suffix, m_redRects[0].width());
     settings.setValue("AtmaZones/RedH" + suffix, m_redRects[0].height());
 
@@ -376,11 +299,6 @@ void AtmaZoneCaptureSetup::saveSettings()
         settings.setValue(key + "X" + suffix, m_redRects[i].x());
         settings.setValue(key + "Y" + suffix, m_redRects[i].y());
     }
-
-    settings.setValue("AtmaZones/BlueX" + suffix, m_blueRect.x());
-    settings.setValue("AtmaZones/BlueY" + suffix, m_blueRect.y());
-    settings.setValue("AtmaZones/BlueW" + suffix, m_blueRect.width());
-    settings.setValue("AtmaZones/BlueH" + suffix, m_blueRect.height());
 
     settings.sync();
 }
@@ -395,19 +313,12 @@ QRect AtmaZoneCaptureSetup::redZoneRect(int index) const
     return m_redRects[index];
 }
 
-QRect AtmaZoneCaptureSetup::blueZoneRect() const
-{
-    return m_blueRect;
-}
-
 // =========================================================
-// CAPTURE REFERENCES (tasto P)
+// CAPTURE REFERENCES (tasto P) — solo i 6 rossi
 // =========================================================
 
 void AtmaZoneCaptureSetup::captureAllReferences()
 {
-    // Nascondiamo i rettangoli prima dello screenshot, altrimenti
-    // il rosso/blu dell'overlay finirebbe dentro l'immagine salvata.
     hide();
 
     QTimer::singleShot(
@@ -437,18 +348,12 @@ void AtmaZoneCaptureSetup::captureAllReferences()
                     allOk = false;
             }
 
-            const QImage blueImg =
-                ScreenCapture::captureRegionReliable(screen, m_blueRect);
-
-            if (blueImg.isNull() || !blueImg.save(dir.filePath("invariant.png")))
-                allOk = false;
-
             show();
             raise();
             activateWindow();
             setFocus();
 
-            showFeedback(allOk ? "7 REFERENCE SALVATE" : "ERRORE: cattura fallita");
+            showFeedback(allOk ? "6 REFERENCE SALVATE" : "ERRORE: cattura fallita");
         }
         );
 }
@@ -461,7 +366,7 @@ bool AtmaZoneCaptureSetup::referencesExist()
         if (!QFile::exists(dir + QString("ref%1.png").arg(i)))
             return false;
 
-    return QFile::exists(dir + "invariant.png");
+    return true;
 }
 
 // =========================================================

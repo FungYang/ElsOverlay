@@ -1,39 +1,33 @@
-#include "atmazoneworker.h"
+#include "resonancegateworker.h"
 
-AtmaZoneWorker::AtmaZoneWorker(QObject *parent)
-    : QObject(parent)
+ResonanceGateWorker::ResonanceGateWorker(QObject *parent) : QObject(parent) {}
+
+void ResonanceGateWorker::loadReference(QString imagesDir)
 {
-}
+    QImage img;
+    const bool ok = img.load(imagesDir + "invariant.png");
 
-// ============================================================
-// LOAD REFERENCES
-// ============================================================
-
-void AtmaZoneWorker::loadReferences(QString imagesDir)
-{
-    bool ok = true;
-
-    for (int i = 0; i < RED_COUNT; ++i)
+    if (ok)
     {
-        QImage img;
-        if (!img.load(imagesDir + QString("ref%1.png").arg(i + 1)))
-        {
-            ok = false;
-            continue;
-        }
-
-        m_redReferences[i] = img.convertToFormat(QImage::Format_ARGB32);
-        m_redMasks[i] = buildForegroundMask(m_redReferences[i]);
+        m_reference = img.convertToFormat(QImage::Format_ARGB32);
+        m_mask = buildForegroundMask(m_reference);
     }
 
-    emit referencesLoaded(ok);
+    emit referenceLoaded(ok);
 }
 
-// ============================================================
-// FOREGROUND DETECTION
-// ============================================================
+void ResonanceGateWorker::compareFrame(QImage frame)
+{
+    const bool isMatch = matches(frame, m_reference, m_mask, TOLERANCE);
 
-bool AtmaZoneWorker::isForegroundPixel(QRgb pixel)
+#ifdef QT_DEBUG
+    emit debugFrame(frame, isMatch);
+#endif
+
+    emit compared(isMatch);
+}
+
+bool ResonanceGateWorker::isForegroundPixel(QRgb pixel)
 {
     const int r = qRed(pixel);
     const int g = qGreen(pixel);
@@ -52,7 +46,7 @@ bool AtmaZoneWorker::isForegroundPixel(QRgb pixel)
     return false; // grigio scuro/spento -> sfondo variabile, ignorato
 }
 
-QVector<bool> AtmaZoneWorker::buildForegroundMask(const QImage &reference)
+QVector<bool> ResonanceGateWorker::buildForegroundMask(const QImage &reference)
 {
     QVector<bool> mask;
 
@@ -79,7 +73,7 @@ QVector<bool> AtmaZoneWorker::buildForegroundMask(const QImage &reference)
 // MATCH (con maschera di foreground)
 // ============================================================
 
-bool AtmaZoneWorker::matches(
+bool ResonanceGateWorker::matches(
     const QImage &current,
     const QImage &reference,
     const QVector<bool> &mask,
@@ -156,20 +150,3 @@ bool AtmaZoneWorker::matches(
     return ratio >= MATCH_RATIO;
 }
 
-// ============================================================
-// COMPARE RED / BLUE
-// ============================================================
-
-void AtmaZoneWorker::compareRedFrame(int index, QImage frame)
-{
-    if (index < 0 || index >= RED_COUNT)
-        return;
-
-    const bool isMatch =
-        matches(frame, m_redReferences[index], m_redMasks[index], TOLERANCE);
-
-#ifdef QT_DEBUG
-    emit redDebugFrame(index, frame, isMatch);
-#endif
-    emit redCompared(index, isMatch);
-}

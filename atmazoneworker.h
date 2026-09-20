@@ -33,7 +33,6 @@ public slots:
 
     // Un frame per zona rossa (index 0..5) o per il blu (index = -1).
     void compareRedFrame(int index, QImage frame);
-    void compareBlueFrame(QImage frame);
 
 signals:
     void referencesLoaded(bool ok);
@@ -41,22 +40,18 @@ signals:
     // isMatch = risultato del confronto per questo frame.
     // La logica di stato/transizione resta nel manager (thread GUI).
     void redCompared(int index, bool isMatch);
-    void blueCompared(bool isMatch);
 
 #ifdef QT_DEBUG
     void redDebugFrame(int index, QImage frame, bool isMatch);
-    void blueDebugFrame(QImage frame, bool isMatch);
 #endif
 
 private:
     std::array<QImage, RED_COUNT> m_redReferences;
-    QImage m_blueReference;
 
     // Maschera di foreground per ciascuna reference: true = pixel
     // di testo/icona da controllare, false = sfondo da ignorare.
     // Stessa dimensione dell'immagine corrispondente (layout riga per riga).
     std::array<QVector<bool>, RED_COUNT> m_redMasks;
-    QVector<bool> m_blueMask;
 
     static QVector<bool> buildForegroundMask(const QImage &reference);
     static bool isForegroundPixel(QRgb pixel);

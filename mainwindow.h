@@ -86,6 +86,11 @@ signals:
     void overlayClickabilityToggled(
         bool enabled
         );
+    void resonanceGateConfigRequested();
+
+    void resonanceGateToggled(
+        bool enabled
+        );
 
 
 
@@ -174,6 +179,12 @@ private:
     // ==================================================
 
     QPushButton *overlayClickabilityToggleButton;
+    // ==================================================
+    // RESONANCE GATE
+    // ==================================================
+
+    QPushButton *resonanceGateConfigButton;
+    QPushButton *resonanceGateToggleButton;
 
 
 

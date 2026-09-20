@@ -35,35 +35,37 @@ public:
     void configure();
     void setEnabled(bool enabled);
 
-signals:
-    void invariantEntered();
-    void invariantExited();
+public slots:
+    // Ricevuto dall'esterno (ResonanceGateManager), sostituisce
+    // il vecchio m_blueState calcolato internamente.
+    void setGateOpen(bool open);
+
+#ifdef QT_DEBUG
+    // Ricevuto dall'esterno (ResonanceGateManager::blueDebugFrame),
+    // inoltrato alla finestra di debug condivisa.
+    void updateBlueDebug(QImage frame, bool isMatch);
+#endif
 
 private slots:
     void onReferencesLoaded(bool ok);
     void onRedZoneCompared(int index, bool isMatch);
-    void onBlueZoneCompared(bool isMatch);
 
     void processPendingRedEvents();
 
 #ifdef QT_DEBUG
     void onRedDebugFrame(int index, QImage frame, bool isMatch);
-    void onBlueDebugFrame(QImage frame, bool isMatch);
 #endif
 
 private:
     static constexpr int RED_COUNT = 6;
 
-    // Finestra temporale durante la quale RED e BLUE vengono
-    // considerati contemporanei.
+    // Finestra temporale durante la quale un evento rosso resta
+    // "in attesa" prima di essere confermato/scartato in base allo
+    // stato del gate (che può arrivare con un ritardo variabile,
+    // dato che ora proviene da un manager esterno e asincrono).
     static constexpr int GATE_DELAY_MS = 30;
 
-    enum class ZoneState
-    {
-        Unknown,
-        Match,
-        Mismatch
-    };
+    enum class ZoneState { Unknown, Match, Mismatch };
 
     GlobalKeyboard *m_keyboard = nullptr;
     OverlayRoot *m_overlayRoot = nullptr;
@@ -74,18 +76,15 @@ private:
     bool m_enabled = false;
     bool m_configured = false;
 
+    // Stato del gate esterno: true = aperto (Risonanza presente,
+    // nessuna pausa), false = chiuso (Risonanza assente).
+    bool m_gateOpen = true;
+
     std::array<int, RED_COUNT> m_redRegionIds;
-    int m_blueRegionId = -1;
-
     std::array<ZoneState, RED_COUNT> m_redStates;
-    ZoneState m_blueState = ZoneState::Unknown;
 
-    // RED events waiting for gate confirmation.
     std::array<bool, RED_COUNT> m_pendingRedEvents{};
-
-    // Se BLUE entra in mismatch durante la finestra del gate,
-    // gli eventi RED pendenti vengono invalidati.
-    bool m_pendingEventsBlockedByBlue = false;
+    bool m_pendingEventsBlockedByGate = false;
 
     QTimer m_gateTimer;
 
@@ -93,7 +92,6 @@ private:
     AtmaZoneWorker *m_worker = nullptr;
 
     std::array<std::unique_ptr<AtmaRedZoneProxy>, RED_COUNT> m_redProxies;
-    std::unique_ptr<AtmaRedZoneProxy> m_blueProxy;
 
 #ifdef QT_DEBUG
     AtmaDebugWindow *m_debugWindow = nullptr;

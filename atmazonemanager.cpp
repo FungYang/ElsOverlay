@@ -7,12 +7,12 @@
 #include "buffvisioncore.h"
 #include "capturecoordinator.h"
 
-#include <QCoreApplication>
-#include <QMessageBox>
 #ifdef QT_DEBUG
 #include "atmadebugwindow.h"
 #endif
 
+#include <QCoreApplication>
+#include <QMessageBox>
 
 AtmaZoneManager::AtmaZoneManager(
     GlobalKeyboard *keyboard,
@@ -28,10 +28,14 @@ AtmaZoneManager::AtmaZoneManager(
     m_redRegionIds.fill(-1);
     m_redStates.fill(ZoneState::Unknown);
 
+    m_gateTimer.setSingleShot(true);
+    connect(&m_gateTimer, &QTimer::timeout,
+            this, &AtmaZoneManager::processPendingRedEvents);
+
     // =========================
     // WORKER (confronto pixel su thread dedicato)
     // =========================
-    m_worker = new AtmaZoneWorker(); // niente parent: deve poter cambiare thread
+    m_worker = new AtmaZoneWorker();
     m_workerThread = new QThread(this);
     m_worker->moveToThread(m_workerThread);
 
@@ -39,17 +43,10 @@ AtmaZoneManager::AtmaZoneManager(
             this, &AtmaZoneManager::onReferencesLoaded);
     connect(m_worker, &AtmaZoneWorker::redCompared,
             this, &AtmaZoneManager::onRedZoneCompared);
-    connect(m_worker, &AtmaZoneWorker::blueCompared,
-            this, &AtmaZoneManager::onBlueZoneCompared);
-    m_gateTimer.setSingleShot(true);
-    connect( &m_gateTimer, &QTimer::timeout, this, &AtmaZoneManager::processPendingRedEvents );
 
 #ifdef QT_DEBUG
     connect(m_worker, &AtmaZoneWorker::redDebugFrame,
             this, &AtmaZoneManager::onRedDebugFrame);
-
-    connect(m_worker, &AtmaZoneWorker::blueDebugFrame,
-            this, &AtmaZoneManager::onBlueDebugFrame);
 #endif
 
     m_workerThread->start();
@@ -71,19 +68,9 @@ AtmaZoneManager::AtmaZoneManager(
                 });
     }
 
-    // =========================
-    // PROXY — zona blu (indice -1, non usato)
-    // =========================
-    m_blueProxy = std::make_unique<AtmaRedZoneProxy>(-1, this);
-
-    connect(m_blueProxy.get(), &AtmaRedZoneProxy::forwardedFrame,
-            this, [this](int /*unused*/, QImage frame)
-            {
-                QMetaObject::invokeMethod(
-                    m_worker, "compareBlueFrame", Qt::QueuedConnection,
-                    Q_ARG(QImage, frame)
-                    );
-            });
+#ifdef QT_DEBUG
+    m_debugWindow = new AtmaDebugWindow();
+#endif
 
     // =========================
     // TASTO P — cattura riferimenti
@@ -93,9 +80,7 @@ AtmaZoneManager::AtmaZoneManager(
         [this](int key)
         {
             if (key != 'P') return;
-            if (!m_captureSetup) return;
-            if (!m_captureSetup->isVisible()) return;
-
+            if (!m_captureSetup || !m_captureSetup->isVisible()) return;
             m_captureSetup->captureAllReferences();
         }
         );
@@ -107,14 +92,12 @@ AtmaZoneManager::AtmaZoneManager(
         m_keyboard, &GlobalKeyboard::confirmPressed, this,
         [this]()
         {
-            if (!m_captureSetup) return;
-            if (!m_captureSetup->isVisible()) return;
+            if (!m_captureSetup || !m_captureSetup->isVisible()) return;
 
             m_captureSetup->saveSettings();
             m_captureSetup->hide();
 
-            if (m_overlayRoot)
-                m_overlayRoot->raiseAll();
+            if (m_overlayRoot) m_overlayRoot->raiseAll();
         }
         );
 }
@@ -127,6 +110,10 @@ AtmaZoneManager::~AtmaZoneManager()
     m_workerThread->quit();
     m_workerThread->wait();
     delete m_worker;
+
+#ifdef QT_DEBUG
+    delete m_debugWindow;
+#endif
 }
 
 // ============================================================
@@ -135,8 +122,7 @@ AtmaZoneManager::~AtmaZoneManager()
 
 void AtmaZoneManager::configure()
 {
-    if (!m_overlayRoot)
-        return;
+    if (!m_overlayRoot) return;
 
     if (!m_captureSetup)
     {
@@ -151,6 +137,14 @@ void AtmaZoneManager::configure()
     m_captureSetup->setFocus();
 
     m_overlayRoot->raiseAll();
+
+#ifdef QT_DEBUG
+    if (m_debugWindow)
+    {
+        m_debugWindow->show();
+        m_debugWindow->raise();
+    }
+#endif
 }
 
 // ============================================================
@@ -167,23 +161,23 @@ void AtmaZoneManager::setEnabled(bool value)
         unregisterAllRegions();
 
         m_redStates.fill(ZoneState::Unknown);
-        m_blueState = ZoneState::Unknown;
+        clearPendingRedEvents();
+        m_gateTimer.stop();
 
-        emit invariantExited();
         return;
     }
 
     if (!AtmaZoneCaptureSetup::referencesExist())
     {
         QMessageBox::warning(nullptr, "Atma Zones",
-                             "Le 7 zone non sono state configurate completamente. "
+                             "Le 6 zone rosse non sono state configurate completamente. "
                              "Disattiva Atma e completa la configurazione.");
         m_enabled = false;
         return;
     }
 
     m_redStates.fill(ZoneState::Unknown);
-    m_blueState = ZoneState::Unknown;
+    clearPendingRedEvents();
 
     const QString imagesDir = QCoreApplication::applicationDirPath() + "/images/";
 
@@ -191,12 +185,11 @@ void AtmaZoneManager::setEnabled(bool value)
         m_worker, "loadReferences", Qt::QueuedConnection,
         Q_ARG(QString, imagesDir)
         );
-    // registerAllRegions()/subscribeAll() partono da onReferencesLoaded()
 }
 
 void AtmaZoneManager::onReferencesLoaded(bool ok)
 {
-    if (!m_enabled) return; // l'utente potrebbe aver disattivato nel frattempo
+    if (!m_enabled) return;
 
     if (!ok)
     {
@@ -208,17 +201,73 @@ void AtmaZoneManager::onReferencesLoaded(bool ok)
 
     m_configured = true;
 
-#ifdef QT_DEBUG
-    if (!m_debugWindow)
-        m_debugWindow = new AtmaDebugWindow();
-
-    m_debugWindow->show();
-    m_debugWindow->raise();
-    m_debugWindow->activateWindow();
-#endif
-
     registerAllRegions();
     subscribeAll();
+}
+
+// ============================================================
+// GATE ESTERNO
+// ============================================================
+
+void AtmaZoneManager::setGateOpen(bool open)
+{
+    const bool wasOpen = m_gateOpen;
+    m_gateOpen = open;
+
+    // Se il gate si chiude MENTRE ci sono eventi rossi in attesa
+    // di conferma, li marchiamo come invalidati: la transizione
+    // rossa era in realtà simultanea alla perdita della Risonanza,
+    // quindi non va considerata un'azione reale.
+    if (wasOpen && !open && m_gateTimer.isActive())
+        m_pendingEventsBlockedByGate = true;
+}
+
+// ============================================================
+// RED ZONE COMPARED
+// ============================================================
+
+void AtmaZoneManager::onRedZoneCompared(int index, bool isMatch)
+{
+    if (!m_enabled || !m_configured) return;
+    if (index < 0 || index >= RED_COUNT) return;
+
+    const ZoneState newState = isMatch ? ZoneState::Match : ZoneState::Mismatch;
+    const ZoneState oldState = m_redStates[index];
+
+    m_redStates[index] = newState;
+
+    if (oldState == ZoneState::Match && newState == ZoneState::Mismatch)
+    {
+        m_pendingRedEvents[index] = true;
+
+        // Avviamo (o lasciamo proseguire, se già attiva) la finestra
+        // di conferma: aspettiamo GATE_DELAY_MS prima di decidere se
+        // l'evento va davvero registrato.
+        if (!m_gateTimer.isActive())
+            m_gateTimer.start(GATE_DELAY_MS);
+    }
+}
+
+void AtmaZoneManager::processPendingRedEvents()
+{
+    const bool blocked = m_pendingEventsBlockedByGate || !m_gateOpen;
+
+    if (!blocked && m_core)
+    {
+        for (int i = 0; i < RED_COUNT; ++i)
+        {
+            if (m_pendingRedEvents[i])
+                m_core->registerAction();
+        }
+    }
+
+    clearPendingRedEvents();
+}
+
+void AtmaZoneManager::clearPendingRedEvents()
+{
+    m_pendingRedEvents.fill(false);
+    m_pendingEventsBlockedByGate = false;
 }
 
 // ============================================================
@@ -241,9 +290,6 @@ void AtmaZoneManager::registerAllRegions()
         const QRect rect = m_captureSetup->redZoneRect(i);
         m_redRegionIds[i] = CaptureCoordinator::instance()->registerRegion(rect);
     }
-
-    m_blueRegionId =
-        CaptureCoordinator::instance()->registerRegion(m_captureSetup->blueZoneRect());
 }
 
 void AtmaZoneManager::unregisterAllRegions()
@@ -255,12 +301,6 @@ void AtmaZoneManager::unregisterAllRegions()
             CaptureCoordinator::instance()->unregisterRegion(m_redRegionIds[i]);
             m_redRegionIds[i] = -1;
         }
-    }
-
-    if (m_blueRegionId >= 0)
-    {
-        CaptureCoordinator::instance()->unregisterRegion(m_blueRegionId);
-        m_blueRegionId = -1;
     }
 }
 
@@ -277,14 +317,6 @@ void AtmaZoneManager::subscribeAll()
             m_redProxies[i].get(), "frameReady"
             );
     }
-
-    if (m_blueRegionId >= 0)
-    {
-        CaptureCoordinator::instance()->subscribe(
-            m_blueRegionId, INTERVAL_MS,
-            m_blueProxy.get(), "frameReady"
-            );
-    }
 }
 
 void AtmaZoneManager::unsubscribeAll()
@@ -292,189 +324,18 @@ void AtmaZoneManager::unsubscribeAll()
     for (int i = 0; i < RED_COUNT; ++i)
         if (m_redRegionIds[i] >= 0)
             CaptureCoordinator::instance()->unsubscribe(m_redRegionIds[i]);
-
-    if (m_blueRegionId >= 0)
-        CaptureCoordinator::instance()->unsubscribe(m_blueRegionId);
-}
-
-// ============================================================
-// RED ZONE COMPARED (risultato dal worker, già in coda sul thread GUI)
-// ============================================================
-
-void AtmaZoneManager::onRedZoneCompared(int index, bool isMatch)
-{
-    if (!m_enabled || !m_configured)
-        return;
-
-    if (index < 0 || index >= RED_COUNT)
-        return;
-
-    const ZoneState newState =
-        isMatch ? ZoneState::Match : ZoneState::Mismatch;
-
-    const ZoneState oldState = m_redStates[index];
-
-    m_redStates[index] = newState;
-
-    // Ci interessa solamente il passaggio:
-    // MATCH -> MISMATCH
-    if (oldState != ZoneState::Match ||
-        newState != ZoneState::Mismatch)
-    {
-        return;
-    }
-
-    qDebug() << "[ATMA] RED" << index + 1
-             << "MATCH -> MISMATCH"
-             << "BLUE STATE =" << static_cast<int>(m_blueState);
-
-    // Se BLUE è già MISMATCH, l'evento è immediatamente bloccato.
-    if (m_blueState == ZoneState::Mismatch)
-    {
-        qDebug() << "[ATMA] RED" << index + 1
-                 << "BLOCKED - BLUE already MISMATCH";
-        return;
-    }
-
-    // Mettiamo il RED in attesa della conferma del gate.
-    m_pendingRedEvents[index] = true;
-
-    // Se il timer non è già attivo, avviamo la finestra
-    // temporale per raccogliere eventuali eventi BLUE contemporanei.
-    if (!m_gateTimer.isActive())
-    {
-        m_pendingEventsBlockedByBlue = false;
-
-        qDebug() << "[ATMA] Gate window START"
-                 << GATE_DELAY_MS << "ms";
-
-        m_gateTimer.start(GATE_DELAY_MS);
-    }
-}
-
-
-// ============================================================
-// BLUE ZONE COMPARED (invariante)
-// ============================================================
-
-void AtmaZoneManager::onBlueZoneCompared(bool isMatch)
-{
-    if (!m_enabled || !m_configured)
-        return;
-
-    const ZoneState newState =
-        isMatch ? ZoneState::Match : ZoneState::Mismatch;
-
-    const ZoneState oldState = m_blueState;
-
-    m_blueState = newState;
-
-    // BLUE è entrato in MISMATCH.
-    if (oldState != ZoneState::Mismatch &&
-        newState == ZoneState::Mismatch)
-    {
-        emit invariantEntered();
-
-        // Se abbiamo RED pendenti, significa che RED e BLUE
-        // sono entrati in mismatch durante la stessa finestra.
-        // Blocchiamo gli eventi RED.
-        bool hasPending = false;
-
-        for (bool pending : m_pendingRedEvents)
-        {
-            if (pending)
-            {
-                hasPending = true;
-                break;
-            }
-        }
-
-        if (hasPending)
-        {
-            m_pendingEventsBlockedByBlue = true;
-
-            qDebug() << "[ATMA] BLUE entered MISMATCH"
-                     << "-> pending RED events BLOCKED";
-        }
-    }
-
-    // BLUE è tornato in MATCH.
-    else if (oldState == ZoneState::Mismatch &&
-             newState == ZoneState::Match)
-    {
-        emit invariantExited();
-
-        qDebug() << "[ATMA] BLUE MATCH";
-    }
 }
 
 #ifdef QT_DEBUG
-
-void AtmaZoneManager::onRedDebugFrame(
-    int index,
-    QImage frame,
-    bool isMatch)
+void AtmaZoneManager::onRedDebugFrame(int index, QImage frame, bool isMatch)
 {
-    if (!m_debugWindow)
-        return;
-
-    m_debugWindow->updateRed(index, frame, isMatch);
+    if (m_debugWindow)
+        m_debugWindow->updateRed(index, frame, isMatch);
 }
 
-void AtmaZoneManager::onBlueDebugFrame(
-    QImage frame,
-    bool isMatch)
+void AtmaZoneManager::updateBlueDebug(QImage frame, bool isMatch)
 {
-    if (!m_debugWindow)
-        return;
-
-    m_debugWindow->updateBlue(frame, isMatch);
+    if (m_debugWindow)
+        m_debugWindow->updateBlue(frame, isMatch);
 }
-
 #endif
-
-void AtmaZoneManager::processPendingRedEvents()
-{
-    if (!m_enabled || !m_configured)
-    {
-        clearPendingRedEvents();
-        return;
-    }
-
-    qDebug() << "[ATMA] Gate window END"
-             << "BLUE STATE =" << static_cast<int>(m_blueState)
-             << "BLOCKED =" << m_pendingEventsBlockedByBlue;
-
-    // Se BLUE è/è stato MISMATCH durante la finestra,
-    // nessun RED pendente deve generare l'evento.
-    if (m_pendingEventsBlockedByBlue ||
-        m_blueState == ZoneState::Mismatch)
-    {
-        qDebug() << "[ATMA] Pending RED events discarded by gate";
-
-        clearPendingRedEvents();
-        return;
-    }
-
-    // BLUE è rimasto MATCH per tutta la finestra.
-    for (int i = 0; i < RED_COUNT; ++i)
-    {
-        if (!m_pendingRedEvents[i])
-            continue;
-
-        qDebug() << "[ATMA] RED" << i + 1
-                 << "confirmed -> registerAction()";
-
-        if (m_core)
-            m_core->registerAction();
-    }
-
-    clearPendingRedEvents();
-}
-
-
-void AtmaZoneManager::clearPendingRedEvents()
-{
-    m_pendingRedEvents.fill(false);
-    m_pendingEventsBlockedByBlue = false;
-}
