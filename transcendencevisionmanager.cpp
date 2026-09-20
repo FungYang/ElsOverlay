@@ -4,6 +4,7 @@
 #include "transcendencevisionconfig.h"
 #include "transcendencecapturesetup.h"
 #include "transcendenceprecisioncrop.h"
+#include "transcendencedebugoverlay.h"
 #include "globalkeyboard.h"
 #include "overlayroot.h"
 #include "overlay.h"
@@ -38,6 +39,25 @@ TranscendenceVisionManager::TranscendenceVisionManager(
 
     loadSettings();
     loadIcon();
+#ifdef QT_DEBUG
+    m_firstFindDebugOverlay =
+        new TranscendenceDebugOverlay(nullptr);
+
+    if (overlayRoot)
+    {
+        overlayRoot->registerOverlay(
+            m_firstFindDebugOverlay
+            );
+
+        m_firstFindDebugOverlay->move(
+            overlayRoot->geometry().topLeft() +
+            QPoint(20, 20)
+            );
+    }
+
+    m_firstFindDebugOverlay->show();
+    m_firstFindDebugOverlay->raise();
+#endif
 
     m_delayTimer.setSingleShot(true);
     m_delayTimer.setInterval(TranscendenceVisionConfig::DELAY_MS);
@@ -573,14 +593,22 @@ void TranscendenceVisionManager::onCooldownStarted()
 {
     if (!m_enabled || !m_configured)
         return;
-    if (!m_atmaGateOpen)
-        return;
 
     stopScanning();
     m_delayTimer.stop();
-    m_delayTimer.start();
-}
 
+    m_firstFindTimer.restart();
+    m_measuringFirstFind = true;
+
+#ifdef QT_DEBUG
+    if (m_firstFindDebugOverlay)
+    {
+        m_firstFindDebugOverlay->setSearching();
+    }
+#endif
+
+    startScanning();
+}
 void TranscendenceVisionManager::onCooldownReset()
 {
     stopAll();
@@ -625,9 +653,15 @@ void TranscendenceVisionManager::onFrameReady(QImage area)
 
 // NUOVO: riceve il risultato dal worker (cross-thread, auto-queued sul
 // thread GUI). Qui è sicuro toccare overlay/widget.
-void TranscendenceVisionManager::onScanResult(bool found, QRect foundRect, double score, QImage area)
+void TranscendenceVisionManager::onScanResult(
+    bool found,
+    QRect foundRect,
+    double score,
+    QImage area
+    )
 {
 #ifdef QT_DEBUG
+
     qDebug()
         << "TRANSCENDENCE: score ="
         << score
@@ -676,19 +710,54 @@ void TranscendenceVisionManager::onScanResult(bool found, QRect foundRect, doubl
                     ".png"
                     );
 
-                // ... il resto del blocco diagnostico bordo/interno
-                // (media R/G/B, max, ecc.) resta identico a quello che
-                // mi avevi mandato: copialo qui invariato, usa 'area',
-                // 'foundRect' e m_templateIcon come prima.
+                // Il resto del tuo blocco diagnostico
+                // bordo/interno resta qui invariato.
             }
 
             dumpTimer.restart();
         }
     }
+
 #endif
+
+    // ========================================================
+    // PRIMA RILEVAZIONE DELL'ICONA
+    // ========================================================
+
+    if (found && m_measuringFirstFind)
+    {
+        const qint64 elapsedMs =
+            m_firstFindTimer.elapsed();
+
+        qDebug()
+            << "TRANSCENDENCE FIRST FIND:"
+            << elapsedMs
+            << "ms";
+
+#ifdef QT_DEBUG
+
+        if (m_firstFindDebugOverlay)
+        {
+            m_firstFindDebugOverlay->setFirstFindTime(
+                elapsedMs
+                );
+        }
+
+#endif
+
+        m_measuringFirstFind = false;
+    }
+
+    // ========================================================
+    // ICONA NON TROVATA
+    // ========================================================
 
     if (!found)
         return;
+
+    // ========================================================
+    // ICONA TROVATA
+    // ========================================================
 
     stopScanning();
 

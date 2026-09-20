@@ -15,7 +15,11 @@ constexpr int PRECISION_ZOOM = 3;
 
 // Tempo di attesa dopo l'inizio del cooldown
 // prima che la scansione inizi.
+#ifdef QT_DEBUG
+constexpr int DELAY_MS = 0;
+#else
 constexpr int DELAY_MS = 18000;
+#endif
 
 // Frequenza di scansione una volta attiva.
 constexpr int SCAN_INTERVAL_MS = 150;

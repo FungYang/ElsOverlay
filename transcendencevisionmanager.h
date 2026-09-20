@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QThread>
 #include <QSize>
+#include <QElapsedTimer>
 #include "transcendencevisionconfig.h"
 
 class GlobalKeyboard;
@@ -14,6 +15,9 @@ class Overlay;
 class TranscendenceCaptureSetup;
 class TranscendencePrecisionCrop;
 class TranscendenceVisionWorker;   // NUOVO
+#ifdef QT_DEBUG
+class TranscendenceDebugOverlay;
+#endif
 
 
 class TranscendenceVisionManager : public QObject
@@ -51,6 +55,12 @@ private slots:
     void onScanResult(bool found, QRect foundRect, double score, QImage area);
 
 private:
+#ifdef QT_DEBUG
+    TranscendenceDebugOverlay *m_firstFindDebugOverlay = nullptr;
+#endif
+
+    QElapsedTimer m_firstFindTimer;
+    bool m_measuringFirstFind = false;
     void loadSettings();
     void saveSettings();
     void loadIcon();

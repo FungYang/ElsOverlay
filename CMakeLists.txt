@@ -171,6 +171,7 @@ qt_add_executable(ElsOverlay
     resonancegateworker.h resonancegateworker.cpp
     resonancegatecapturesetup.h resonancegatecapturesetup.cpp
     resonancegatemanager.h resonancegatemanager.cpp
+    transcendencedebugoverlay.h transcendencedebugoverlay.cpp
 
 )
 
