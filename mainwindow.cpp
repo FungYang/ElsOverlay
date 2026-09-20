@@ -14,6 +14,7 @@
 #include <QSettings>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QSlider>
 
 
     namespace
@@ -388,6 +389,64 @@ MainWindow::MainWindow(
             saveToggleStates();
         }
         );
+
+    // ========================================================
+    // OVERLAY TRANSPARENCY
+    // ========================================================
+
+    QGroupBox *transparencyGroup =
+        new QGroupBox(
+            "Overlay Transparency",
+            central
+            );
+
+
+    QHBoxLayout *transparencyLayout =
+        new QHBoxLayout(
+            transparencyGroup
+            );
+
+
+    transparencySlider =
+        new QSlider(
+            Qt::Horizontal,
+            transparencyGroup
+            );
+
+
+    transparencySlider->setRange(
+        0,
+        255
+        );
+
+
+    transparencySlider->setValue(
+        255
+        );
+
+
+    transparencyLayout->addWidget(
+        transparencySlider
+        );
+
+
+    mainLayout->addWidget(
+        transparencyGroup
+        );
+
+
+    connect(
+        transparencySlider,
+        &QSlider::valueChanged,
+        this,
+        [this](int value)
+        {
+            emit transparencyChanged(
+                value
+                );
+        }
+        );
+
     // ========================================================
     // RESONANCE GATE
     // ========================================================

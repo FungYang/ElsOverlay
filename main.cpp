@@ -127,6 +127,12 @@
         &OverlayRoot::setClickable
         );
 
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::transparencyChanged,
+        overlayRoot,
+        &OverlayRoot::setTransparency
+        );
 
     // ==================================================
     // CLASS BUFF CONFIGURATION
@@ -362,6 +368,10 @@
             overlayRoot
             );
 
+    overlayRoot->setSpecialCooldownOverlay(
+        specialCooldowns
+        );
+
 
     QObject::connect(
         &mainWindow,
@@ -422,6 +432,10 @@
             &keyboard,
             overlayRoot
             );
+
+    overlayRoot->setSkillOverlay(
+        skills
+        );
 
 
     overlayRoot->registerOverlay(
@@ -669,6 +683,10 @@
     BuffVisionManager atma(
         &keyboard,
         overlayRoot
+        );
+
+    overlayRoot->setBuffVisionOverlay(
+        atma.visionOverlay()
         );
 
 

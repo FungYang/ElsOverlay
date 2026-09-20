@@ -33,7 +33,11 @@ public:
 
     void pauseAtmaCooldown();
     void resumeAtmaCooldown();
+public slots:
 
+    void setTransparency(
+        int value
+        );
 
 protected:
 
@@ -97,6 +101,7 @@ private:
 
     int cooldown15 = 0;
 
+    int transparency = 255;
 
     QTimer timer;
 

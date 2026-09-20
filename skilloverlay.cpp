@@ -719,6 +719,34 @@ void SkillOverlay::setScale(
     settings.sync();
 }
 
+// ============================================================
+// TRASPARENZA
+// ============================================================
+
+void SkillOverlay::setTransparency(
+    int value
+    )
+{
+    upSkill->setTransparency(
+        value
+        );
+
+
+    leftSkill->setTransparency(
+        value
+        );
+
+
+    downSkill->setTransparency(
+        value
+        );
+
+
+    rightSkill->setTransparency(
+        value
+        );
+}
+
 
 double SkillOverlay::getScale() const
 {

@@ -6,6 +6,7 @@
 
 
 class QPushButton;
+class QSlider;
 
 class MainWindow : public QMainWindow
 {
@@ -90,6 +91,9 @@ signals:
 
     void resonanceGateToggled(
         bool enabled
+        );
+    void transparencyChanged(
+        int value
         );
 
 
@@ -185,6 +189,12 @@ private:
 
     QPushButton *resonanceGateConfigButton;
     QPushButton *resonanceGateToggleButton;
+
+    // ==================================================
+    // TRASPARENZA
+    // ==================================================
+
+    QSlider *transparencySlider;
 
 
 

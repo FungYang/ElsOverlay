@@ -49,6 +49,10 @@ public slots:
 
     void resumeAtmaGate();
 
+    void setTransparency(
+        int value
+        );
+
 
 protected:
 

@@ -196,11 +196,17 @@ void BuffVisionOverlay::paintEvent(
     // IMMAGINE
     // ========================================================
 
+
     const QPixmap &image =
         core->isBuff60Active()
             ? buffImage
             : grayBuffImage;
 
+    p.save();
+
+    p.setOpacity(
+        transparency / 255.0
+        );
 
     p.drawPixmap(
         10,
@@ -209,6 +215,7 @@ void BuffVisionOverlay::paintEvent(
         height() - 20,
         image
         );
+    p.restore();
 
 
     // ========================================================
@@ -237,9 +244,22 @@ void BuffVisionOverlay::paintEvent(
             );
 
 
-        p.setPen(
-            Qt::white
-            );
+        if(cooldown15 > 3)
+        {
+            p.setPen(
+                Qt::white
+                );
+        }
+        else
+        {
+            p.setPen(
+                QColor(
+                    255,
+                    0,
+                    0
+                    )
+                );
+        }
 
 
         p.drawText(
@@ -255,6 +275,11 @@ void BuffVisionOverlay::paintEvent(
     // ========================================================
     // MANIGLIE AGLI ANGOLI
     // ========================================================
+    p.save();
+
+    p.setOpacity(
+        transparency / 255.0
+        );
 
     const int half =
         HandleSize / 2;
@@ -316,6 +341,7 @@ void BuffVisionOverlay::paintEvent(
         HandleSize,
         HandleSize
         );
+    p.restore();
 }
 
 
@@ -1082,6 +1108,20 @@ void BuffVisionOverlay::resumeAtmaCooldown()
         return;
 
     atmaCooldownPaused = false;
+
+    update();
+}
+
+void BuffVisionOverlay::setTransparency(
+    int value
+    )
+{
+    transparency =
+        qBound(
+            0,
+            value,
+            255
+            );
 
     update();
 }

@@ -123,6 +123,12 @@ void SkillBox::paintEvent(
         qRound(
             35.0 * scale
             );
+    painter.save();
+
+    painter.setOpacity(
+        transparency / 255.0
+        );
+
 
 
     // =====================================================
@@ -193,6 +199,7 @@ void SkillBox::paintEvent(
             );
     }
 
+    painter.restore();
 
     // =====================================================
     // COOLDOWN / READY
@@ -208,8 +215,8 @@ void SkillBox::paintEvent(
     {
         painter.setPen(
             QColor(
-                0,
-                0,
+                255,
+                255,
                 255
                 )
             );
@@ -490,4 +497,18 @@ void SkillBox::resumeCooldown()
 {
     cooldownPaused =
         false;
+}
+
+void SkillBox::setTransparency(
+    int value
+    )
+{
+    transparency =
+        qBound(
+            0,
+            value,
+            255
+            );
+
+    update();
 }

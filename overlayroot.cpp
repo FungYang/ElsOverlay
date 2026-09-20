@@ -4,6 +4,9 @@
 #include <QApplication>
 #include <QScreen>
 #include <windows.h>
+#include "skilloverlay.h"
+#include "buffvisionoverlay.h"
+#include "specialcooldownoverlay.h"
 
 
 // ============================================================
@@ -368,7 +371,93 @@ void OverlayRoot::toggleVisibility()
     m_overlaysVisible = true;
 }
 
+void OverlayRoot::setTransparency(
+    int value
+    )
+{
+    m_transparency =
+        qBound(
+            0,
+            value,
+            255
+            );
+
+
+    if(m_skillOverlay)
+    {
+        m_skillOverlay->setTransparency(
+            m_transparency
+            );
+    }
+
+
+    if(m_buffVisionOverlay)
+    {
+        m_buffVisionOverlay->setTransparency(
+            m_transparency
+            );
+    }
+
+
+    if(m_specialCooldownOverlay)
+    {
+        m_specialCooldownOverlay->setTransparency(
+            m_transparency
+            );
+    }
+}
+
 bool OverlayRoot::areOverlaysVisible() const
 {
     return m_overlaysVisible;
 }
+
+
+void OverlayRoot::setSkillOverlay(
+    SkillOverlay *overlay
+    )
+{
+    m_skillOverlay =
+        overlay;
+
+    if(m_skillOverlay)
+    {
+        m_skillOverlay->setTransparency(
+            m_transparency
+            );
+    }
+}
+
+
+void OverlayRoot::setBuffVisionOverlay(
+    BuffVisionOverlay *overlay
+    )
+{
+    m_buffVisionOverlay =
+        overlay;
+
+    if(m_buffVisionOverlay)
+    {
+        m_buffVisionOverlay->setTransparency(
+            m_transparency
+            );
+    }
+}
+
+
+void OverlayRoot::setSpecialCooldownOverlay(
+    SpecialCooldownOverlay *overlay
+    )
+{
+    m_specialCooldownOverlay =
+        overlay;
+
+    if(m_specialCooldownOverlay)
+    {
+        m_specialCooldownOverlay->setTransparency(
+            m_transparency
+            );
+    }
+}
+
+

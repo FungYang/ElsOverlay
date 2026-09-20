@@ -33,6 +33,9 @@ public slots:
         );
 
     void resetAll();
+    void setTransparency(
+        int value
+        );
 
 
 private slots:

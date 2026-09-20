@@ -17,6 +17,23 @@
 
     class SpecialCooldownWidget : public QWidget
     {
+
+
+
+    public slots:
+       void setTransparency(
+           int value
+           )
+        {
+            m_transparency =
+                qBound(
+                    0,
+                    value,
+                    255
+                    );
+
+            update();
+        }
     public:
 
         enum class ResizeCorner
@@ -82,6 +99,7 @@
         {
             return m_configuration;
         }
+
 
 
         void setConfiguration(
@@ -185,8 +203,15 @@
 
 
             // ========================================================
-            // IMMAGINE
+            // IMMAGINE + BORDO
             // ========================================================
+
+            painter.save();
+
+            painter.setOpacity(
+                m_transparency / 255.0
+                );
+
 
             if(!m_pixmap.isNull())
             {
@@ -196,10 +221,6 @@
                     );
             }
 
-
-            // ========================================================
-            // BORDO
-            // ========================================================
 
             painter.setPen(
                 QPen(
@@ -217,6 +238,9 @@
                     -1
                     )
                 );
+
+
+            painter.restore();
 
 
             // ========================================================
@@ -302,9 +326,28 @@
                     );
 
 
-                painter.setPen(
-                    Qt::white
-                    );
+                if(!m_active)
+                {
+                    painter.setPen(
+                        Qt::white
+                        );
+                }
+                else if(m_remainingMilliseconds > 3000)
+                {
+                    painter.setPen(
+                        Qt::white
+                        );
+                }
+                else
+                {
+                    painter.setPen(
+                        QColor(
+                            255,
+                            0,
+                            0
+                            )
+                        );
+                }
 
 
                 painter.drawText(
@@ -323,6 +366,12 @@
             // ========================================================
             // QUATTRO MANIGLIE
             // ========================================================
+
+            painter.save();
+
+            painter.setOpacity(
+                m_transparency / 255.0
+                );
 
             const int handleSize =
                 6;
@@ -368,7 +417,9 @@
                 handleSize,
                 handleSize
                 );
+            painter.restore();
         }
+
 
 
         void mousePressEvent(
@@ -533,6 +584,7 @@
 
         QPixmap m_pixmap;
 
+        int m_transparency = 255;
 
         int m_remainingMilliseconds = 0;
 
@@ -1571,5 +1623,23 @@ QString SpecialCooldownOverlay::keyName(
         return QString(
                    "VK %1"
                    ).arg(key);
+    }
+}
+
+
+void SpecialCooldownOverlay::setTransparency(
+    int value
+    )
+{
+    for(QWidget *widget : m_widgets)
+    {
+        SpecialCooldownWidget *specialWidget =
+            static_cast<SpecialCooldownWidget *>(
+                widget
+                );
+
+        specialWidget->setTransparency(
+            value
+            );
     }
 }

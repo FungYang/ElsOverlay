@@ -58,6 +58,12 @@ public:
     QString getImagePath() const;
     double getCooldown() const;
 
+public slots:
+
+    void setTransparency(
+        int value
+        );
+
 
 protected:
 
@@ -67,6 +73,8 @@ protected:
 
 
 private:
+
+    int transparency = 255;
 
     bool cooldownPaused = false;
     bool selected = false;
