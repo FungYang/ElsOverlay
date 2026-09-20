@@ -805,10 +805,19 @@
     // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
     //                  overlay, &Overlay::resumeAtmaGate);
 
-    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
-    //                  skills, &SkillOverlay::pauseAtmaGate);
-    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
-    //                  skills, &SkillOverlay::resumeAtmaGate);
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateClosed,
+        skills,
+        &SkillOverlay::pauseAtmaGate
+        );
+
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::gateOpened,
+        skills,
+        &SkillOverlay::resumeAtmaGate
+        );
 
     // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
     //                  specialCooldowns, &SpecialCooldownOverlay::pauseAll);

@@ -23,6 +23,8 @@ public:
     void startCooldown();
     void resetCooldown();
     void tick();
+    void pauseCooldown();
+    void resumeCooldown();
 
 
     void setImage(
@@ -61,6 +63,7 @@ protected:
 
 
 private:
+    bool cooldownPaused = false;
 
     QString skillName;
     QString imagePath;

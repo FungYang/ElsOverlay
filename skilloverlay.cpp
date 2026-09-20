@@ -180,6 +180,12 @@ SkillOverlay::SkillOverlay(
         this,
         [this]()
         {
+
+            if(cooldownsPaused)
+            {
+                return;
+            }
+
             upSkill->tick();
 
             leftSkill->tick();
@@ -1368,4 +1374,26 @@ void SkillOverlay::mouseMoveEvent(
 
         settings.sync();
     }
+}
+// ============================================================
+// ATMA GATE
+// ============================================================
+
+void SkillOverlay::pauseAtmaGate()
+{
+    cooldownsPaused = true;
+    upSkill->pauseCooldown();
+    leftSkill->pauseCooldown();
+    downSkill->pauseCooldown();
+    rightSkill->pauseCooldown();
+}
+
+
+void SkillOverlay::resumeAtmaGate()
+{
+    cooldownsPaused = false;
+    upSkill->resumeCooldown();
+    leftSkill->resumeCooldown();
+    downSkill->resumeCooldown();
+    rightSkill->resumeCooldown();
 }

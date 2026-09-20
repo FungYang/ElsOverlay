@@ -229,9 +229,12 @@ void SkillBox::tick()
         return;
     }
 
+    if(cooldownPaused)
+    {
+        return;
+    }
 
     currentCooldown--;
-
 
     if(currentCooldown <= 0)
     {
@@ -239,7 +242,6 @@ void SkillBox::tick()
 
         return;
     }
-
 
     update();
 }
@@ -374,4 +376,11 @@ QString SkillBox::getImagePath() const
 int SkillBox::getCooldown() const
 {
     return cooldown;
+}
+
+void SkillBox::pauseCooldown(){
+    cooldownPaused = true;
+}
+void SkillBox::resumeCooldown(){
+    cooldownPaused = false;
 }

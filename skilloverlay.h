@@ -44,6 +44,9 @@ public slots:
     void applyConfig(
         const SkillOverlayConfig &config
         );
+    void pauseAtmaGate();
+
+    void resumeAtmaGate();
 
 
 protected:
@@ -59,6 +62,7 @@ protected:
 
 
 private:
+    bool cooldownsPaused = false;
 
     // --------------------------------------------------------
     // SKILL BOX
