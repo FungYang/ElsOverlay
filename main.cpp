@@ -688,6 +688,9 @@
     overlayRoot->setBuffVisionOverlay(
         atma.visionOverlay()
         );
+    overlayRoot->setTransparency(
+        mainWindow.transparencyValue()
+        );
 
 
     QObject::connect(

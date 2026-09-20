@@ -27,6 +27,7 @@ public:
 
     void loadToggleStates();
     void saveToggleStates();
+    int transparencyValue() const;
 
 
 signals:

@@ -420,8 +420,13 @@ MainWindow::MainWindow(
         );
 
 
+    QSettings settings;
+
     transparencySlider->setValue(
-        255
+        settings.value(
+                    "Overlay/Transparency",
+                    255
+                    ).toInt()
         );
 
 
@@ -441,6 +446,13 @@ MainWindow::MainWindow(
         this,
         [this](int value)
         {
+            QSettings settings;
+
+            settings.setValue(
+                "Overlay/Transparency",
+                value
+                );
+
             emit transparencyChanged(
                 value
                 );
@@ -1680,4 +1692,9 @@ void MainWindow::loadToggleStates()
         overlayClickabilityToggleButton,
         overlayClickability
         );
+}
+
+int MainWindow::transparencyValue() const
+{
+    return transparencySlider->value();
 }
