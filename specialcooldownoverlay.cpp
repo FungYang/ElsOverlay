@@ -1163,7 +1163,9 @@ void SpecialCooldownOverlay::updateWidget(
 
     if(
         !m_enabled ||
-        !m_states[index].configuration.visible
+        !m_states[index].configuration.visible ||
+        !m_root ||
+        !m_root->areOverlaysVisible()
         )
     {
         widget->hide();

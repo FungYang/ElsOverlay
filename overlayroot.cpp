@@ -367,3 +367,8 @@ void OverlayRoot::toggleVisibility()
 
     m_overlaysVisible = true;
 }
+
+bool OverlayRoot::areOverlaysVisible() const
+{
+    return m_overlaysVisible;
+}

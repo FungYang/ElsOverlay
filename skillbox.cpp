@@ -1,4 +1,3 @@
-
 #include "skillbox.h"
 
 #include <QPainter>
@@ -9,7 +8,7 @@
 SkillBox::SkillBox(
     const QString &imagePath,
     const QString &skillName,
-    int cooldownTime,
+    double cooldownTime,
     QWidget *parent
     )
     : QWidget(parent),
@@ -44,7 +43,7 @@ SkillBox::SkillBox(
 
 
     currentCooldown =
-        0;
+        0.0;
 
 
     setAttribute(
@@ -57,6 +56,10 @@ SkillBox::SkillBox(
         );
 }
 
+
+// =========================================================
+// PAINT
+// =========================================================
 
 // =========================================================
 // PAINT
@@ -80,12 +83,6 @@ void SkillBox::paintEvent(
     painter.setRenderHint(
         QPainter::Antialiasing,
         true
-        );
-
-
-    painter.fillRect(
-        rect(),
-        QColor(30,30,30,180)
         );
 
 
@@ -129,6 +126,59 @@ void SkillBox::paintEvent(
 
 
     // =====================================================
+    // GLOW SELEZIONE
+    // =====================================================
+
+    if(selected && !drawImage.isNull())
+    {
+        QRect imageRect(
+            imageX,
+            imageY,
+            imageWidth,
+            imageHeight
+            );
+
+
+        QColor glowColor(
+            0,
+            255,
+            0,
+            45
+            );
+
+
+        for(int i = 6;
+             i >= 1;
+             --i)
+        {
+            painter.setPen(
+                QPen(
+                    glowColor,
+                    i * 2
+                    )
+                );
+
+
+            painter.setBrush(
+                Qt::NoBrush
+                );
+
+
+            painter.drawRoundedRect(
+                imageRect.adjusted(
+                    -i,
+                    -i,
+                    i,
+                    i
+                    ),
+                4,
+                4
+                );
+        }
+    }
+
+
+    // =====================================================
     // IMAGE
     // =====================================================
 
@@ -148,9 +198,32 @@ void SkillBox::paintEvent(
     // COOLDOWN / READY
     // =====================================================
 
-    painter.setPen(
-        Qt::white
-        );
+    if(!activeCooldown)
+    {
+        painter.setPen(
+            Qt::white
+            );
+    }
+    else if(currentCooldown > 3.0)
+    {
+        painter.setPen(
+            QColor(
+                0,
+                0,
+                255
+                )
+            );
+    }
+    else
+    {
+        painter.setPen(
+            QColor(
+                255,
+                0,
+                0
+                )
+            );
+    }
 
 
     QFont font;
@@ -163,6 +236,7 @@ void SkillBox::paintEvent(
                 )
             )
         );
+
 
     font.setBold(
         true
@@ -178,7 +252,11 @@ void SkillBox::paintEvent(
         rect(),
         Qt::AlignCenter,
         activeCooldown
-            ? QString::number(currentCooldown)
+            ? QString::number(
+                  currentCooldown,
+                  'f',
+                  1
+                  )
             : "Ready"
         );
 }
@@ -193,11 +271,18 @@ void SkillBox::startCooldown()
     if(activeCooldown)
         return;
 
+
     if(cooldownPaused)
         return;
 
-    currentCooldown = cooldown;
-    activeCooldown = true;
+
+    currentCooldown =
+        cooldown;
+
+
+    activeCooldown =
+        true;
+
 
     update();
 }
@@ -210,7 +295,7 @@ void SkillBox::resetCooldown()
 
 
     currentCooldown =
-        0;
+        0.0;
 
 
     update();
@@ -224,19 +309,23 @@ void SkillBox::tick()
         return;
     }
 
+
     if(cooldownPaused)
     {
         return;
     }
 
-    currentCooldown--;
 
-    if(currentCooldown <= 0)
+    currentCooldown -= 0.1;
+
+
+    if(currentCooldown <= 0.0)
     {
         resetCooldown();
 
         return;
     }
+
 
     update();
 }
@@ -288,14 +377,26 @@ void SkillBox::setSkillName(
 
 
 void SkillBox::setCooldown(
-    int cooldownTime
+    double cooldownTime
     )
 {
     cooldown =
         qMax(
-            1,
+            0.0,
             cooldownTime
             );
+}
+
+
+void SkillBox::setSelected(
+    bool value
+    )
+{
+    selected =
+        value;
+
+
+    update();
 }
 
 
@@ -368,14 +469,25 @@ QString SkillBox::getImagePath() const
 }
 
 
-int SkillBox::getCooldown() const
+double SkillBox::getCooldown() const
 {
     return cooldown;
 }
 
-void SkillBox::pauseCooldown(){
-    cooldownPaused = true;
+
+// =========================================================
+// PAUSE / RESUME
+// =========================================================
+
+void SkillBox::pauseCooldown()
+{
+    cooldownPaused =
+        true;
 }
-void SkillBox::resumeCooldown(){
-    cooldownPaused = false;
+
+
+void SkillBox::resumeCooldown()
+{
+    cooldownPaused =
+        false;
 }

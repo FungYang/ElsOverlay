@@ -19,7 +19,7 @@ struct SkillConfig
 
     QString imagePath;
 
-    int cooldown = 0;
+    double cooldown = 0.0;
 
     SkillActivation activation =
         SkillActivation::CtrlCipolla;
@@ -49,6 +49,12 @@ struct SkillOverlayConfig
     // --------------------------------------------------------
 
     double scale = 1.0;
+
+    // --------------------------------------------------------
+    // TITOLO SELEZIONATO AL RESET
+    // --------------------------------------------------------
+
+    int defaultDirection = 0;
 
 
     // --------------------------------------------------------

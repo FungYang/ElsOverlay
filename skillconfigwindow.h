@@ -4,15 +4,13 @@
 #include <QDialog>
 #include <QString>
 
-
 #include "skillconfig.h"
 
-
-    class QComboBox;
+class QComboBox;
+class QDoubleSpinBox;
 class QLineEdit;
 class KeyEdit;
 class QPushButton;
-class QSpinBox;
 class QListWidget;
 class QWidget;
 
@@ -59,6 +57,8 @@ private:
 
     QComboBox *scaleCombo = nullptr;
 
+    QComboBox *defaultDirectionCombo = nullptr;
+
 
     // --------------------------------------------------------
     // SKILL UP
@@ -68,7 +68,7 @@ private:
 
     QLineEdit *upImageEdit = nullptr;
 
-    QSpinBox *upCooldownSpin = nullptr;
+    QDoubleSpinBox *upCooldownSpin = nullptr;
 
     QComboBox *upActivationCombo = nullptr;
 
@@ -87,7 +87,7 @@ private:
 
     QLineEdit *leftImageEdit = nullptr;
 
-    QSpinBox *leftCooldownSpin = nullptr;
+    QDoubleSpinBox *leftCooldownSpin = nullptr;
 
     QComboBox *leftActivationCombo = nullptr;
 
@@ -106,7 +106,7 @@ private:
 
     QLineEdit *downImageEdit = nullptr;
 
-    QSpinBox *downCooldownSpin = nullptr;
+    QDoubleSpinBox *downCooldownSpin = nullptr;
 
     QComboBox *downActivationCombo = nullptr;
 
@@ -125,7 +125,7 @@ private:
 
     QLineEdit *rightImageEdit = nullptr;
 
-    QSpinBox *rightCooldownSpin = nullptr;
+    QDoubleSpinBox *rightCooldownSpin = nullptr;
 
     QComboBox *rightActivationCombo = nullptr;
 
@@ -144,7 +144,7 @@ private:
 
     QLineEdit *artifactImageEdit = nullptr;
 
-    QSpinBox *artifactCooldownSpin = nullptr;
+    QDoubleSpinBox *artifactCooldownSpin = nullptr;
 
 
     // --------------------------------------------------------
@@ -168,7 +168,7 @@ private:
 
         QLineEdit *&nameEdit,
         QLineEdit *&imageEdit,
-        QSpinBox *&cooldownSpin,
+        QDoubleSpinBox *&cooldownSpin,
         QComboBox *&activationCombo,
 
         QListWidget *&comboKeysList,
@@ -182,7 +182,7 @@ private:
 
         QLineEdit *&nameEdit,
         QLineEdit *&imageEdit,
-        QSpinBox *&cooldownSpin
+        QDoubleSpinBox *&cooldownSpin
         );
 
 
@@ -201,7 +201,7 @@ private:
 
         QLineEdit *nameEdit,
         QLineEdit *imageEdit,
-        QSpinBox *cooldownSpin,
+        QDoubleSpinBox *cooldownSpin,
         QComboBox *activationCombo,
 
         QListWidget *comboKeysList
@@ -211,7 +211,7 @@ private:
     SkillConfig readSkill(
         QLineEdit *nameEdit,
         QLineEdit *imageEdit,
-        QSpinBox *cooldownSpin,
+        QDoubleSpinBox *cooldownSpin,
         QComboBox *activationCombo,
 
         QListWidget *comboKeysList

@@ -27,6 +27,8 @@ public:
 
     bool isClickable() const;
 
+    bool areOverlaysVisible() const;
+
 
 public slots:
 

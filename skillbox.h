@@ -1,4 +1,3 @@
-
 #ifndef SKILLBOX_H
 #define SKILLBOX_H
 
@@ -6,7 +5,7 @@
 #include <QPixmap>
 
 
-    class SkillBox : public QWidget
+class SkillBox : public QWidget
 {
     Q_OBJECT
 
@@ -15,7 +14,7 @@ public:
     explicit SkillBox(
         const QString &imagePath,
         const QString &skillName,
-        int cooldownTime,
+        double cooldownTime,
         QWidget *parent = nullptr
         );
 
@@ -38,7 +37,7 @@ public:
 
 
     void setCooldown(
-        int cooldownTime
+        double cooldownTime
         );
 
 
@@ -47,12 +46,17 @@ public:
         );
 
 
+    void setSelected(
+        bool selected
+        );
+
+
     double getScale() const;
 
 
     QString getSkillName() const;
     QString getImagePath() const;
-    int getCooldown() const;
+    double getCooldown() const;
 
 
 protected:
@@ -63,7 +67,9 @@ protected:
 
 
 private:
+
     bool cooldownPaused = false;
+    bool selected = false;
 
     QString skillName;
     QString imagePath;
@@ -71,8 +77,8 @@ private:
     QPixmap image;
     QPixmap grayImage;
 
-    int cooldown = 0;
-    int currentCooldown = 0;
+    double cooldown = 0.0;
+    double currentCooldown = 0.0;
 
     bool activeCooldown = false;
 

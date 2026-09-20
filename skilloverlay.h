@@ -170,6 +170,10 @@ private:
 
 
     void updateOverlayGeometry();
+
+    void updateSelectedSkillVisual();
+
+    Direction directionFromConfig(int value) const;
 };
 
 #endif

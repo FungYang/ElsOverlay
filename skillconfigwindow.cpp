@@ -2,6 +2,7 @@
 
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -11,8 +12,8 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QSettings>
-#include <QSpinBox>
 #include <QVBoxLayout>
+#include <QGridLayout>
 
 #include "keyedit.h"
 
@@ -192,10 +193,85 @@ void SkillConfigWindow::buildUi()
 
 
     // ========================================================
-    // SKILL UP
+    // SELEZIONE DOPO RESET
     // ========================================================
 
+    QGroupBox *defaultDirectionGroup =
+        new QGroupBox(
+            "Selezione dopo Reset",
+            this
+            );
+
+
+    QFormLayout *defaultDirectionLayout =
+        new QFormLayout(
+            defaultDirectionGroup
+            );
+
+
+    defaultDirectionCombo =
+        new QComboBox(
+            defaultDirectionGroup
+            );
+
+
+    defaultDirectionCombo->addItem(
+        "Nessuno",
+        0
+        );
+
+
+    defaultDirectionCombo->addItem(
+        "↑ Skill Up",
+        1
+        );
+
+
+    defaultDirectionCombo->addItem(
+        "← Skill Left",
+        2
+        );
+
+
+    defaultDirectionCombo->addItem(
+        "↓ Skill Down",
+        3
+        );
+
+
+    defaultDirectionCombo->addItem(
+        "→ Skill Right",
+        4
+        );
+
+
+    defaultDirectionLayout->addRow(
+        "Titolo predefinito:",
+        defaultDirectionCombo
+        );
+
+
     mainLayout->addWidget(
+        defaultDirectionGroup
+        );
+
+
+    // ========================================================
+    // SKILL
+    //
+    // Riga 1: UP    | DOWN
+    // Riga 2: LEFT  | RIGHT
+    // ========================================================
+
+    QGridLayout *skillsLayout =
+        new QGridLayout;
+
+
+    // --------------------------------------------------------
+    // SKILL UP
+    // --------------------------------------------------------
+
+    skillsLayout->addWidget(
         createSkillWidget(
             "↑ Skill Up",
 
@@ -207,35 +283,17 @@ void SkillConfigWindow::buildUi()
             upComboKeysList,
             upAddComboKeyButton,
             upRemoveComboKeyButton
-            )
+            ),
+        0,
+        0
         );
 
 
-    // ========================================================
-    // SKILL LEFT
-    // ========================================================
-
-    mainLayout->addWidget(
-        createSkillWidget(
-            "← Skill Left",
-
-            leftNameEdit,
-            leftImageEdit,
-            leftCooldownSpin,
-            leftActivationCombo,
-
-            leftComboKeysList,
-            leftAddComboKeyButton,
-            leftRemoveComboKeyButton
-            )
-        );
-
-
-    // ========================================================
+    // --------------------------------------------------------
     // SKILL DOWN
-    // ========================================================
+    // --------------------------------------------------------
 
-    mainLayout->addWidget(
+    skillsLayout->addWidget(
         createSkillWidget(
             "↓ Skill Down",
 
@@ -247,15 +305,39 @@ void SkillConfigWindow::buildUi()
             downComboKeysList,
             downAddComboKeyButton,
             downRemoveComboKeyButton
-            )
+            ),
+        0,
+        1
         );
 
 
-    // ========================================================
-    // SKILL RIGHT
-    // ========================================================
+    // --------------------------------------------------------
+    // SKILL LEFT
+    // --------------------------------------------------------
 
-    mainLayout->addWidget(
+    skillsLayout->addWidget(
+        createSkillWidget(
+            "← Skill Left",
+
+            leftNameEdit,
+            leftImageEdit,
+            leftCooldownSpin,
+            leftActivationCombo,
+
+            leftComboKeysList,
+            leftAddComboKeyButton,
+            leftRemoveComboKeyButton
+            ),
+        1,
+        0
+        );
+
+
+    // --------------------------------------------------------
+    // SKILL RIGHT
+    // --------------------------------------------------------
+
+    skillsLayout->addWidget(
         createSkillWidget(
             "→ Skill Right",
 
@@ -267,7 +349,14 @@ void SkillConfigWindow::buildUi()
             rightComboKeysList,
             rightAddComboKeyButton,
             rightRemoveComboKeyButton
-            )
+            ),
+        1,
+        1
+        );
+
+
+    mainLayout->addLayout(
+        skillsLayout
         );
 
 
@@ -355,7 +444,7 @@ QWidget *SkillConfigWindow::createSkillWidget(
 
     QLineEdit *&nameEdit,
     QLineEdit *&imageEdit,
-    QSpinBox *&cooldownSpin,
+    QDoubleSpinBox *&cooldownSpin,
     QComboBox *&activationCombo,
 
     QListWidget *&comboKeysList,
@@ -459,14 +548,24 @@ QWidget *SkillConfigWindow::createSkillWidget(
     // ========================================================
 
     cooldownSpin =
-        new QSpinBox(
+        new QDoubleSpinBox(
             group
             );
 
 
     cooldownSpin->setRange(
-        0,
-        9999
+        0.0,
+        9999.0
+        );
+
+
+    cooldownSpin->setDecimals(
+        1
+        );
+
+
+    cooldownSpin->setSingleStep(
+        0.1
         );
 
 
@@ -689,6 +788,17 @@ void SkillConfigWindow::loadConfig()
 
 
     // ========================================================
+    // DEFAULT DIRECTION
+    // ========================================================
+
+    m_config.defaultDirection =
+        settings.value(
+                    "BuffTitles/DefaultDirection",
+                    0
+                    ).toInt();
+
+
+    // ========================================================
     // UP
     // ========================================================
 
@@ -709,8 +819,8 @@ void SkillConfigWindow::loadConfig()
     m_config.up.cooldown =
         settings.value(
                     "BuffTitles/Up/Cooldown",
-                    60
-                    ).toInt();
+                    60.0
+                    ).toDouble();
 
 
     m_config.up.activation =
@@ -745,8 +855,8 @@ void SkillConfigWindow::loadConfig()
     m_config.left.cooldown =
         settings.value(
                     "BuffTitles/Left/Cooldown",
-                    25
-                    ).toInt();
+                    25.0
+                    ).toDouble();
 
 
     m_config.left.activation =
@@ -781,8 +891,8 @@ void SkillConfigWindow::loadConfig()
     m_config.down.cooldown =
         settings.value(
                     "BuffTitles/Down/Cooldown",
-                    30
-                    ).toInt();
+                    30.0
+                    ).toDouble();
 
 
     m_config.down.activation =
@@ -817,8 +927,8 @@ void SkillConfigWindow::loadConfig()
     m_config.right.cooldown =
         settings.value(
                     "BuffTitles/Right/Cooldown",
-                    20
-                    ).toInt();
+                    20.0
+                    ).toDouble();
 
 
     m_config.right.activation =
@@ -960,6 +1070,30 @@ void SkillConfigWindow::loadConfig()
 
 
     // ========================================================
+    // CARICA DEFAULT DIRECTION NEL COMBOBOX
+    // ========================================================
+
+    int defaultDirectionIndex =
+        defaultDirectionCombo->findData(
+            m_config.defaultDirection
+            );
+
+
+    if(defaultDirectionIndex >= 0)
+    {
+        defaultDirectionCombo->setCurrentIndex(
+            defaultDirectionIndex
+            );
+    }
+    else
+    {
+        defaultDirectionCombo->setCurrentIndex(
+            0
+            );
+    }
+
+
+    // ========================================================
     // LOAD SKILL
     // ========================================================
 
@@ -1013,7 +1147,7 @@ void SkillConfigWindow::loadSkill(
 
     QLineEdit *nameEdit,
     QLineEdit *imageEdit,
-    QSpinBox *cooldownSpin,
+    QDoubleSpinBox *cooldownSpin,
     QComboBox *activationCombo,
 
     QListWidget *comboKeysList
@@ -1145,6 +1279,18 @@ void SkillConfigWindow::readUiToConfig()
 
 
     // ========================================================
+    // DEFAULT DIRECTION
+    // ========================================================
+
+    if(defaultDirectionCombo)
+    {
+        m_config.defaultDirection =
+            defaultDirectionCombo->currentData()
+                .toInt();
+    }
+
+
+    // ========================================================
     // SKILL UP
     // ========================================================
 
@@ -1208,7 +1354,7 @@ void SkillConfigWindow::readUiToConfig()
 SkillConfig SkillConfigWindow::readSkill(
     QLineEdit *nameEdit,
     QLineEdit *imageEdit,
-    QSpinBox *cooldownSpin,
+    QDoubleSpinBox *cooldownSpin,
     QComboBox *activationCombo,
 
     QListWidget *comboKeysList
@@ -1229,8 +1375,18 @@ SkillConfig SkillConfigWindow::readSkill(
         imageEdit->text();
 
 
-    config.cooldown =
+    double cooldown =
         cooldownSpin->value();
+
+
+    cooldown =
+        qRound(
+            cooldown * 10.0
+            ) / 10.0;
+
+
+    config.cooldown =
+        cooldown;
 
 
     config.activation =
@@ -1342,6 +1498,16 @@ void SkillConfigWindow::saveConfig()
     settings.setValue(
         "Overlay/BuffGroup/Scale",
         m_config.scale
+        );
+
+
+    // ========================================================
+    // DEFAULT DIRECTION
+    // ========================================================
+
+    settings.setValue(
+        "BuffTitles/DefaultDirection",
+        m_config.defaultDirection
         );
 
 

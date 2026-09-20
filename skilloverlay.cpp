@@ -18,6 +18,13 @@ SkillOverlay::SkillOverlay(
     // ========================================================
 
     loadDefaultConfig();
+    qDebug()
+        << "DefaultDirection:"
+        << config.defaultDirection;
+    currentDirection =
+        directionFromConfig(
+            config.defaultDirection
+            );
 
 
     // ========================================================
@@ -198,7 +205,7 @@ SkillOverlay::SkillOverlay(
 
 
     timer->start(
-        1000
+        100
         );
 
 
@@ -285,17 +292,15 @@ SkillOverlay::SkillOverlay(
             this,
             [this]()
             {
-                trackingActive =
-                    true;
-
-
-                sequenceState =
-                    SequenceState::WaitingStateKey;
-
+                trackingActive = true;
+                sequenceState = SequenceState::WaitingStateKey;
 
                 currentDirection =
-                    Direction::None;
+                    directionFromConfig(
+                        config.defaultDirection
+                        );
 
+                updateSelectedSkillVisual();
 
                 resetAllCooldowns();
             },
@@ -317,6 +322,8 @@ SkillOverlay::SkillOverlay(
                     true;
             }
             );
+
+        updateSelectedSkillVisual();
     }
 }
 
@@ -376,6 +383,11 @@ void SkillOverlay::loadDefaultConfig()
                     "BuffTitles/CipollaKey",
                     '6'
                     ).toInt();
+    config.defaultDirection =
+        settings.value(
+                    "BuffTitles/DefaultDirection",
+                    0
+                    ).toInt();
 
 
     // --------------------------------------------------------
@@ -400,7 +412,7 @@ void SkillOverlay::loadDefaultConfig()
         settings.value(
                     "BuffTitles/Up/Cooldown",
                     60
-                    ).toInt();
+                    ).toDouble();
 
 
     config.up.activation =
@@ -436,7 +448,7 @@ void SkillOverlay::loadDefaultConfig()
         settings.value(
                     "BuffTitles/Left/Cooldown",
                     25
-                    ).toInt();
+                    ).toDouble();
 
 
     config.left.activation =
@@ -472,7 +484,7 @@ void SkillOverlay::loadDefaultConfig()
         settings.value(
                     "BuffTitles/Down/Cooldown",
                     30
-                    ).toInt();
+                    ).toDouble();
 
 
     config.down.activation =
@@ -508,7 +520,7 @@ void SkillOverlay::loadDefaultConfig()
         settings.value(
                     "BuffTitles/Right/Cooldown",
                     0
-                    ).toInt();
+                    ).toDouble();
 
 
     config.right.activation =
@@ -641,6 +653,7 @@ void SkillOverlay::setScale(
 
     config.scale =
         scale;
+
 
 
     // --------------------------------------------------------
@@ -1288,13 +1301,14 @@ void SkillOverlay::checkSequences(
             sequenceState =
                 SequenceState::WaitingStateKey;
 
-
             return;
         }
 
 
         sequenceState =
             SequenceState::WaitingStateKey;
+
+        updateSelectedSkillVisual();
     }
 }
 
@@ -1401,4 +1415,44 @@ void SkillOverlay::resumeAtmaGate()
 int SkillOverlay::cipollaKey() const
 {
     return config.cipollaKey;
+}
+
+SkillOverlay::Direction SkillOverlay::directionFromConfig(int value) const
+{
+    switch(value)
+    {
+    case 1:
+        return Direction::Up;
+
+    case 2:
+        return Direction::Left;
+
+    case 3:
+        return Direction::Down;
+
+    case 4:
+        return Direction::Right;
+
+    default:
+        return Direction::None;
+    }
+}
+
+void SkillOverlay::updateSelectedSkillVisual()
+{
+    upSkill->setSelected(
+        currentDirection == Direction::Up
+        );
+
+    leftSkill->setSelected(
+        currentDirection == Direction::Left
+        );
+
+    downSkill->setSelected(
+        currentDirection == Direction::Down
+        );
+
+    rightSkill->setSelected(
+        currentDirection == Direction::Right
+        );
 }
