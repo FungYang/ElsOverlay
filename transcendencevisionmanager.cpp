@@ -776,4 +776,7 @@ void TranscendenceVisionManager::pauseAtmaGate()
 void TranscendenceVisionManager::resumeAtmaGate()
 {
     m_atmaGateOpen = true;
+
+    if (m_enabled && m_configured)
+        startScanning();
 }
