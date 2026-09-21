@@ -18,9 +18,9 @@ SkillOverlay::SkillOverlay(
     // ========================================================
 
     loadDefaultConfig();
-    qDebug()
-        << "DefaultDirection:"
-        << config.defaultDirection;
+    // qDebug()
+    //     << "DefaultDirection:"
+    //     << config.defaultDirection;
     currentDirection =
         directionFromConfig(
             config.defaultDirection

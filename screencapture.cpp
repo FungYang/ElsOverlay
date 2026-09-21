@@ -581,10 +581,10 @@ bool ScreenCapture::ensureStaging(
         size;
 
 
-    qDebug()
-        << "ScreenCapture:"
-        << "staging resized:"
-        << size;
+    // qDebug()
+    //     << "ScreenCapture:"
+    //     << "staging resized:"
+    //     << size;
 
 
     return true;

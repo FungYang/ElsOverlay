@@ -198,7 +198,9 @@ void Overlay::resetCooldown()
 {
     running = false;
 
-    atmaGatePaused = false;
+    // NON tocchiamo atmaGatePaused: appartiene al Resonance Gate,
+    // non al reset del cooldown (stesso principio già applicato
+    // correttamente in setEnabled()).
 
     cooldown = 20;
 
@@ -208,7 +210,6 @@ void Overlay::resetCooldown()
 
     update();
 }
-
 
 bool Overlay::startCooldown()
 {

@@ -1230,30 +1230,30 @@ if (detections.empty())
 
 int number = 0;
 
-qDebug()
-    << "Cifre rilevate:";
+// qDebug()
+//     << "Cifre rilevate:";
 
 for (const Detection& detection :
      detections)
 {
-    qDebug()
-    << "Digit="
-    << detection.digit
-    << "confidence="
-    << detection.confidence
-    << "x="
-    << (detection.x1 +
-        detection.x2) *
-            0.5f;
+    // qDebug()
+    // << "Digit="
+    // << detection.digit
+    // << "confidence="
+    // << detection.confidence
+    // << "x="
+    // << (detection.x1 +
+    //     detection.x2) *
+    //         0.5f;
 
     number =
         number * 10 +
         detection.digit;
 }
 
-qDebug()
-    << "Numero finale:"
-    << number;
+// qDebug()
+//     << "Numero finale:"
+//     << number;
 
 return number;
 }

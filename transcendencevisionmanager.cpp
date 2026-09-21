@@ -190,12 +190,12 @@ TranscendenceVisionManager::TranscendenceVisionManager(
 
                 loadIcon();
 
-                qDebug()
-                    << "TRANSCENDENCE:"
-                    << "search area aggiornata:"
-                    << m_searchArea
-                    << "regionId ="
-                    << m_searchRegionId;
+                // qDebug()
+                //     << "TRANSCENDENCE:"
+                //     << "search area aggiornata:"
+                //     << m_searchArea
+                //     << "regionId ="
+                //     << m_searchRegionId;
 
                 captureSetup->hide();
 
@@ -488,10 +488,10 @@ void TranscendenceVisionManager::savePreciseIcon(
 
     if (icon.size() != size)
     {
-        qDebug()
-        << "TRANSCENDENCE: dimensione crop incoerente:"
-        << "image =" << icon.size()
-        << "size =" << size;
+        // qDebug()
+        // << "TRANSCENDENCE: dimensione crop incoerente:"
+        // << "image =" << icon.size()
+        // << "size =" << size;
 
         return;
     }
@@ -662,13 +662,13 @@ void TranscendenceVisionManager::onScanResult(
 {
 #ifdef QT_DEBUG
 
-    qDebug()
-        << "TRANSCENDENCE: score ="
-        << score
-        << "soglia ="
-        << TranscendenceVisionConfig::MATCH_THRESHOLD
-        << "found ="
-        << found;
+    // qDebug()
+    //     << "TRANSCENDENCE: score ="
+    //     << score
+    //     << "soglia ="
+    //     << TranscendenceVisionConfig::MATCH_THRESHOLD
+    //     << "found ="
+    //     << found;
 
     {
         static QElapsedTimer dumpTimer;
@@ -729,10 +729,10 @@ void TranscendenceVisionManager::onScanResult(
         const qint64 elapsedMs =
             m_firstFindTimer.elapsed();
 
-        qDebug()
-            << "TRANSCENDENCE FIRST FIND:"
-            << elapsedMs
-            << "ms";
+        // qDebug()
+        //     << "TRANSCENDENCE FIRST FIND:"
+        //     << elapsedMs
+        //     << "ms";
 
 #ifdef QT_DEBUG
 
