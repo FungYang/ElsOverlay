@@ -1,489 +1,295 @@
 # ElsOverlay
 
-**ElsOverlay** is a customizable overlay for **Elsword** designed to help track skill cooldowns, buffs, transcendence and distance-related information directly on screen.
+**ElsOverlay** is a customizable, external overlay for **Elsword** that shows skill cooldowns, buffs, Transcendence, Atma and distance guides directly on top of the game.
 
-The application is designed to remain completely external to the game: it relies on keyboard input and screen recognition and does not modify game files or directly interact with the game client.
+It runs entirely outside the game: it uses global keyboard input, screen capture and on-screen image recognition (template matching and an ONNX/YOLO detector). It does **not** read game memory, inject code or touch game files.
+
+> **Disclaimer:** ElsOverlay is an independent, unofficial fan project and is not affiliated with or endorsed by KOG or the Elsword publishers. Use it at your own risk.
+
+<!-- VERIFY: add a screenshot of the main window / a sample overlay, e.g. ![ElsOverlay](images/screenshot.png) -->
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Compliance note](#compliance-note)
+- [Requirements](#requirements)
+- [Installation (release build)](#installation-release-build)
+- [First-time setup](#first-time-setup)
+- [Configuration](#configuration)
+- [Building from source](#building-from-source)
+- [Project structure](#project-structure)
+- [Known limitations](#known-limitations)
+- [Related projects](#related-projects)
+- [Release history](#release-history)
+- [License](#license)
 
 ---
 
 ## Features
 
-ElsOverlay currently provides several independent overlay systems that can be enabled or disabled from the main window.
+Every system is independent and can be switched **ON/OFF** from the main window without restarting the application. The main window uses Italian labels (*Configura*, *Chiudi*).
+
+| Section | What it does |
+|---|---|
+| **Atma** | Tracks Atma-related buffs using screen recognition. Includes a dedicated capture/zone setup and a debug window. |
+| **Class Buff** | Configurable, per-class buff/cooldown tracking with custom names and icons. |
+| **Distance Guides** | Lines, rectangles and circles drawn over the game, organized in groups. |
+| **Buff Titles** | Cooldown tracking for the equipped title's buff. Supports transparency and pauses automatically on stage change. |
+| **Buff Trascendenza** | Visual buff display for Transcendence, independent from the cooldown timer. |
+| **Buff Tracker** | Buff remapping, configured through the companion app [ElsBuffRemapping](https://github.com/FungYang/ElsBuffRemapping). |
 
 ### Transcendence
 
-Tracks the cooldown of the Transcendence system.
+- Transcendence cooldown tracking with reset and pause support.
+- Screen-recognition based detection, with dedicated capture setup and precision cropping.
+- Movable overlay, position saved automatically.
 
-The overlay displays the remaining cooldown and can be controlled through keyboard input.
+### Skill cooldowns
 
-Features:
-
-- Transcendence cooldown tracking
-- Reset support
-- Ability to pause the cooldown
-- Movable overlay
-- Automatic position saving
-
----
-
-### Main Skill Overlay
-
-Tracks the cooldowns of the main skills associated with the character.
-
-The overlay currently supports:
-
-- Concerto
-- Artifact
-- Night Parade
-- Setting Sun
-
-The skill overlay uses keyboard sequences to determine which title/skill is currently active.
-
-#### Title selection
-
-After the awakening sequence, the title can be selected using the directional keys:
-
-| Direction | Title |
-|---|---|
-| `↑` | Concerto |
-| `←` | Night Parade |
-| `↓` | Setting Sun |
-| `→` | Other |
-
-The overlay then tracks the corresponding cooldown according to the detected input sequence.
-
----
-
-### Class Buffs
-
-ElsOverlay includes a configurable system for tracking class-specific buffs.
-
-Class buffs can be configured from the main window and displayed through a dedicated overlay.
-
-The system supports:
-
-- Multiple class configurations
-- Custom buff entries
-- Custom names
-- Custom icons
-- Cooldown tracking
-- Enable/disable toggle
-- Configuration editor
-
----
-
-### Buff Titles
-
-Buff Titles can be independently enabled or disabled from the main window.
-
-This allows the user to control exactly which buff information is displayed without affecting the other overlay systems.
-
----
-
-### Buff Trascendenza
-
-The Transcendence buff overlay can also be independently enabled or disabled.
-
-This makes it possible to keep the Transcendence cooldown system separate from the visual buff display.
-
----
-
-### Atma / BuffVision
-
-The Atma system uses **BuffVision**, a screen-recognition system designed to detect visual changes in selected areas of the screen.
-
-BuffVision does not read game memory.
-
-Instead, it:
-
-1. Captures selected areas of the screen.
-2. Stores reference images.
-3. Compares the current screen with the stored references.
-4. Detects state transitions.
-5. Triggers the corresponding buff logic.
-
-This allows the system to react to visual changes without directly interacting with the game client.
-
----
+- Configurable skill overlay: skills and their keys are set from the skill configuration window.
+- Title-aware tracking (Concerto, Night Parade, Setting Sun, and others), selected through a keyboard sequence or configured directly.
+- Special cooldown overlay (potions and Invariant), detected via template matching and resonance text recognition.
+<!-- VERIFY: confirm which skills/titles are currently supported and whether title selection is still done by key sequence or via the config window. -->
 
 ### Distance Guides
 
-Distance Guides provide visual guides that can be placed over the game.
+Guide types: **vertical line**, **rectangle**, **circle**.
 
-Supported guide types include:
+Guides can be created, removed, configured, moved, grouped and enabled/disabled. A group can hold any number of guides and groups can be switched independently, e.g.:
 
-- Vertical lines
-- Rectangles
-- Circles
-
-Guides can be:
-
-- Created
-- Removed
-- Configured
-- Moved
-- Grouped
-- Enabled or disabled
-
-#### Groups
-
-Distance Guides can be organized into groups.
-
-Each group can contain any number of guides.
-
-For example:
-
-```text
+```
 Group: Boss Position
-
-    ├── Player Position
-    ├── Boss Position
-    ├── Left Limit
-    ├── Right Limit
-    └── Safe Area
+ ├── Player Position
+ ├── Boss Position
+ ├── Left Limit
+ ├── Right Limit
+ └── Safe Area
 ```
 
-Groups can be configured independently, making it possible to quickly switch between different guide setups.
+The group configuration window stays open while adding elements, so you can create several guides in a row.
 
 ---
 
-## Main Window
+## How it works
 
-The main window provides independent controls for the different overlay systems.
+ElsOverlay observes the same pixels you see on screen:
 
-Each system can be turned ON or OFF without affecting the others.
+1. **Global keyboard hook**: reads your key presses to start, reset and pause timers.
+2. **Screen capture**: Windows Direct3D 11 / DXGI capture of the selected screen regions.
+3. **Recognition**:
+   - *Template matching* against reference images you save during setup (Atma, potions, Invariant, digits).
+   - *YOLO detection* through **ONNX Runtime**, using the models in `models/` (`best_1080.onnx` for 1080p, `best_2k.onnx` for 2K).
+4. **Overlays**: transparent, click-through-friendly Qt windows managed by a common overlay root.
 
-Available sections include:
-
-- Atma
-- Class Buff
-- Distance Guides
-- Buff Tracker
-- Buff Titles
-- Buff Trascendenza
-
-The configuration windows can be opened separately using the corresponding **Configura** buttons.
+It does **not**: read or modify game memory, inject code, inspect network traffic, or modify game files.
 
 ---
 
-# Controls
+## Compliance note
 
-The exact keyboard behavior depends on the active overlay system.
+On 12 August 2026 the Elsword.it support team (Game Admin, after consulting with the CoMa) stated that software obtaining information from the game client through data mining is to be considered illicit, while software that operates solely through screen capture is permitted.
 
-Common controls include:
+ElsOverlay is designed to stay within that scope: it analyses only what is visible on screen and does not access the game client's internal data.
+
+Please keep in mind that:
+
+- This statement comes from the **Elsword.it** support team and concerns that server. Rules on other servers may differ.
+- It is a support answer, not a formal license or endorsement, and rules may change over time. Always check the current terms of service of the server you play on.
+- The statement refers to software that analyses *only* information obtained through screen capture. Do not extend ElsOverlay with anything that reads game memory, injects code, inspects network traffic or reads game files.
+
+<!-- VERIFY: the support answer does not explicitly mention the global keyboard hook (globalkeyboard.*). Consider asking support to confirm it, then mention it here. -->
+
+---
+
+## Requirements
+
+**To run**
+
+- Windows 10/11 (64-bit)
+- Elsword in windowed or borderless mode
+- A **1080p** or **2K** game resolution (the bundled detection models target these two)
+<!-- VERIFY: confirm exclusive fullscreen support and whether other resolutions work. -->
+
+**To build**
+
+- CMake 3.19+
+- Qt 6.5+ (Core, Widgets, Concurrent)
+- A C++17 compiler for Windows (MSVC recommended)
+- [ONNX Runtime](https://github.com/microsoft/onnxruntime/releases) for Windows (headers and `onnxruntime.dll`)
+
+---
+
+## Installation (release build)
+
+1. Download the latest archive from the [Releases](https://github.com/FungYang/ElsOverlay/releases) page.
+2. Extract it anywhere you have write access.
+3. Keep the folder structure intact: the executable expects `images/`, `models/` and `onnxruntime.dll` next to it.
+4. Run `ElsOverlay.exe`.
+
+---
+
+## First-time setup
+
+1. Start Elsword and set your final resolution and UI scale first. Changing them later invalidates saved references.
+2. Start ElsOverlay and enable only the sections you need.
+3. For each section, press **Configura** and follow its setup (see below).
+4. Drag overlays where you want them. Positions are saved automatically.
+
+### Moving overlays
+
+Click and hold an overlay, drag it, release. Positions are restored on the next launch.
+
+### Atma setup
+
+1. Enable **Atma** and open its configuration.
+2. Place the capture areas over the relevant parts of the screen.
+3. Save the reference images with the configured key (default `P`), then confirm with `ENTER`.
+
+Reference images are stored locally and reloaded at startup.
+<!-- VERIFY: the Atma flow changed (atmazone* modules, red-zone proxy, debug window). Update these steps and the folder name (previously AtmaFlowBuff/). -->
+
+### Transcendence setup
+
+Open the Transcendence capture setup, select the region that shows the Transcendence indicator and save the reference.
+<!-- VERIFY: describe the actual steps of transcendencecapturesetup / precision crop. -->
+
+### Class Buff
+
+`Class Buff → Configura` lets you create class configurations, each with any number of buffs (name, icon, cooldown). Use different configurations for different characters.
+
+### Distance Guides
+
+`Distance Guides → Configura` lets you create groups and add lines, rectangles and circles. Each guide is configured individually and can be removed without deleting the group.
+
+### Buff Tracker
+
+`Buff Tracker → Configura` launches the companion app **ElsBuffRemapping**. See its repository for setup.
+<!-- VERIFY: the old README said this was "buffoverla.exe" (typo). Confirm the real executable name and where it must be placed. -->
+
+---
+
+## Controls
+
+Keys depend on the active subsystem and only work while that subsystem is enabled.
 
 | Key | Function |
 |---|---|
-| `CTRL` | Start/reset relevant cooldown tracking |
-| `CTRL Right` | Reset relevant cooldown systems |
-| `0` | Start AtmaFlowBuff tracking |
-| `1` - `6` | AtmaFlowBuff action input |
+| `CTRL` | Start / reset the relevant cooldown |
+| `CTRL Right` | Reset cooldown systems |
+| `8` | Pause / resume Transcendence cooldown |
 | `G` | Begin title selection sequence |
-| `↑` | Select Concerto |
-| `←` | Select Night Parade |
-| `↓` | Select Setting Sun |
-| `→` | Select Other |
-| `P` | Save AtmaFlowBuff reference |
+| `↑` `←` `↓` `→` | Select title (Concerto / Night Parade / Setting Sun / Other) |
+| `P` | Save a reference image during Atma setup |
 | `ENTER` | Confirm configuration |
-| `8` | Pause/resume Transcendence cooldown |
+| `0`, `1`-`6` | Atma buff tracking input |
 
-> Some keys are handled only when the corresponding subsystem is enabled.
-
----
-
-# Moving Overlays
-
-Overlay elements can generally be moved directly with the mouse.
-
-To move an overlay:
-
-1. Click and hold the overlay.
-2. Drag it to the desired position.
-3. Release the mouse button.
-
-Positions are automatically saved.
-
-The next time ElsOverlay is launched, the overlays are restored to their previous positions.
+<!-- VERIFY: keys are now configurable via skillconfigwindow/keyedit. Check which of these are still hard-coded defaults and update or remove the table. -->
 
 ---
 
-# Configuration
+## Configuration
 
-Most configuration is performed directly through the application's graphical interface.
+Everything is configured from the GUI; no manual file editing is normally needed.
 
-No manual editing of configuration files is normally required.
+- `ElsOverlay.ini` stores overlay positions and general settings.
+- Reference images and per-class / per-guide configurations are stored locally next to the executable.
 
-The application stores positional and configuration data locally.
-
-The main position file is:
-
-```text
-ElsOverlay.ini
-```
+To reset a section, close ElsOverlay and delete the corresponding configuration file or reference folder.
+<!-- VERIFY: list the actual config/reference file and folder names used today. -->
 
 ---
 
-# AtmaFlowBuff Setup
-
-To configure Atma/AtmaFlowBuff:
-
-1. Enable **Atma** from the main window.
-2. Open the Atma configuration window.
-3. Position the capture areas over the desired parts of the screen.
-4. Save the first reference using `P`.
-5. Save the second reference using `P`.
-6. Confirm the configuration with `ENTER`.
-7. Enable the Atma overlay when needed.
-
-Reference images are stored in:
-
-```text
-AtmaFlowBuff/
-```
-
-Existing references are automatically loaded when the application starts.
-
----
-
-# Class Buff Configuration
-
-Open:
-
-```text
-Class Buff → Configura
-```
-
-From there you can create and manage class configurations.
-
-Each configuration can contain multiple buffs.
-
-The system is intended to allow different setups to be prepared for different characters or situations.
-
----
-
-# Distance Guide Configuration
-
-Open:
-
-```text
-Distance Guides → Configura
-```
-
-From there you can create guide groups and add as many guides as required.
-
-Available guide types:
-
-- Line
-- Rectangle
-- Circle
-
-Each guide can be configured individually.
-
-Guides can also be removed from their group without deleting the entire group.
-
-The group configuration window remains open while adding multiple elements, allowing several guides to be created consecutively.
-
----
-
-# Buff Tracker
-
-The Buff Tracker can be opened from the main window.
-
-It is implemented as a separate executable:
-
-```text
-buffoverla.exe
-```
-
-The main application launches it when the **Configura** button is pressed.
-
----
-
-# Architecture
-
-ElsOverlay is structured around several independent components.
-
-The main components include:
-
-```text
-MainWindow
-    |
-    +-- Atma / AtmaFlowBuff
-    |
-    +-- Class Buff
-    |
-    +-- Distance Guides
-    |
-    +-- Buff Titles
-    |
-    +-- Buff Trascendenza
-    |
-    +-- Buff Tracker
-```
-
-The overlay elements are managed through a common overlay root, allowing the different visual components to coexist independently.
-
-This architecture makes it possible to enable or disable individual systems without shutting down the entire application.
-
----
-
-# External Operation
-
-ElsOverlay is designed to operate externally to Elsword.
-
-The application uses:
-
-- Global keyboard input
-- Screen capture
-- Image comparison
-- Visual overlays
-
-It does **not**:
-
-- Modify Elsword game files
-- Read game memory
-- Inject code into the game client
-- Directly interact with the game's internal systems
-
-AtmaFlowBuff specifically relies on visual recognition rather than game-memory access.
-
----
-
-# Requirements
-
-The project is developed using **Qt/C++** and is intended for Windows.
-
-A compiled release should include all required Qt runtime dependencies and application resources.
-
-For developers building from source, a compatible Qt development environment is required.
-
----
-
-# Building From Source
-
-Clone the repository:
+## Building from source
 
 ```bash
 git clone https://github.com/FungYang/ElsOverlay.git
+cd ElsOverlay
 ```
 
-Open the project with Qt Creator and build it using the configured Qt kit.
+1. Download ONNX Runtime for Windows and place it as:
 
-The project contains the source files for the main application, overlay systems, configuration managers and AtmaFlowBuff components.
+   ```
+   third_party/onnxruntime/
+   ├── include/        (headers)
+   └── lib/onnxruntime.dll
+   ```
+
+2. Make sure the `models/` directory contains `best_1080.onnx` and `best_2k.onnx`. They are copied next to the executable after each build.
+
+3. Configure and build (Qt 6.5+ kit required):
+
+   ```bash
+   cmake -S . -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.x.x/msvc2022_64"
+   cmake --build build --config Release
+   ```
+
+   Or open `CMakeLists.txt` in **Qt Creator** and build with a Qt 6 kit.
+
+The post-build step copies `images/`, `onnxruntime.dll` and the ONNX models into the output directory. `qt_generate_deploy_app_script` is used for Qt deployment (`windeployqt`-style) on install.
 
 ---
 
-# Project Structure
+## Project structure
 
-The repository contains several major components:
-
-```text
+```
 ElsOverlay/
+├── images/                     Icons and bundled images
+├── models/                     ONNX (YOLO) models: best_1080.onnx, best_2k.onnx
+├── third_party/onnxruntime/    ONNX Runtime headers (+ DLL, not tracked)
 │
-├── images/
+├── main.cpp, mainwindow.*      Entry point and main control window
+├── globalkeyboard.*            Global keyboard hook
+├── screencapture.*             Screen capture (D3D11/DXGI)
+├── overlay.*, overlayroot.*    Common overlay windows and root container
 │
-├── buffoverlay.*
-├── buffbox.*
+├── skill*.*, keyedit.*         Skill overlay and skill/key configuration
+├── specialcooldown*.*          Special cooldowns (potions, Invariant)
+├── digitdetector.*             Digit recognition
 │
-├── skilloverlay.*
-├── skillbox.*
+├── transcendence*.*            Transcendence capture, cropping and vision manager
+├── atma*.*                     Atma zone capture, worker, manager and debug tools
 │
-├── overlay.*
-├── overlayroot.*
+├── buff*.*                     Buff overlay and BuffVision (capture, detector, core, manager)
+├── class*.*, newbuffdialog.*   Class buff configuration and editors
 │
-├── buffvisioncore.*
-├── buffvisioncapture.*
-├── buffvisiondetector.*
-├── buffvisionmanager.*
-├── buffvisionoverlay.*
-├── buffvisioncapturesetup.*
-│
-├── classconfigurationmanager.*
-├── classbuffconfigwindow.*
-├── classbuffeditorwindow.*
-├── classselector.*
-│
-├── distanceguidemanager.*
-├── distanceguideoverlay.*
-├── distanceguideconfigwindow.*
-├── distanceguidegroupconfigwindow.*
-├── distanceguidegroup.*
-├── distanceguideline.*
-├── distanceguiderectangle.*
-├── distanceguidecircle.*
-│
-├── globalkeyboard.*
-│
-├── mainwindow.*
-└── main.cpp
+└── distanceguide*.*            Distance guides (line, rectangle, circle, groups, config)
 ```
 
 ---
 
-# Important Notes
+## Known limitations
 
-ElsOverlay is intended as a personal utility for Elsword players who want additional visual information while playing.
-
-Because the application relies on global keyboard hooks and screen recognition, behavior can depend on:
-
-- Windows configuration
-- Game resolution
-- Display scaling
-- Overlay positioning
-- Screen layout
-- The configured BuffVision reference images
-
-BuffVision references may need to be recreated if the visual appearance or screen layout changes significantly.
-## Buff Remapping
-
-The Buff Tracker configuration uses a separate companion application for buff remapping:
-
-**ElsBuffRemapping**
-
-[https://github.com/FungYang/ElsBuffRemapping](https://github.com/FungYang/ElsBuffRemapping)
-
-ElsBuffRemapping is an external Qt application launched by ElsOverlay when the **Buff Tracker → Configura** button is pressed.
-
-It is responsible for configuring and managing the buff remapping system.
-
-### Visual-only detection
-
-ElsBuffRemapping does **not** perform game data mining or access the game's internal data.
-
-It does not:
-
-- Read or modify game memory
-- Inject code into the game process
-- Inspect network packets
-- Intercept game traffic
-- Extract internal game data
-
-The system works exclusively by analyzing **visual information captured from the screen**.
-
-In other words, it observes the same visual information that is available to the user and uses that information to identify and manage buffs.
-
-For more information about the implementation and configuration of the external application, see the dedicated repository:
-
-**[ElsBuffRemapping](https://github.com/FungYang/ElsBuffRemapping)**
+- Windows only.
+- Recognition depends on resolution, display scaling, UI layout and your saved reference images. Recreate references if any of these change significantly.
+- The bundled YOLO models target 1080p and 2K layouts.
+- Global keyboard hooks and screen capture may behave differently with some Windows configurations, overlays or security software.
 
 ---
 
-# License
+## Related projects
 
-See the [`LICENSE`](LICENSE) file included in the repository.
-
----
-
-# Repository
-
-GitHub:
-
-https://github.com/FungYang/ElsOverlay
+- [ElsBuffRemapping](https://github.com/FungYang/ElsBuffRemapping): companion app used by **Buff Tracker → Configura**. It analyses visual information from the screen only.
 
 ---
 
-# Credits
+## Release history
+
+| Version | Highlights |
+|---|---|
+| v1.18 | Transparency option and automatic pause on stage change for titles |
+| v1.17 | Template matching for potions; Invariant detection via Resonance text |
+| v1.15 | Debug output removed |
+| v1.08 | Transcendence bug fix; fully configurable titles |
+
+See the [Releases](https://github.com/FungYang/ElsOverlay/releases) page for the complete list.
+
+---
+
+## License
+
+Released under the **GPL-3.0** license. See [`LICENSE`](LICENSE).
 
 Developed by **FungYang**.
-
-ElsOverlay is an independent external utility created to provide customizable visual assistance for Elsword.
