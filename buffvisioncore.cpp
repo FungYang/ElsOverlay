@@ -105,7 +105,7 @@ void BuffVisionCore::reset()
 void BuffVisionCore::registerAction()
 {
 
-    if(!tracking)
+    if(!tracking || m_detectionSuspended)
         return;
 
 

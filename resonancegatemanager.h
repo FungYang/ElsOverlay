@@ -24,6 +24,7 @@ public:
 
     void configure();
     void setEnabled(bool enabled);
+    void setDetectionSuspended(bool on);
 
     bool isGateOpen() const { return m_gateOpen; } // per query sincrona se serve
     bool isEnabled() const { return m_enabled; }
@@ -52,6 +53,7 @@ private:
     bool m_enabled = false;
     bool m_configured = false;
     bool m_gateOpen = true; // Match = risonanza presente = gate aperto = nessuna pausa
+    bool m_detectionSuspended = false;
     State m_state = State::Unknown;
 
     int m_regionId = -1;

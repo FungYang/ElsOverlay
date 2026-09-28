@@ -229,6 +229,7 @@ void AtmaZoneManager::setGateOpen(bool open)
 void AtmaZoneManager::onRedZoneCompared(int index, bool isMatch)
 {
     if (!m_enabled || !m_configured) return;
+    if (m_detectionSuspended) return;   // <-- nuovo
     if (index < 0 || index >= RED_COUNT) return;
 
     const ZoneState newState = isMatch ? ZoneState::Match : ZoneState::Mismatch;
@@ -324,6 +325,20 @@ void AtmaZoneManager::unsubscribeAll()
     for (int i = 0; i < RED_COUNT; ++i)
         if (m_redRegionIds[i] >= 0)
             CaptureCoordinator::instance()->unsubscribe(m_redRegionIds[i]);
+}
+void AtmaZoneManager::setDetectionSuspended(bool on)
+{
+    if (m_detectionSuspended == on)
+        return;
+
+    m_detectionSuspended = on;
+
+    // Sia all'inizio che alla fine: butto via eventi in attesa e
+    // riparto da stato sconosciuto, così il primo confronto dopo il
+    // rilascio si limita a riallinearsi senza generare eventi.
+    m_gateTimer.stop();
+    clearPendingRedEvents();
+    m_redStates.fill(ZoneState::Unknown);
 }
 
 #ifdef QT_DEBUG

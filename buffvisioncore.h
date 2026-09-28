@@ -39,6 +39,7 @@ public:
 
     int buff15RemainingTime() const;
     int buff60RemainingTime() const;
+    void setDetectionSuspended(bool on) { m_detectionSuspended = on; }
 
 
 
@@ -63,6 +64,7 @@ signals:
 private:
 
     bool atmaCooldownPaused = false;
+    bool m_detectionSuspended = false;
 
     int buff15RemainingMs = 0;
     int buff60RemainingMs = 0;

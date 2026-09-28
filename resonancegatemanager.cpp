@@ -160,6 +160,7 @@ void ResonanceGateManager::onCompared(bool isMatch)
 
 {
     if (!m_enabled || !m_configured) return;
+    if (m_detectionSuspended) return;
 
     const State newState = isMatch ? State::Match : State::Mismatch;
     const State oldState = m_state;
@@ -198,5 +199,23 @@ void ResonanceGateManager::unregisterRegion()
         CaptureCoordinator::instance()->unsubscribe(m_regionId);
         CaptureCoordinator::instance()->unregisterRegion(m_regionId);
         m_regionId = -1;
+    }
+}
+void ResonanceGateManager::setDetectionSuspended(bool on)
+{
+    if (m_detectionSuspended == on)
+        return;
+
+    m_detectionSuspended = on;
+
+    // In entrambi i casi riparto da stato sconosciuto, così il primo
+    // confronto dopo il rilascio non genera transizioni spurie.
+    m_state = State::Unknown;
+
+    if (on && !m_gateOpen)
+    {
+        // Se il gate era chiuso, lo riapro: i cooldown devono scorrere
+        m_gateOpen = true;
+        emit gateOpened();
     }
 }

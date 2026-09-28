@@ -219,51 +219,47 @@ SkillOverlay::SkillOverlay(
             keyboard,
             &GlobalKeyboard::keyPressed,
             this,
-            [this](int key)
+        [this](int key)
+        {
+            // ------------------------------------------------
+            // CIPOLLA
+            // ------------------------------------------------
+
+            if(key == config.cipollaKey)
             {
-                if(!trackingActive)
-                {
-                    checkSequences(
-                        key
-                        );
+                // Come Ctrl: se il tracking non era attivo lo avvio
+                trackingActive = true;
 
-                    return;
-                }
+                // Skillbox di tipo Artifact: partono sempre
+                startArtifactSkills();
 
-
-                // ------------------------------------------------
-                // CIPOLLA
-                // ------------------------------------------------
-
-                if(
-                    key == config.cipollaKey &&
-                    sequenceState ==
-                        SequenceState::WaitingStateKey
-                    )
+                // Skill selezionata di tipo CtrlCipolla
+                if(sequenceState == SequenceState::WaitingStateKey)
                 {
                     activateCipollaSkill();
                 }
+            }
 
+            if(!trackingActive)
+            {
+                checkSequences(key);
+                return;
+            }
 
-                // ------------------------------------------------
-                // COMBO
-                // ------------------------------------------------
+            // ------------------------------------------------
+            // COMBO
+            // ------------------------------------------------
 
-                activateComboSkill(
-                    key
-                    );
+            activateComboSkill(key);
 
+            // ------------------------------------------------
+            // SEQUENZA STATO
+            // ------------------------------------------------
 
-                // ------------------------------------------------
-                // SEQUENZA STATO
-                // ------------------------------------------------
-
-                checkSequences(
-                    key
-                    );
-            },
-            Qt::QueuedConnection
-            );
+            checkSequences(key);
+        },
+        Qt::QueuedConnection
+        );
 
 
         // ====================================================
@@ -1483,4 +1479,18 @@ void SkillOverlay::updateSelectedSkillVisual()
     rightSkill->setSelected(
         currentDirection == Direction::Right
         );
+}
+void SkillOverlay::startArtifactSkills()
+{
+    if(config.up.activation == SkillActivation::Artifact)
+        upSkill->startCooldown();
+
+    if(config.left.activation == SkillActivation::Artifact)
+        leftSkill->startCooldown();
+
+    if(config.down.activation == SkillActivation::Artifact)
+        downSkill->startCooldown();
+
+    if(config.right.activation == SkillActivation::Artifact)
+        rightSkill->startCooldown();
 }

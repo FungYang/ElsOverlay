@@ -34,6 +34,7 @@ public:
 
     void configure();
     void setEnabled(bool enabled);
+    void setDetectionSuspended(bool on);
 
 public slots:
     // Ricevuto dall'esterno (ResonanceGateManager), sostituisce
@@ -79,6 +80,7 @@ private:
     // Stato del gate esterno: true = aperto (Risonanza presente,
     // nessuna pausa), false = chiuso (Risonanza assente).
     bool m_gateOpen = true;
+    bool m_detectionSuspended = false;
 
     std::array<int, RED_COUNT> m_redRegionIds;
     std::array<ZoneState, RED_COUNT> m_redStates;

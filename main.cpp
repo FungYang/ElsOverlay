@@ -33,55 +33,32 @@
 #include "resonancegatemanager.h"
 
 
-    int main(
-        int argc,
-        char *argv[]
-        )
+int main(int argc, char *argv[])
 {
-    QApplication app(
-        argc,
-        argv
-        );
+    QApplication app(argc, argv);
+
     // ==================================================
     // THREAD POOL CAP
     // ==================================================
-    //
-    // QtConcurrent::run() (usato da TranscendenceVisionManager
-    // per findIcon()) pesca da questo pool globale condiviso.
-    // Limitiamo quanti core può occupare, per lasciare margine
-    // al resto del sistema e ridurre il carico/calore sostenuto.
 
     QThreadPool::globalInstance()->setMaxThreadCount(
         qMax(2, QThread::idealThreadCount() / 2)
         );
 
-
-
-
     // ==================================================
     // QSETTINGS
     // ==================================================
 
-    QCoreApplication::setOrganizationName(
-        "ElsOverlay"
-        );
-
-
-    QCoreApplication::setApplicationName(
-        "ElsOverlay"
-        );
-
+    QCoreApplication::setOrganizationName("ElsOverlay");
+    QCoreApplication::setApplicationName("ElsOverlay");
 
     // ==================================================
     // ROOT OVERLAY
     // ==================================================
 
-    OverlayRoot *overlayRoot =
-        new OverlayRoot();
-
+    OverlayRoot *overlayRoot = new OverlayRoot();
 
     overlayRoot->show();
-
 
     // ==================================================
     // GLOBAL KEYBOARD
@@ -89,15 +66,11 @@
 
     GlobalKeyboard keyboard;
 
-
-
-
     // ==================================================
     // MAIN WINDOW
     // ==================================================
 
     MainWindow mainWindow;
-
 
     // ==================================================
     // OVERLAY CLICKABILITY
@@ -123,12 +96,10 @@
 
     ClassConfigurationManager classConfigManager;
 
-
     ClassBuffConfigWindow classBuffConfigWindow(
         &classConfigManager,
         &keyboard
         );
-
 
     // ==================================================
     // KEY CONFIGURATION
@@ -141,7 +112,6 @@
         &GlobalKeyboard::setPauseKey
         );
 
-
     QObject::connect(
         &mainWindow,
         &MainWindow::resetKeyChanged,
@@ -149,19 +119,16 @@
         &GlobalKeyboard::setResetKey
         );
 
-
     // ==================================================
     // DISTANCE GUIDES
     // ==================================================
 
     DistanceGuideManager distanceGuideManager;
 
-
     DistanceGuideConfigWindow distanceGuideConfigWindow(
         &distanceGuideManager,
         &keyboard
         );
-
 
     DistanceGuideOverlay *distanceGuides =
         new DistanceGuideOverlay(
@@ -169,11 +136,7 @@
             overlayRoot
             );
 
-
-    overlayRoot->registerOverlay(
-        distanceGuides
-        );
-
+    overlayRoot->registerOverlay(distanceGuides);
 
     QObject::connect(
         &mainWindow,
@@ -182,15 +145,11 @@
         [&distanceGuideConfigWindow]()
         {
             distanceGuideConfigWindow.refresh();
-
             distanceGuideConfigWindow.show();
-
             distanceGuideConfigWindow.raise();
-
             distanceGuideConfigWindow.activateWindow();
         }
         );
-
 
     QObject::connect(
         &mainWindow,
@@ -198,7 +157,6 @@
         distanceGuides,
         &DistanceGuideOverlay::setEnabled
         );
-
 
     // ==================================================
     // DISTANCE GUIDES - MOVEMENT
@@ -212,45 +170,21 @@
         {
             if(key == VK_LEFT)
             {
-                distanceGuideManager.setMovementDirection(
-                    MovementDirection::Left
-                    );
-
-
-                distanceGuideManager.setCharacterFacing(
-                    CharacterFacing::Left
-                    );
-
-
-                distanceGuideManager.setCharacterMoving(
-                    true
-                    );
-
-
+                distanceGuideManager.setMovementDirection(MovementDirection::Left);
+                distanceGuideManager.setCharacterFacing(CharacterFacing::Left);
+                distanceGuideManager.setCharacterMoving(true);
                 return;
             }
 
-
             if(key == VK_RIGHT)
             {
-                distanceGuideManager.setMovementDirection(
-                    MovementDirection::Right
-                    );
-
-
-                distanceGuideManager.setCharacterFacing(
-                    CharacterFacing::Right
-                    );
-
-
-                distanceGuideManager.setCharacterMoving(
-                    true
-                    );
+                distanceGuideManager.setMovementDirection(MovementDirection::Right);
+                distanceGuideManager.setCharacterFacing(CharacterFacing::Right);
+                distanceGuideManager.setCharacterMoving(true);
             }
         },
         Qt::QueuedConnection
         );
-
 
     QObject::connect(
         &keyboard,
@@ -258,52 +192,33 @@
         &distanceGuideManager,
         [&distanceGuideManager](int key)
         {
-            if(key == VK_LEFT ||
-                key == VK_RIGHT)
+            if(key == VK_LEFT || key == VK_RIGHT)
             {
-                distanceGuideManager.setCharacterMoving(
-                    false
-                    );
+                distanceGuideManager.setCharacterMoving(false);
             }
         },
         Qt::QueuedConnection
         );
 
-
     // ==================================================
     // TRANSCENDENCE OVERLAY
     // ==================================================
 
-    Overlay *overlay =
-        new Overlay(
-            overlayRoot
-            );
+    Overlay *overlay = new Overlay(overlayRoot);
 
-
-    overlayRoot->registerOverlay(
-        overlay
-        );
-
+    overlayRoot->registerOverlay(overlay);
 
     if(!overlayRoot)
     {
-        qDebug()
-        << "MAIN: ERRORE - overlayRoot nullo";
-
-
+        qDebug() << "MAIN: ERRORE - overlayRoot nullo";
         return -1;
     }
-
 
     if(!overlay)
     {
-        qDebug()
-        << "MAIN: ERRORE - Overlay non creato";
-
-
+        qDebug() << "MAIN: ERRORE - Overlay non creato";
         return -1;
     }
-
 
     QObject::connect(
         &mainWindow,
@@ -316,7 +231,6 @@
                 return;
             }
 
-
             if(enabled)
             {
                 overlay->show();
@@ -328,21 +242,17 @@
         }
         );
 
-
     // ==================================================
     // SPECIAL COOLDOWN
     // ==================================================
 
     SpecialCooldownManager specialCooldownManager;
 
-
     specialCooldownManager.load();
-
 
     SpecialCooldownConfigWindow specialCooldownConfigWindow(
         &specialCooldownManager
         );
-
 
     SpecialCooldownOverlay *specialCooldowns =
         new SpecialCooldownOverlay(
@@ -351,10 +261,7 @@
             overlayRoot
             );
 
-    overlayRoot->setSpecialCooldownOverlay(
-        specialCooldowns
-        );
-
+    overlayRoot->setSpecialCooldownOverlay(specialCooldowns);
 
     QObject::connect(
         &mainWindow,
@@ -363,13 +270,10 @@
         [&specialCooldownConfigWindow]()
         {
             specialCooldownConfigWindow.show();
-
             specialCooldownConfigWindow.raise();
-
             specialCooldownConfigWindow.activateWindow();
         }
         );
-
 
     QObject::connect(
         &mainWindow,
@@ -377,7 +281,6 @@
         specialCooldowns,
         &SpecialCooldownOverlay::setEnabled
         );
-
 
     // ==================================================
     // TRANSCENDENCE VISION
@@ -389,7 +292,6 @@
         overlay
         );
 
-
     QObject::connect(
         &mainWindow,
         &MainWindow::transcendenceConfigRequested,
@@ -397,14 +299,12 @@
         &TranscendenceVisionManager::configure
         );
 
-
     QObject::connect(
         &mainWindow,
         &MainWindow::buffTranscendenceToggled,
         &transcendenceVision,
         &TranscendenceVisionManager::setEnabled
         );
-
 
     // ==================================================
     // SKILL OVERLAY
@@ -416,21 +316,12 @@
             overlayRoot
             );
 
-    overlayRoot->setSkillOverlay(
-        skills
-        );
+    overlayRoot->setSkillOverlay(skills);
 
-
-    overlayRoot->registerOverlay(
-        skills
-        );
-
+    overlayRoot->registerOverlay(skills);
 
     SkillConfigWindow *skillConfigWindow =
-        new SkillConfigWindow(
-            &mainWindow
-            );
-
+        new SkillConfigWindow(&mainWindow);
 
     QObject::connect(
         &mainWindow,
@@ -439,13 +330,10 @@
         [skillConfigWindow]()
         {
             skillConfigWindow->show();
-
             skillConfigWindow->raise();
-
             skillConfigWindow->activateWindow();
         }
         );
-
 
     QObject::connect(
         skillConfigWindow,
@@ -453,7 +341,6 @@
         skills,
         &SkillOverlay::applyConfig
         );
-
 
     QObject::connect(
         &mainWindow,
@@ -472,7 +359,6 @@
         }
         );
 
-
     // ==================================================
     // CLASS BUFF OVERLAY
     // ==================================================
@@ -483,11 +369,7 @@
             overlayRoot
             );
 
-
-    overlayRoot->registerOverlay(
-        buffs
-        );
-
+    overlayRoot->registerOverlay(buffs);
 
     QObject::connect(
         &mainWindow,
@@ -498,51 +380,39 @@
             if(!enabled)
             {
                 buffs->clearBuffs();
-
                 return;
             }
 
-
             const QString activeId =
                 classConfigManager.activeConfigurationId();
-
 
             if(activeId.isEmpty())
             {
                 return;
             }
 
-
             const QList<ClassConfiguration> configurations =
                 classConfigManager.configurations();
 
-
-            for(const ClassConfiguration &configuration :
-                 configurations)
+            for(const ClassConfiguration &configuration : configurations)
             {
                 if(configuration.id != activeId)
                 {
                     continue;
                 }
 
-
-                buffs->loadConfiguration(
-                    configuration
-                    );
-
+                buffs->loadConfiguration(configuration);
 
                 return;
             }
         }
         );
 
-
     // ==================================================
     // CLASS SELECTOR
     // ==================================================
 
     ClassSelector selector;
-
 
     // ==================================================
     // MAIN SKILL OVERLAY
@@ -552,7 +422,7 @@
         &keyboard,
         &GlobalKeyboard::ctrlPressed,
         overlay,
-        [overlay,&transcendenceVision]()
+        [overlay, &transcendenceVision]()
         {
             if(overlay->startCooldown())
             {
@@ -562,7 +432,6 @@
         Qt::QueuedConnection
         );
 
-
     // ==================================================
     // GLOBAL RESET
     // ==================================================
@@ -571,29 +440,25 @@
         &keyboard,
         &GlobalKeyboard::resetPressed,
         overlay,
-        [overlay,&transcendenceVision]()
+        [overlay, &transcendenceVision]()
         {
             overlay->resetCooldown();
-
             transcendenceVision.onCooldownReset();
         },
         Qt::QueuedConnection
         );
-
 
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::transcendenceResetPressed,
         overlay,
-        [overlay,&transcendenceVision]()
+        [overlay, &transcendenceVision]()
         {
             overlay->resetCooldown();
-
             transcendenceVision.onCooldownReset();
         },
         Qt::QueuedConnection
         );
-
 
     // ==================================================
     // KEYBOARD SHORTCUTS
@@ -608,13 +473,11 @@
             if(key == skills->cipollaKey())
             {
                 overlay->startCooldown();
-
                 transcendenceVision.onCooldownStarted();
             }
         },
         Qt::QueuedConnection
         );
-
 
     // ==================================================
     // BUFF SYSTEM
@@ -628,7 +491,6 @@
         Qt::QueuedConnection
         );
 
-
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::resetPressed,
@@ -636,7 +498,6 @@
         &BuffOverlay::resetAll,
         Qt::QueuedConnection
         );
-
 
     // ==================================================
     // CLASS BUFF CONFIGURATION WINDOW
@@ -649,15 +510,11 @@
         [&classBuffConfigWindow]()
         {
             classBuffConfigWindow.refresh();
-
             classBuffConfigWindow.show();
-
             classBuffConfigWindow.raise();
-
             classBuffConfigWindow.activateWindow();
         }
         );
-
 
     // ==================================================
     // ATMA BUFF VISION
@@ -668,13 +525,8 @@
         overlayRoot
         );
 
-    overlayRoot->setBuffVisionOverlay(
-        atma.visionOverlay()
-        );
-    overlayRoot->setTransparency(
-        mainWindow.transparencyValue()
-        );
-
+    overlayRoot->setBuffVisionOverlay(atma.visionOverlay());
+    overlayRoot->setTransparency(mainWindow.transparencyValue());
 
     QObject::connect(
         &mainWindow,
@@ -682,7 +534,6 @@
         &atma,
         &BuffVisionManager::configure
         );
-
 
     QObject::connect(
         &mainWindow,
@@ -692,34 +543,29 @@
         );
 
     // ==================================================
-    // ATMA ZONES (nuovo sistema a 7 regioni)
+    // ATMA ZONES
     // ==================================================
 
     AtmaZoneManager atmaZones(
         &keyboard,
         overlayRoot,
-        atma.visionCore(), // vedi nota sotto: serve un getter pubblico
+        atma.visionCore(),
         nullptr
         );
 
     QObject::connect(
         &mainWindow,
-        &MainWindow::atmaZonesConfigRequested, // NUOVO segnale, vedi sotto
+        &MainWindow::atmaZonesConfigRequested,
         &atmaZones,
         &AtmaZoneManager::configure
         );
 
-    // Stesso toggle "Atma" attiva/disattiva ENTRAMBI i sistemi insieme.
     QObject::connect(
         &mainWindow,
         &MainWindow::atmaToggled,
         &atmaZones,
         &AtmaZoneManager::setEnabled
         );
-
-    // ==================================================
-    // ATMA GATE — pausa globale su invariante
-    // ==================================================
 
     // ==================================================
     // RESONANCE GATE
@@ -729,6 +575,7 @@
         &keyboard,
         overlayRoot
         );
+
     QObject::connect(
         &mainWindow,
         &MainWindow::resonanceGateConfigRequested,
@@ -742,6 +589,7 @@
         &resonanceGate,
         &ResonanceGateManager::setEnabled
         );
+
 #ifdef QT_DEBUG
     QObject::connect(
         &resonanceGate,
@@ -751,118 +599,69 @@
         );
 #endif
 
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateClosed,
-        atma.visionCore(),
-        &BuffVisionCore::pauseAtmaCooldowns
-        );
+    // ==================================================
+    // RESONANCE GATE -> PAUSA / RIPRESA
+    // (filtrata: durante il "Delete" i gateClosed vengono ignorati)
+    // ==================================================
+
+    bool overlayHidden = false;
+
+    auto pauseAll = [&]()
+    {
+        atma.visionCore()->pauseAtmaCooldowns();
+        atma.visionOverlay()->pauseAtmaCooldown();
+        atmaZones.setGateOpen(false);
+        overlay->pauseAtmaGate();
+        skills->pauseAtmaGate();
+        transcendenceVision.pauseAtmaGate();
+    };
+
+    auto resumeAll = [&]()
+    {
+        atma.visionCore()->resumeAtmaCooldowns();
+        atma.visionOverlay()->resumeAtmaCooldown();
+        atmaZones.setGateOpen(true);
+        overlay->resumeAtmaGate();
+        skills->resumeAtmaGate();
+        transcendenceVision.resumeAtmaGate();
+    };
 
     QObject::connect(
         &resonanceGate,
-        &ResonanceGateManager::gateOpened,
-        atma.visionCore(),
-        &BuffVisionCore::resumeAtmaCooldowns
-        );
-
-    QObject::connect(
-        &resonanceGate,
         &ResonanceGateManager::gateClosed,
-        atma.visionOverlay(),
-        &BuffVisionOverlay::pauseAtmaCooldown
-        );
-
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateOpened,
-        atma.visionOverlay(),
-        &BuffVisionOverlay::resumeAtmaCooldown
-        );
-    // Resonance Gate -> Atma Zones
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateClosed,
-        &atmaZones,
-        [&atmaZones]()
+        overlayRoot,
+        [&]()
         {
-            atmaZones.setGateOpen(false);
+            if(!overlayHidden)
+            {
+                pauseAll();
+            }
         }
         );
 
     QObject::connect(
         &resonanceGate,
         &ResonanceGateManager::gateOpened,
-        &atmaZones,
-        [&atmaZones]()
+        overlayRoot,
+        [&]()
         {
-            atmaZones.setGateOpen(true);
+            resumeAll();
         }
         );
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateClosed,
-        overlay,
-        &Overlay::pauseAtmaGate
-        );
-
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateOpened,
-        overlay,
-        &Overlay::resumeAtmaGate
-        );
-
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateClosed,
-        skills,
-        &SkillOverlay::pauseAtmaGate
-        );
-
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateOpened,
-        skills,
-        &SkillOverlay::resumeAtmaGate
-        );
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateClosed,
-        &transcendenceVision,
-        &TranscendenceVisionManager::pauseAtmaGate
-        );
-
-    QObject::connect(
-        &resonanceGate,
-        &ResonanceGateManager::gateOpened,
-        &transcendenceVision,
-        &TranscendenceVisionManager::resumeAtmaGate
-        );
-
-    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
-    //                  specialCooldowns, &SpecialCooldownOverlay::pauseAll);
-    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
-    //                  specialCooldowns, &SpecialCooldownOverlay::resumeAll);
-
-    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantEntered,
-    //                  buffs, &BuffOverlay::pauseAll);
-    // QObject::connect(&atmaZones, &AtmaZoneManager::invariantExited,
-    //                  buffs, &BuffOverlay::resumeAll);
-
-
 
     // ==================================================
-    // HIDE / SHOW OVERLAY (+ pausa Resonance Gate)
+    // HIDE / SHOW OVERLAY (DELETE)
     // ==================================================
-
-    bool overlayHidden  = false;
-    bool gateWasEnabled = false;
+    //
+    // Mentre l'overlay e' nascosto:
+    //  - il gate viene ignorato (i cooldown scorrono)
+    //  - non si registrano nuovi eventi Atma
 
     QObject::connect(
         &keyboard,
         &GlobalKeyboard::keyPressed,
         overlayRoot,
-        [overlayRoot, &resonanceGate, &mainWindow, &overlayHidden, &gateWasEnabled](int key)
+        [&, overlayRoot](int key)
         {
             if(key != VK_DELETE)
             {
@@ -872,25 +671,24 @@
             overlayRoot->toggleVisibility();
             overlayHidden = !overlayHidden;
 
+            atma.visionCore()->setDetectionSuspended(overlayHidden);
+            atmaZones.setDetectionSuspended(overlayHidden);
+
             if(overlayHidden)
             {
-                gateWasEnabled = resonanceGate.isEnabled();
-
-                if(gateWasEnabled)
-                {
-                    resonanceGate.setEnabled(false);
-                    mainWindow.setResonanceGateChecked(false);   // <-- nuovo
-                }
+                // Se il gate si era chiuso un attimo prima di Delete,
+                // rimetto subito in moto i timer.
+                resumeAll();
             }
-            else if(gateWasEnabled)
+            else if(!resonanceGate.isGateOpen())
             {
-                gateWasEnabled = false;
-                resonanceGate.setEnabled(true);
-                mainWindow.setResonanceGateChecked(true);        // <-- nuovo
+                // Riattivo: se la scritta e' davvero assente, torno in pausa.
+                pauseAll();
             }
         },
         Qt::QueuedConnection
         );
+
     // ==================================================
     // BUFF TRACKER
     // ==================================================
@@ -904,13 +702,9 @@
                 QCoreApplication::applicationDirPath() +
                 "/buffoverla.exe";
 
-
-            QProcess::startDetached(
-                path
-                );
+            QProcess::startDetached(path);
         }
         );
-
 
     // ==================================================
     // RESTORE TOGGLE STATES
@@ -918,19 +712,13 @@
 
     mainWindow.loadToggleStates();
 
-
     // ==================================================
     // SHOW MAIN WINDOW
     // ==================================================
 
     mainWindow.show();
-
-
     mainWindow.raise();
-
-
     mainWindow.activateWindow();
-
 
     // ==================================================
     // APPLICATION LOOP

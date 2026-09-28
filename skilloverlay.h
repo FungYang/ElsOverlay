@@ -38,6 +38,7 @@ public:
 
     double getScale() const;
     int cipollaKey() const;
+    void startArtifactSkills();
 
 
 public slots:
