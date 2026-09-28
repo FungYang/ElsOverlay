@@ -28,6 +28,7 @@ public:
     void loadToggleStates();
     void saveToggleStates();
     int transparencyValue() const;
+    void setResonanceGateChecked(bool on);
 
 
 signals:

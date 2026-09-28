@@ -26,6 +26,7 @@ public:
     void setEnabled(bool enabled);
 
     bool isGateOpen() const { return m_gateOpen; } // per query sincrona se serve
+    bool isEnabled() const { return m_enabled; }
 
 signals:
     void gateOpened();  // Risonanza torna presente -> pausa terminata

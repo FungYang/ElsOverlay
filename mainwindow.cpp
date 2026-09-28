@@ -1698,3 +1698,10 @@ int MainWindow::transparencyValue() const
 {
     return transparencySlider->value();
 }
+
+void MainWindow::setResonanceGateChecked(bool on)
+{
+    QSignalBlocker blocker(resonanceGateToggleButton);
+    resonanceGateToggleButton->setChecked(on);
+    updateToggleText(resonanceGateToggleButton, on);
+}

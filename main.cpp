@@ -90,23 +90,6 @@
     GlobalKeyboard keyboard;
 
 
-    // ==================================================
-    // HIDE / SHOW OVERLAY
-    // ==================================================
-
-    QObject::connect(
-        &keyboard,
-        &GlobalKeyboard::keyPressed,
-        overlayRoot,
-        [overlayRoot](int key)
-        {
-            if(key == VK_DELETE)
-            {
-                overlayRoot->toggleVisibility();
-            }
-        },
-        Qt::QueuedConnection
-        );
 
 
     // ==================================================
@@ -868,6 +851,46 @@
 
 
 
+    // ==================================================
+    // HIDE / SHOW OVERLAY (+ pausa Resonance Gate)
+    // ==================================================
+
+    bool overlayHidden  = false;
+    bool gateWasEnabled = false;
+
+    QObject::connect(
+        &keyboard,
+        &GlobalKeyboard::keyPressed,
+        overlayRoot,
+        [overlayRoot, &resonanceGate, &mainWindow, &overlayHidden, &gateWasEnabled](int key)
+        {
+            if(key != VK_DELETE)
+            {
+                return;
+            }
+
+            overlayRoot->toggleVisibility();
+            overlayHidden = !overlayHidden;
+
+            if(overlayHidden)
+            {
+                gateWasEnabled = resonanceGate.isEnabled();
+
+                if(gateWasEnabled)
+                {
+                    resonanceGate.setEnabled(false);
+                    mainWindow.setResonanceGateChecked(false);   // <-- nuovo
+                }
+            }
+            else if(gateWasEnabled)
+            {
+                gateWasEnabled = false;
+                resonanceGate.setEnabled(true);
+                mainWindow.setResonanceGateChecked(true);        // <-- nuovo
+            }
+        },
+        Qt::QueuedConnection
+        );
     // ==================================================
     // BUFF TRACKER
     // ==================================================
