@@ -7,6 +7,7 @@
 #include "skilloverlay.h"
 #include "buffvisionoverlay.h"
 #include "specialcooldownoverlay.h"
+#include "customsearcheroverlay.h"
 
 
 // ============================================================
@@ -41,6 +42,19 @@ OverlayRoot::OverlayRoot(
     show();
 
     raise();
+
+    m_raiseTimer.setInterval(
+        1000
+        );
+
+    connect(
+        &m_raiseTimer,
+        &QTimer::timeout,
+        this,
+        &OverlayRoot::raiseAll
+        );
+
+    m_raiseTimer.start();
 }
 
 
@@ -405,6 +419,20 @@ void OverlayRoot::setTransparency(
             m_transparency
             );
     }
+
+
+    for(CustomSearcherOverlay *overlay : m_customSearcherOverlays)
+    {
+        if(!overlay)
+        {
+            continue;
+        }
+
+
+        overlay->setTransparency(
+            m_transparency
+            );
+    }
 }
 
 bool OverlayRoot::areOverlaysVisible() const
@@ -459,5 +487,76 @@ void OverlayRoot::setSpecialCooldownOverlay(
             );
     }
 }
+void OverlayRoot::registerCustomSearcherOverlay(
+    CustomSearcherOverlay *overlay
+    )
+{
+    if(!overlay)
+    {
+        return;
+    }
 
+
+    if(!m_customSearcherOverlays.contains(overlay))
+    {
+        m_customSearcherOverlays.append(
+            overlay
+            );
+
+
+        connect(
+            overlay,
+            &QObject::destroyed,
+            this,
+            [this, overlay]()
+            {
+                m_customSearcherOverlays.removeAll(
+                    overlay
+                    );
+            }
+            );
+    }
+
+
+    /*
+     * Applica immediatamente la trasparenza globale
+     * all'overlay appena registrato.
+     */
+    overlay->setTransparency(
+        m_transparency
+        );
+
+
+    /*
+     * Manteniamo anche tutta la gestione globale
+     * esistente: click-through, hide/show, ecc.
+     */
+    registerOverlay(
+        overlay
+        );
+}
+void OverlayRoot::unregisterCustomSearcherOverlay(
+    CustomSearcherOverlay *overlay
+    )
+{
+    if(!overlay)
+    {
+        return;
+    }
+
+
+    m_customSearcherOverlays.removeAll(
+        overlay
+        );
+
+
+    overlays.removeAll(
+        overlay
+        );
+
+
+    visibilityBeforeHide.remove(
+        overlay
+        );
+}
 

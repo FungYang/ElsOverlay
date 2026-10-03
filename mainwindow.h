@@ -33,6 +33,9 @@ public:
 
 signals:
 
+    void customSearcherConfigRequested();
+    void customSearcherToggled(bool enabled);
+
     void atmaConfigRequested();
     void atmaZonesConfigRequested();
     void atmaToggled(
@@ -52,7 +55,6 @@ signals:
         );
 
 
-    void buffTrackerConfigRequested();
 
 
     void buffTitlesConfigRequested();
@@ -129,13 +131,6 @@ private:
 
 
     // ==================================================
-    // BUFF TRACKER
-    // ==================================================
-
-    QPushButton *buffTrackerConfigButton;
-
-
-    // ==================================================
     // BUFF TITLES
     // ==================================================
 
@@ -197,6 +192,9 @@ private:
     // ==================================================
 
     QSlider *transparencySlider;
+
+    QPushButton *customSearcherConfigButton;
+    QPushButton *customSearcherToggleButton;
 
 
 

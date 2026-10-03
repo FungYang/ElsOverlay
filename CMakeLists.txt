@@ -172,6 +172,14 @@ qt_add_executable(ElsOverlay
     resonancegatecapturesetup.h resonancegatecapturesetup.cpp
     resonancegatemanager.h resonancegatemanager.cpp
     transcendencedebugoverlay.h transcendencedebugoverlay.cpp
+    customsearchermultifinder.h customsearchermultifinder.cpp
+    CustomSearcherTemplate.h
+    customsearchermanager.h customsearchermanager.cpp
+    customsearcherworker.h customsearcherworker.cpp
+    customsearcherconfigwindow.h customsearcherconfigwindow.cpp
+    customsearchertemplatecrop.h customsearchertemplatecrop.cpp
+    customsearchersearcharea.h customsearchersearcharea.cpp
+    customsearcheroverlay.h customsearcheroverlay.cpp
 
 )
 

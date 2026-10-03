@@ -1,6 +1,5 @@
 #include <QApplication>
 #include <QCoreApplication>
-#include <QProcess>
 #include <QThreadPool>
 #include <QThread>
 
@@ -19,6 +18,8 @@
 #include "overlayroot.h"
 #include "classconfigurationmanager.h"
 #include "classbuffconfigwindow.h"
+#include "capturecoordinator.h"
+#include "customsearchermanager.h"
 
 #include "distanceguidemanager.h"
 #include "distanceguideconfigwindow.h"
@@ -305,6 +306,35 @@ int main(int argc, char *argv[])
         &transcendenceVision,
         &TranscendenceVisionManager::setEnabled
         );
+
+    // ==================================================
+    // CUSTOM SEARCHER
+    // ==================================================
+
+    // ==================================================
+    // CUSTOM SEARCHER
+    // ==================================================
+
+    CustomSearcherManager customSearcher(
+        CaptureCoordinator::instance(),
+        overlayRoot
+        );
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::customSearcherConfigRequested,
+        &customSearcher,
+        &CustomSearcherManager::configure
+        );
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::customSearcherToggled,
+        &customSearcher,
+        &CustomSearcherManager::setEnabled
+        );
+
+
 
     // ==================================================
     // SKILL OVERLAY
@@ -687,23 +717,6 @@ int main(int argc, char *argv[])
             }
         },
         Qt::QueuedConnection
-        );
-
-    // ==================================================
-    // BUFF TRACKER
-    // ==================================================
-
-    QObject::connect(
-        &mainWindow,
-        &MainWindow::buffTrackerConfigRequested,
-        []()
-        {
-            const QString path =
-                QCoreApplication::applicationDirPath() +
-                "/buffoverla.exe";
-
-            QProcess::startDetached(path);
-        }
         );
 
     // ==================================================

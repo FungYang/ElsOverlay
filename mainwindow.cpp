@@ -787,6 +787,51 @@ MainWindow::MainWindow(
         buffTranscendenceGroup
         );
 
+    // ========================================================
+    // CUSTOM SEARCHER
+    // ========================================================
+
+    QGroupBox *customSearcherGroup =
+        new QGroupBox(
+            "Custom Searcher",
+            central
+            );
+
+    QHBoxLayout *customSearcherLayout =
+        new QHBoxLayout(
+            customSearcherGroup
+            );
+
+    customSearcherConfigButton =
+        new QPushButton(
+            "Configura",
+            customSearcherGroup
+            );
+
+    customSearcherToggleButton =
+        new QPushButton(
+            "OFF",
+            customSearcherGroup
+            );
+
+    setupToggleButton(
+        customSearcherToggleButton
+        );
+
+    customSearcherLayout->addWidget(
+        customSearcherConfigButton
+        );
+
+    customSearcherLayout->addStretch();
+
+    customSearcherLayout->addWidget(
+        customSearcherToggleButton
+        );
+
+    mainLayout->addWidget(
+        customSearcherGroup
+        );
+
 
     // ========================================================
     // SPECIAL COOLDOWNS
@@ -839,40 +884,6 @@ MainWindow::MainWindow(
 
     mainLayout->addWidget(
         specialCooldownGroup
-        );
-
-
-    // ========================================================
-    // BUFF TRACKER
-    // ========================================================
-
-    QGroupBox *trackerGroup =
-        new QGroupBox(
-            "Buff Tracker",
-            central
-            );
-
-
-    QHBoxLayout *trackerLayout =
-        new QHBoxLayout(
-            trackerGroup
-            );
-
-
-    buffTrackerConfigButton =
-        new QPushButton(
-            "Configura",
-            trackerGroup
-            );
-
-
-    trackerLayout->addWidget(
-        buffTrackerConfigButton
-        );
-
-
-    mainLayout->addWidget(
-        trackerGroup
         );
 
 
@@ -941,6 +952,36 @@ MainWindow::MainWindow(
     // ========================================================
     // CONNECTIONS TASTI
     // ========================================================
+
+    // ========================================================
+    // CUSTOM SEARCHER
+    // ========================================================
+
+    connect(
+        customSearcherConfigButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::customSearcherConfigRequested
+        );
+
+    connect(
+        customSearcherToggleButton,
+        &QPushButton::toggled,
+        this,
+        [this](bool enabled)
+        {
+            updateToggleText(
+                customSearcherToggleButton,
+                enabled
+                );
+
+            emit customSearcherToggled(
+                enabled
+                );
+
+            saveToggleStates();
+        }
+        );
 
     connect(
         pauseKeyButton,
@@ -1137,17 +1178,6 @@ MainWindow::MainWindow(
         }
         );
 
-
-    // ========================================================
-    // BUFF TRACKER
-    // ========================================================
-
-    connect(
-        buffTrackerConfigButton,
-        &QPushButton::clicked,
-        this,
-        &MainWindow::buffTrackerConfigRequested
-        );
 
 
     // ========================================================
@@ -1532,6 +1562,11 @@ void MainWindow::saveToggleStates()
         buffTranscendenceToggleButton->isChecked()
         );
 
+    settings.setValue(
+        "Toggles/CustomSearcher",
+        customSearcherToggleButton->isChecked()
+        );
+
 
     settings.setValue(
         "Toggles/SpecialCooldowns",
@@ -1611,6 +1646,12 @@ void MainWindow::loadToggleStates()
                     "Toggles/OverlayClickability",
                     true
                     ).toBool();
+
+    const bool customSearcher =
+        settings.value(
+                    "Toggles/CustomSearcher",
+                    false
+                    ).toBool();
     const bool resonanceGateEnabled =
         settings.value("Toggles/ResonanceGate", false).toBool();
 
@@ -1643,7 +1684,9 @@ void MainWindow::loadToggleStates()
     specialCooldownToggleButton->setChecked(
         specialCooldowns
         );
-
+    customSearcherToggleButton->setChecked(
+        customSearcher
+        );
 
     overlayClickabilityToggleButton->setChecked(
         overlayClickability
@@ -1673,6 +1716,10 @@ void MainWindow::loadToggleStates()
     updateToggleText(
         buffTitlesToggleButton,
         buffTitles
+        );
+    updateToggleText(
+        customSearcherToggleButton,
+        customSearcher
         );
 
 

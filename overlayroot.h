@@ -4,10 +4,12 @@
 #include <QList>
 #include <QHash>
 #include <QWidget>
+#include <QTimer>
 
 class SkillOverlay;
 class BuffVisionOverlay;
 class SpecialCooldownOverlay;
+class CustomSearcherOverlay;
 
 
     class OverlayRoot : public QWidget
@@ -44,6 +46,13 @@ public:
     void setSpecialCooldownOverlay(
         SpecialCooldownOverlay *overlay
         );
+    void registerCustomSearcherOverlay(
+        CustomSearcherOverlay *overlay
+        );
+
+    void unregisterCustomSearcherOverlay(
+        CustomSearcherOverlay *overlay
+        );
 
 
 public slots:
@@ -67,6 +76,8 @@ private:
 
     SpecialCooldownOverlay *m_specialCooldownOverlay = nullptr;
 
+    QList<CustomSearcherOverlay *> m_customSearcherOverlays;
+
     QList<QWidget *> overlays;
 
     QHash<QWidget *, bool> visibilityBeforeHide;
@@ -76,6 +87,7 @@ private:
     bool m_clickable = true;
 
     int m_transparency = 255;
+    QTimer m_raiseTimer;
 
 
 private:
