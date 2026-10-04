@@ -15,6 +15,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QSlider>
+#include <QCheckBox>
 
 
     namespace
@@ -462,21 +463,73 @@ MainWindow::MainWindow(
     // ========================================================
     // RESONANCE GATE
     // ========================================================
-    QGroupBox *resonanceGateGroup = new QGroupBox("Gate", central);
-    QHBoxLayout *resonanceGateLayout = new QHBoxLayout(resonanceGateGroup);
+    QGroupBox *resonanceGateGroup =
+        new QGroupBox(
+            "Gate",
+            central
+            );
 
-    resonanceGateConfigButton = new QPushButton("Configura", resonanceGateGroup);
+    QHBoxLayout *resonanceGateLayout =
+        new QHBoxLayout(
+            resonanceGateGroup
+            );
 
-    resonanceGateToggleButton = new QPushButton("OFF", resonanceGateGroup);
-    setupToggleButton(resonanceGateToggleButton);
-    resonanceGateToggleButton->setChecked(false);
-    updateToggleText(resonanceGateToggleButton, false);
+    resonanceGateConfigButton =
+        new QPushButton(
+            "Configura",
+            resonanceGateGroup
+            );
 
-    resonanceGateLayout->addWidget(resonanceGateConfigButton);
+    resonanceGatePauseCooldownCheckBox =
+        new QCheckBox(
+            "Pausa",
+            resonanceGateGroup
+            );
+
+    resonanceGatePauseCooldownCheckBox->setChecked(
+        true
+        );
+
+    resonanceGateToggleButton =
+        new QPushButton(
+            "OFF",
+            resonanceGateGroup
+            );
+
+    setupToggleButton(
+        resonanceGateToggleButton
+        );
+
+    resonanceGateToggleButton->setChecked(
+        false
+        );
+
+    updateToggleText(
+        resonanceGateToggleButton,
+        false
+        );
+
+    // Configura
+    resonanceGateLayout->addWidget(
+        resonanceGateConfigButton
+        );
+
+    // Pausa
+    resonanceGateLayout->addWidget(
+        resonanceGatePauseCooldownCheckBox
+        );
+
+    // Spazio
     resonanceGateLayout->addStretch();
-    resonanceGateLayout->addWidget(resonanceGateToggleButton);
 
-    mainLayout->addWidget(resonanceGateGroup);
+    // OFF
+    resonanceGateLayout->addWidget(
+        resonanceGateToggleButton
+        );
+
+    mainLayout->addWidget(
+        resonanceGateGroup
+        );
 
     connect(
         resonanceGateConfigButton,
@@ -496,6 +549,21 @@ MainWindow::MainWindow(
         {
             updateToggleText(resonanceGateToggleButton, enabled);
             emit resonanceGateToggled(enabled);
+            saveToggleStates();
+        }
+        );
+    connect(
+        resonanceGatePauseCooldownCheckBox,
+        &QCheckBox::toggled,
+        this,
+        [this](bool enabled)
+        {
+            m_resonanceGatePauseCooldown = enabled;
+
+            emit resonanceGatePauseCooldownChanged(
+                enabled
+                );
+
             saveToggleStates();
         }
         );
@@ -1581,6 +1649,10 @@ void MainWindow::saveToggleStates()
     settings.setValue("Toggles/ResonanceGate",
                       resonanceGateToggleButton->isChecked());
 
+    settings.setValue(
+        "Toggles/ResonanceGatePauseCooldown",
+        m_resonanceGatePauseCooldown
+        );
 
     settings.sync();
 }
@@ -1654,6 +1726,15 @@ void MainWindow::loadToggleStates()
                     ).toBool();
     const bool resonanceGateEnabled =
         settings.value("Toggles/ResonanceGate", false).toBool();
+    m_resonanceGatePauseCooldown =
+        settings.value(
+                    "Toggles/ResonanceGatePauseCooldown",
+                    true
+                    ).toBool();
+
+    resonanceGatePauseCooldownCheckBox->setChecked(
+        m_resonanceGatePauseCooldown
+        );
 
 
     atmaToggleButton->setChecked(

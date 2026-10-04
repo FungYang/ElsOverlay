@@ -171,16 +171,29 @@ int main(int argc, char *argv[])
         {
             if(key == VK_LEFT)
             {
-                distanceGuideManager.setMovementDirection(MovementDirection::Left);
-                distanceGuideManager.setCharacterFacing(CharacterFacing::Left);
+                distanceGuideManager.setMovementDirection(
+                    MovementDirection::Left
+                    );
+
+                distanceGuideManager.setCharacterFacing(
+                    CharacterFacing::Left
+                    );
+
                 distanceGuideManager.setCharacterMoving(true);
+
                 return;
             }
 
             if(key == VK_RIGHT)
             {
-                distanceGuideManager.setMovementDirection(MovementDirection::Right);
-                distanceGuideManager.setCharacterFacing(CharacterFacing::Right);
+                distanceGuideManager.setMovementDirection(
+                    MovementDirection::Right
+                    );
+
+                distanceGuideManager.setCharacterFacing(
+                    CharacterFacing::Right
+                    );
+
                 distanceGuideManager.setCharacterMoving(true);
             }
         },
@@ -311,10 +324,6 @@ int main(int argc, char *argv[])
     // CUSTOM SEARCHER
     // ==================================================
 
-    // ==================================================
-    // CUSTOM SEARCHER
-    // ==================================================
-
     CustomSearcherManager customSearcher(
         CaptureCoordinator::instance(),
         overlayRoot
@@ -333,6 +342,7 @@ int main(int argc, char *argv[])
         &customSearcher,
         &CustomSearcherManager::setEnabled
         );
+
     // ==================================================
     // CUSTOM SEARCHER - GLOBAL RESET
     // ==================================================
@@ -344,8 +354,6 @@ int main(int argc, char *argv[])
         &CustomSearcherManager::reset,
         Qt::QueuedConnection
         );
-
-
 
     // ==================================================
     // SKILL OVERLAY
@@ -566,8 +574,13 @@ int main(int argc, char *argv[])
         overlayRoot
         );
 
-    overlayRoot->setBuffVisionOverlay(atma.visionOverlay());
-    overlayRoot->setTransparency(mainWindow.transparencyValue());
+    overlayRoot->setBuffVisionOverlay(
+        atma.visionOverlay()
+        );
+
+    overlayRoot->setTransparency(
+        mainWindow.transparencyValue()
+        );
 
     QObject::connect(
         &mainWindow,
@@ -641,11 +654,20 @@ int main(int argc, char *argv[])
 #endif
 
     // ==================================================
+    // RESTORE TOGGLE STATES
+    // ==================================================
+
+    mainWindow.loadToggleStates();
+
+    // ==================================================
     // RESONANCE GATE -> PAUSA / RIPRESA
-    // (filtrata: durante il "Delete" i gateClosed vengono ignorati)
     // ==================================================
 
     bool overlayHidden = false;
+
+    // Stato del checkbox "Pausa"
+    bool resonanceGatePauseCooldown =
+        mainWindow.resonanceGatePauseCooldownEnabled();
 
     auto pauseAll = [&]()
     {
@@ -667,18 +689,58 @@ int main(int argc, char *argv[])
         transcendenceVision.resumeAtmaGate();
     };
 
+    // ==================================================
+    // CAMBIO CHECKBOX "PAUSA"
+    // ==================================================
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::resonanceGatePauseCooldownChanged,
+        overlayRoot,
+        [&](bool enabled)
+        {
+            resonanceGatePauseCooldown = enabled;
+
+            if(enabled)
+            {
+                // Se il Gate è già chiuso e l'overlay è visibile,
+                // applico immediatamente la pausa.
+                if(!overlayHidden &&
+                    !resonanceGate.isGateOpen())
+                {
+                    pauseAll();
+                }
+            }
+            else
+            {
+                // Disattivando "Pausa", i cooldown ripartono subito.
+                resumeAll();
+            }
+        },
+        Qt::QueuedConnection
+        );
+
+    // ==================================================
+    // GATE CLOSED
+    // ==================================================
+
     QObject::connect(
         &resonanceGate,
         &ResonanceGateManager::gateClosed,
         overlayRoot,
         [&]()
         {
-            if(!overlayHidden)
+            if(!overlayHidden &&
+                resonanceGatePauseCooldown)
             {
                 pauseAll();
             }
         }
         );
+
+    // ==================================================
+    // GATE OPENED
+    // ==================================================
 
     QObject::connect(
         &resonanceGate,
@@ -686,7 +748,10 @@ int main(int argc, char *argv[])
         overlayRoot,
         [&]()
         {
-            resumeAll();
+            if(resonanceGatePauseCooldown)
+            {
+                resumeAll();
+            }
         }
         );
 
@@ -695,8 +760,14 @@ int main(int argc, char *argv[])
     // ==================================================
     //
     // Mentre l'overlay e' nascosto:
-    //  - il gate viene ignorato (i cooldown scorrono)
+    //  - il gate viene ignorato
+    //  - i cooldown continuano a scorrere
     //  - non si registrano nuovi eventi Atma
+    //
+    // IMPORTANTE:
+    // questa logica NON dipende dal checkbox "Pausa".
+    // DELETE mantiene quindi il comportamento originale.
+    // ==================================================
 
     QObject::connect(
         &keyboard,
@@ -710,10 +781,16 @@ int main(int argc, char *argv[])
             }
 
             overlayRoot->toggleVisibility();
+
             overlayHidden = !overlayHidden;
 
-            atma.visionCore()->setDetectionSuspended(overlayHidden);
-            atmaZones.setDetectionSuspended(overlayHidden);
+            atma.visionCore()->setDetectionSuspended(
+                overlayHidden
+                );
+
+            atmaZones.setDetectionSuspended(
+                overlayHidden
+                );
 
             if(overlayHidden)
             {
@@ -723,18 +800,13 @@ int main(int argc, char *argv[])
             }
             else if(!resonanceGate.isGateOpen())
             {
-                // Riattivo: se la scritta e' davvero assente, torno in pausa.
+                // Riattivo: se la scritta e' davvero assente,
+                // torno in pausa.
                 pauseAll();
             }
         },
         Qt::QueuedConnection
         );
-
-    // ==================================================
-    // RESTORE TOGGLE STATES
-    // ==================================================
-
-    mainWindow.loadToggleStates();
 
     // ==================================================
     // SHOW MAIN WINDOW

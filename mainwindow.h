@@ -7,6 +7,7 @@
 
 class QPushButton;
 class QSlider;
+class QCheckBox;
 
 class MainWindow : public QMainWindow
 {
@@ -29,6 +30,10 @@ public:
     void saveToggleStates();
     int transparencyValue() const;
     void setResonanceGateChecked(bool on);
+    bool resonanceGatePauseCooldownEnabled() const
+    {
+        return m_resonanceGatePauseCooldown;
+    }
 
 
 signals:
@@ -99,6 +104,7 @@ signals:
     void transparencyChanged(
         int value
         );
+    void resonanceGatePauseCooldownChanged(bool enabled);
 
 
 
@@ -195,6 +201,9 @@ private:
 
     QPushButton *customSearcherConfigButton;
     QPushButton *customSearcherToggleButton;
+
+    QCheckBox *resonanceGatePauseCooldownCheckBox = nullptr;
+    bool m_resonanceGatePauseCooldown = true;
 
 
 
