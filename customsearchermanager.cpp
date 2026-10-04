@@ -1078,34 +1078,28 @@ void CustomSearcherManager::startCooldown(
         if(runtime.config.id != templateId)
             continue;
 
-        if(runtime.coolingDown)
-            return;
-
-        runtime.coolingDown = true;
-
-        if(runtime.overlay)
-        {
-            runtime.overlay->startCooldown(
-                runtime.config.cooldownMs
-                );
-        }
-
-        if(runtime.cooldownTimer)
-        {
-            runtime.cooldownTimer->stop();
-            runtime.cooldownTimer->deleteLater();
-            runtime.cooldownTimer = nullptr;
-        }
-
         const int cooldownMs =
             qMax(
                 0,
                 runtime.config.cooldownMs
                 );
 
+        /*
+         * ====================================================
+         * COOLDOWN NULLO
+         * ====================================================
+         */
+
         if(cooldownMs <= 0)
         {
             runtime.coolingDown = false;
+
+            if(runtime.cooldownTimer)
+            {
+                runtime.cooldownTimer->stop();
+                runtime.cooldownTimer->deleteLater();
+                runtime.cooldownTimer = nullptr;
+            }
 
             if(runtime.overlay)
             {
@@ -1115,6 +1109,108 @@ void CustomSearcherManager::startCooldown(
             rebuildWorkerTemplates();
 
             return;
+        }
+
+        /*
+         * ====================================================
+         * COOLDOWN BREVE
+         *
+         * Sotto la soglia la ricerca NON viene fermata.
+         *
+         * Se il template viene trovato nuovamente mentre il
+         * cooldown è attivo, arriviamo nuovamente qui e
+         * ricarichiamo il timer.
+         * ====================================================
+         */
+
+        if(cooldownMs < SEARCH_STOP_THRESHOLD_MS)
+        {
+            runtime.coolingDown = false;
+
+            if(runtime.cooldownTimer)
+            {
+                runtime.cooldownTimer->stop();
+                runtime.cooldownTimer->deleteLater();
+                runtime.cooldownTimer = nullptr;
+            }
+
+            if(runtime.overlay)
+            {
+                runtime.overlay->startCooldown(
+                    cooldownMs
+                    );
+            }
+
+            QTimer *timer =
+                new QTimer(this);
+
+            timer->setSingleShot(
+                true
+                );
+
+            runtime.cooldownTimer =
+                timer;
+
+            connect(
+                timer,
+                &QTimer::timeout,
+                this,
+                [this, templateId]()
+                {
+                    onCooldownFinished(
+                        templateId
+                        );
+                }
+                );
+
+            timer->start(
+                cooldownMs
+                );
+
+            /*
+             * Il template deve rimanere nel worker.
+             */
+            rebuildWorkerTemplates();
+
+            return;
+        }
+
+        /*
+         * ====================================================
+         * COOLDOWN LUNGO
+         *
+         * Da 21 secondi in su il comportamento rimane quello
+         * originale: il template viene escluso dal worker.
+         * ====================================================
+         */
+
+        /*
+         * Questo controllo vale SOLO per i cooldown lunghi.
+         *
+         * Se siamo già in cooldown, un risultato non dovrebbe
+         * normalmente arrivare perché il template è stato
+         * rimosso dal worker.
+         *
+         * La protezione rimane comunque necessaria per eventuali
+         * risultati già in coda.
+         */
+        if(runtime.coolingDown)
+            return;
+
+        runtime.coolingDown = true;
+
+        if(runtime.overlay)
+        {
+            runtime.overlay->startCooldown(
+                cooldownMs
+                );
+        }
+
+        if(runtime.cooldownTimer)
+        {
+            runtime.cooldownTimer->stop();
+            runtime.cooldownTimer->deleteLater();
+            runtime.cooldownTimer = nullptr;
         }
 
         QTimer *timer =

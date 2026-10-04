@@ -399,6 +399,7 @@ private:
     // ---------------------------------------------------------
 
     int m_captureIntervalMs = 150;
+    static constexpr int SEARCH_STOP_THRESHOLD_MS = 21000;
 
 
     // ---------------------------------------------------------
