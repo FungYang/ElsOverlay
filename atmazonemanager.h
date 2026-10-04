@@ -64,7 +64,7 @@ private:
     // "in attesa" prima di essere confermato/scartato in base allo
     // stato del gate (che può arrivare con un ritardo variabile,
     // dato che ora proviene da un manager esterno e asincrono).
-    static constexpr int GATE_DELAY_MS = 30;
+    static constexpr int GATE_DELAY_MS = 10;
 
     enum class ZoneState { Unknown, Match, Mismatch };
 

@@ -688,6 +688,25 @@ int main(int argc, char *argv[])
         skills->resumeAtmaGate();
         transcendenceVision.resumeAtmaGate();
     };
+    auto pauseCooldowns = [&]()
+    {
+        atma.visionCore()->pauseAtmaCooldowns();
+        atma.visionOverlay()->pauseAtmaCooldown();
+
+        overlay->pauseAtmaGate();
+        skills->pauseAtmaGate();
+        transcendenceVision.pauseAtmaGate();
+    };
+
+    auto resumeCooldowns = [&]()
+    {
+        atma.visionCore()->resumeAtmaCooldowns();
+        atma.visionOverlay()->resumeAtmaCooldown();
+
+        overlay->resumeAtmaGate();
+        skills->resumeAtmaGate();
+        transcendenceVision.resumeAtmaGate();
+    };
 
     // ==================================================
     // CAMBIO CHECKBOX "PAUSA"
@@ -701,20 +720,19 @@ int main(int argc, char *argv[])
         {
             resonanceGatePauseCooldown = enabled;
 
-            if(enabled)
+            if(!enabled)
             {
-                // Se il Gate è già chiuso e l'overlay è visibile,
-                // applico immediatamente la pausa.
-                if(!overlayHidden &&
-                    !resonanceGate.isGateOpen())
-                {
-                    pauseAll();
-                }
+                resumeAll();
+                return;
+            }
+
+            if(resonanceGate.isGateOpen())
+            {
+                resumeAll();
             }
             else
             {
-                // Disattivando "Pausa", i cooldown ripartono subito.
-                resumeAll();
+                pauseAll();
             }
         },
         Qt::QueuedConnection
@@ -730,10 +748,14 @@ int main(int argc, char *argv[])
         overlayRoot,
         [&]()
         {
+            // SEMPRE: il Gate decide se Atma può usare le pozioni
+            atmaZones.setGateOpen(false);
+
+            // SOLO Pausa decide se fermare i cooldown
             if(!overlayHidden &&
                 resonanceGatePauseCooldown)
             {
-                pauseAll();
+                pauseCooldowns();
             }
         }
         );
@@ -748,9 +770,13 @@ int main(int argc, char *argv[])
         overlayRoot,
         [&]()
         {
+            // SEMPRE: il Gate decide se Atma può usare le pozioni
+            atmaZones.setGateOpen(true);
+
+            // SOLO Pausa decide se riprendere i cooldown
             if(resonanceGatePauseCooldown)
             {
-                resumeAll();
+                resumeCooldowns();
             }
         }
         );

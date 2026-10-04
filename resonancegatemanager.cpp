@@ -166,14 +166,18 @@ void ResonanceGateManager::onCompared(bool isMatch)
     const State oldState = m_state;
     m_state = newState;
 
-    if (oldState != State::Mismatch && newState == State::Mismatch)
+    if(newState == State::Mismatch &&
+        oldState != State::Mismatch)
     {
         m_gateOpen = false;
+
         emit gateClosed();
     }
-    else if (oldState == State::Mismatch && newState == State::Match)
+    else if(newState == State::Match &&
+             oldState != State::Match)
     {
         m_gateOpen = true;
+
         emit gateOpened();
     }
 }
@@ -203,6 +207,10 @@ void ResonanceGateManager::unregisterRegion()
 }
 void ResonanceGateManager::setDetectionSuspended(bool on)
 {
+    qDebug()
+    << "RESONANCE GATE DETECTION SUSPENDED ="
+    << on;
+
     if (m_detectionSuspended == on)
         return;
 
