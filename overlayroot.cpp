@@ -1,13 +1,21 @@
 #include "overlayroot.h"
 
-#include <QVBoxLayout>
 #include <QApplication>
 #include <QScreen>
+
 #include <windows.h>
+
 #include "skilloverlay.h"
 #include "buffvisionoverlay.h"
 #include "specialcooldownoverlay.h"
 #include "customsearcheroverlay.h"
+
+
+#ifdef Q_OS_WIN
+
+OverlayRoot *OverlayRoot::s_instance = nullptr;
+
+#endif
 
 
 // ============================================================
@@ -35,26 +43,76 @@ OverlayRoot::OverlayRoot(
         true
         );
 
-    setGeometry(
-        QApplication::primaryScreen()->geometry()
-        );
+    if(QScreen *screen = QApplication::primaryScreen())
+    {
+        setGeometry(
+            screen->geometry()
+            );
+    }
+
 
     show();
 
     raise();
 
-    m_raiseTimer.setInterval(
-        1000
-        );
 
-    connect(
-        &m_raiseTimer,
-        &QTimer::timeout,
-        this,
-        &OverlayRoot::raiseAll
-        );
+#ifdef Q_OS_WIN
 
-    m_raiseTimer.start();
+    // ========================================================
+    // WINDOWS FOREGROUND EVENT
+    //
+    // Nessun timer periodico.
+    //
+    // Riceviamo un evento quando cambia la finestra
+    // in foreground e, in quel momento, riportiamo
+    // il Custom Searcher sopra le altre finestre TOPMOST.
+    // ========================================================
+
+    if(!s_instance)
+    {
+        s_instance = this;
+
+        m_foregroundHook =
+            SetWinEventHook(
+                EVENT_SYSTEM_FOREGROUND,
+                EVENT_SYSTEM_FOREGROUND,
+                nullptr,
+                &OverlayRoot::winEventProc,
+                0,
+                0,
+                WINEVENT_OUTOFCONTEXT |
+                    WINEVENT_SKIPOWNPROCESS
+                );
+    }
+
+#endif
+}
+
+
+// ============================================================
+// DESTRUCTOR
+// ============================================================
+
+OverlayRoot::~OverlayRoot()
+{
+#ifdef Q_OS_WIN
+
+    if(m_foregroundHook)
+    {
+        UnhookWinEvent(
+            m_foregroundHook
+            );
+
+        m_foregroundHook = nullptr;
+    }
+
+
+    if(s_instance == this)
+    {
+        s_instance = nullptr;
+    }
+
+#endif
 }
 
 
@@ -134,7 +192,6 @@ void OverlayRoot::registerOverlay(
 // ============================================================
 // APPLY CLICKABLE STATE
 // ============================================================
-
 
 void OverlayRoot::applyClickableState(
     QWidget *overlay
@@ -229,8 +286,6 @@ void OverlayRoot::applyClickableState(
 }
 
 
-
-
 // ============================================================
 // IS CLICKABLE
 // ============================================================
@@ -288,6 +343,10 @@ void OverlayRoot::raiseAll()
     raise();
 
 
+    // ========================================================
+    // OVERLAY NORMALI
+    // ========================================================
+
     for(QWidget *overlay : overlays)
     {
         if(!overlay)
@@ -301,7 +360,148 @@ void OverlayRoot::raiseAll()
             overlay->raise();
         }
     }
+
+
+    // ========================================================
+    // CUSTOM SEARCHER
+    //
+    // Sempre per ultimi.
+    // ========================================================
+
+    raiseCustomSearcherOverlays();
 }
+
+
+// ============================================================
+// RAISE CUSTOM SEARCHER OVERLAYS
+// ============================================================
+
+void OverlayRoot::raiseCustomSearcherOverlays()
+{
+    if(!m_overlaysVisible)
+    {
+        return;
+    }
+
+
+#ifdef Q_OS_WIN
+
+    for(CustomSearcherOverlay *overlay :
+         m_customSearcherOverlays)
+    {
+        if(!overlay)
+        {
+            continue;
+        }
+
+
+        if(!overlay->isVisible())
+        {
+            continue;
+        }
+
+
+        HWND hwnd =
+            reinterpret_cast<HWND>(
+                overlay->winId()
+                );
+
+
+        if(!hwnd)
+        {
+            continue;
+        }
+
+
+        // ====================================================
+        // WINDOWS TOPMOST
+        //
+        // Non attiva la finestra.
+        // Non prende il focus.
+        // Non modifica posizione o dimensione.
+        // ====================================================
+
+        SetWindowPos(
+            hwnd,
+            HWND_TOPMOST,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE |
+                SWP_NOSIZE |
+                SWP_NOACTIVATE
+            );
+    }
+
+#else
+
+    for(CustomSearcherOverlay *overlay :
+         m_customSearcherOverlays)
+    {
+        if(!overlay)
+        {
+            continue;
+        }
+
+
+        if(overlay->isVisible())
+        {
+            overlay->raise();
+        }
+    }
+
+#endif
+}
+
+
+// ============================================================
+// WINDOWS FOREGROUND EVENT
+// ============================================================
+
+#ifdef Q_OS_WIN
+
+void CALLBACK OverlayRoot::winEventProc(
+    HWINEVENTHOOK,
+    DWORD event,
+    HWND,
+    LONG,
+    LONG,
+    DWORD,
+    DWORD
+    )
+{
+    if(event != EVENT_SYSTEM_FOREGROUND)
+    {
+        return;
+    }
+
+
+    if(!s_instance)
+    {
+        return;
+    }
+
+
+    s_instance->handleForegroundChanged();
+}
+
+
+void OverlayRoot::handleForegroundChanged()
+{
+    if(!m_overlaysVisible)
+    {
+        return;
+    }
+
+    // Prima riportiamo sopra gli overlay normali.
+    raiseNormalOverlays();
+
+    // Infine riportiamo sopra i Custom Searcher.
+    raiseCustomSearcherOverlays();
+}
+
+#endif
 
 
 // ============================================================
@@ -383,7 +583,21 @@ void OverlayRoot::toggleVisibility()
 
 
     m_overlaysVisible = true;
+
+
+    // ========================================================
+    // CUSTOM SEARCHER
+    //
+    // Dopo il ripristino, riportiamolo sopra.
+    // ========================================================
+
+    raiseCustomSearcherOverlays();
 }
+
+
+// ============================================================
+// SET TRANSPARENCY
+// ============================================================
 
 void OverlayRoot::setTransparency(
     int value
@@ -421,7 +635,8 @@ void OverlayRoot::setTransparency(
     }
 
 
-    for(CustomSearcherOverlay *overlay : m_customSearcherOverlays)
+    for(CustomSearcherOverlay *overlay :
+         m_customSearcherOverlays)
     {
         if(!overlay)
         {
@@ -435,11 +650,20 @@ void OverlayRoot::setTransparency(
     }
 }
 
+
+// ============================================================
+// ARE OVERLAYS VISIBLE
+// ============================================================
+
 bool OverlayRoot::areOverlaysVisible() const
 {
     return m_overlaysVisible;
 }
 
+
+// ============================================================
+// SET SKILL OVERLAY
+// ============================================================
 
 void OverlayRoot::setSkillOverlay(
     SkillOverlay *overlay
@@ -447,6 +671,7 @@ void OverlayRoot::setSkillOverlay(
 {
     m_skillOverlay =
         overlay;
+
 
     if(m_skillOverlay)
     {
@@ -457,12 +682,17 @@ void OverlayRoot::setSkillOverlay(
 }
 
 
+// ============================================================
+// SET BUFF VISION OVERLAY
+// ============================================================
+
 void OverlayRoot::setBuffVisionOverlay(
     BuffVisionOverlay *overlay
     )
 {
     m_buffVisionOverlay =
         overlay;
+
 
     if(m_buffVisionOverlay)
     {
@@ -473,12 +703,17 @@ void OverlayRoot::setBuffVisionOverlay(
 }
 
 
+// ============================================================
+// SET SPECIAL COOLDOWN OVERLAY
+// ============================================================
+
 void OverlayRoot::setSpecialCooldownOverlay(
     SpecialCooldownOverlay *overlay
     )
 {
     m_specialCooldownOverlay =
         overlay;
+
 
     if(m_specialCooldownOverlay)
     {
@@ -487,6 +722,12 @@ void OverlayRoot::setSpecialCooldownOverlay(
             );
     }
 }
+
+
+// ============================================================
+// REGISTER CUSTOM SEARCHER OVERLAY
+// ============================================================
+
 void OverlayRoot::registerCustomSearcherOverlay(
     CustomSearcherOverlay *overlay
     )
@@ -518,23 +759,43 @@ void OverlayRoot::registerCustomSearcherOverlay(
     }
 
 
-    /*
-     * Applica immediatamente la trasparenza globale
-     * all'overlay appena registrato.
-     */
+    // ========================================================
+    // TRASPARENZA
+    // ========================================================
+
     overlay->setTransparency(
         m_transparency
         );
 
 
-    /*
-     * Manteniamo anche tutta la gestione globale
-     * esistente: click-through, hide/show, ecc.
-     */
+    // ========================================================
+    // REGISTRAZIONE GENERALE
+    // ========================================================
+
     registerOverlay(
         overlay
         );
+
+
+    // ========================================================
+    // STACKING
+    //
+    // Se è già visibile, lo mettiamo immediatamente
+    // sopra gli altri.
+    // ========================================================
+
+    if(m_overlaysVisible &&
+        overlay->isVisible())
+    {
+        raiseCustomSearcherOverlays();
+    }
 }
+
+
+// ============================================================
+// UNREGISTER CUSTOM SEARCHER OVERLAY
+// ============================================================
+
 void OverlayRoot::unregisterCustomSearcherOverlay(
     CustomSearcherOverlay *overlay
     )
@@ -560,3 +821,81 @@ void OverlayRoot::unregisterCustomSearcherOverlay(
         );
 }
 
+void OverlayRoot::raiseNormalOverlays()
+{
+    if(!m_overlaysVisible)
+    {
+        return;
+    }
+
+#ifdef Q_OS_WIN
+
+    for(QWidget *overlay : overlays)
+    {
+        if(!overlay)
+        {
+            continue;
+        }
+
+        if(!overlay->isVisible())
+        {
+            continue;
+        }
+
+        bool isCustomSearcher = false;
+
+        for(CustomSearcherOverlay *custom :
+             m_customSearcherOverlays)
+        {
+            if(custom == overlay)
+            {
+                isCustomSearcher = true;
+                break;
+            }
+        }
+
+        if(isCustomSearcher)
+        {
+            continue;
+        }
+
+        HWND hwnd =
+            reinterpret_cast<HWND>(
+                overlay->winId()
+                );
+
+        if(!hwnd)
+        {
+            continue;
+        }
+
+        SetWindowPos(
+            hwnd,
+            HWND_TOPMOST,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE |
+                SWP_NOSIZE |
+                SWP_NOACTIVATE
+            );
+    }
+
+#else
+
+    for(QWidget *overlay : overlays)
+    {
+        if(!overlay)
+        {
+            continue;
+        }
+
+        if(overlay->isVisible())
+        {
+            overlay->raise();
+        }
+    }
+
+#endif
+}
