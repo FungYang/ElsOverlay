@@ -26,12 +26,24 @@ public:
     // THREAD-SAFE INPUT
     // ========================================================
 
-    void submitFrame(
+    void submitFrameZone1(
+        const QImage &frame
+        );
+
+    void submitFrameZone2(
         const QImage &frame
         );
 
 
-    void setTemplates(
+    // ========================================================
+    // TEMPLATES
+    // ========================================================
+
+    void setTemplatesZone1(
+        const QVector<CustomSearcherMultiFinder::Template> &templates
+        );
+
+    void setTemplatesZone2(
         const QVector<CustomSearcherMultiFinder::Template> &templates
         );
 
@@ -41,17 +53,39 @@ public:
 
 signals:
 
-    void resultsReady(
+    // ========================================================
+    // RESULTS
+    // ========================================================
+
+    void resultsReadyZone1(
+        const QVector<CustomSearcherMultiFinder::Result> &results
+        );
+
+    void resultsReadyZone2(
         const QVector<CustomSearcherMultiFinder::Result> &results
         );
 
 
 private slots:
 
-    void processLatest();
+    // ========================================================
+    // PROCESSING
+    // ========================================================
+
+    void processLatestZone1();
+
+    void processLatestZone2();
 
 
-    void applyTemplates(
+    // ========================================================
+    // APPLY TEMPLATES
+    // ========================================================
+
+    void applyTemplatesZone1(
+        const QVector<CustomSearcherMultiFinder::Template> &templates
+        );
+
+    void applyTemplatesZone2(
         const QVector<CustomSearcherMultiFinder::Template> &templates
         );
 
@@ -61,13 +95,38 @@ private slots:
 
 private:
 
+    // ========================================================
+    // SHARED FRAME STATE
+    // ========================================================
+
     QMutex m_mutex;
 
-    QImage m_pendingFrame;
 
-    bool m_processScheduled = false;
+    // ========================================================
+    // ZONE 1
+    // ========================================================
 
-    CustomSearcherMultiFinder m_finder;
+    QImage m_pendingFrameZone1;
+
+    bool m_processScheduledZone1 = false;
+
+
+    // ========================================================
+    // ZONE 2
+    // ========================================================
+
+    QImage m_pendingFrameZone2;
+
+    bool m_processScheduledZone2 = false;
+
+
+    // ========================================================
+    // FINDERS
+    // ========================================================
+
+    CustomSearcherMultiFinder m_finderZone1;
+
+    CustomSearcherMultiFinder m_finderZone2;
 };
 
 #endif

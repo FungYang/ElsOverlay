@@ -35,21 +35,33 @@ CustomSearcherManager::CustomSearcherManager(
     loadTemplates();
 
     /*
-     * IMPORTANT:
+     * Registriamo entrambe le zone salvate.
      *
-     * La Search Area viene caricata da QSettings.
-     * In precedenza veniva caricata ma non registrata
-     * nel CaptureCoordinator.
+     * Compatibilità:
      *
-     * Quindi dopo un riavvio m_regionId poteva rimanere -1.
+     * - SearchRegion1 -> Zona 1
+     * - SearchRegion2 -> Zona 2
+     *
+     * Le vecchie configurazioni con SearchRegion vengono
+     * convertite automaticamente in Zona 1 da loadSettings().
      */
-    if(m_captureCoordinator &&
-        m_searchRegion.isValid())
+    if(m_captureCoordinator)
     {
-        m_regionId =
-            m_captureCoordinator->registerRegion(
-                m_searchRegion
-                );
+        if(m_searchRegion1.isValid())
+        {
+            m_regionId1 =
+                m_captureCoordinator->registerRegion(
+                    m_searchRegion1
+                    );
+        }
+
+        if(m_searchRegion2.isValid())
+        {
+            m_regionId2 =
+                m_captureCoordinator->registerRegion(
+                    m_searchRegion2
+                    );
+        }
     }
 
     for(RuntimeTemplate &runtime : m_templates)
@@ -70,11 +82,25 @@ CustomSearcherManager::CustomSearcherManager(
         &QObject::deleteLater
         );
 
+    /*
+     * Il worker ora mantiene due flussi indipendenti:
+     *
+     * Zona 1 -> resultsReadyZone1()
+     * Zona 2 -> resultsReadyZone2()
+     */
     connect(
         m_worker,
-        &CustomSearcherWorker::resultsReady,
+        &CustomSearcherWorker::resultsReadyZone1,
         this,
-        &CustomSearcherManager::onWorkerResults,
+        &CustomSearcherManager::onWorkerResultsZone1,
+        Qt::QueuedConnection
+        );
+
+    connect(
+        m_worker,
+        &CustomSearcherWorker::resultsReadyZone2,
+        this,
+        &CustomSearcherManager::onWorkerResultsZone2,
         Qt::QueuedConnection
         );
 
@@ -90,14 +116,25 @@ CustomSearcherManager::~CustomSearcherManager()
 {
     unsubscribeCapture();
 
-    if(m_regionId >= 0 &&
-        m_captureCoordinator)
+    if(m_captureCoordinator)
     {
-        m_captureCoordinator->unregisterRegion(
-            m_regionId
-            );
+        if(m_regionId1 >= 0)
+        {
+            m_captureCoordinator->unregisterRegion(
+                m_regionId1
+                );
 
-        m_regionId = -1;
+            m_regionId1 = -1;
+        }
+
+        if(m_regionId2 >= 0)
+        {
+            m_captureCoordinator->unregisterRegion(
+                m_regionId2
+                );
+
+            m_regionId2 = -1;
+        }
     }
 
     for(RuntimeTemplate &runtime : m_templates)
@@ -182,7 +219,7 @@ void CustomSearcherManager::setEnabled(bool enabled)
         /*
          * Ordine importante:
          *
-         * 1. assicuriamo la regione
+         * 1. assicuriamo le regioni
          * 2. configuriamo il worker
          * 3. sottoscriviamo la cattura
          */
@@ -201,6 +238,34 @@ bool CustomSearcherManager::isEnabled() const
 {
     return m_enabled;
 }
+void CustomSearcherManager::reset()
+{
+    if(!m_enabled)
+        return;
+
+    for(RuntimeTemplate &runtime : m_templates)
+    {
+        runtime.coolingDown = false;
+
+        if(runtime.cooldownTimer)
+        {
+            runtime.cooldownTimer->stop();
+            runtime.cooldownTimer->deleteLater();
+            runtime.cooldownTimer = nullptr;
+        }
+
+        if(runtime.overlay)
+        {
+            runtime.overlay->stopCooldown();
+        }
+    }
+
+    /*
+     * Tutti i template devono tornare immediatamente
+     * disponibili al worker.
+     */
+    rebuildWorkerTemplates();
+}
 
 
 void CustomSearcherManager::setSearchRegion(
@@ -210,19 +275,19 @@ void CustomSearcherManager::setSearchRegion(
     const QRect normalizedRect =
         rect.normalized();
 
-    if(m_searchRegion == normalizedRect)
+    if(m_searchRegion1 == normalizedRect)
     {
         /*
          * Se la regione è già uguale ma non è stata
          * ancora registrata, la registriamo comunque.
          */
-        if(m_regionId < 0 &&
+        if(m_regionId1 < 0 &&
             m_captureCoordinator &&
-            m_searchRegion.isValid())
+            m_searchRegion1.isValid())
         {
-            m_regionId =
+            m_regionId1 =
                 m_captureCoordinator->registerRegion(
-                    m_searchRegion
+                    m_searchRegion1
                     );
 
             if(m_enabled)
@@ -232,7 +297,18 @@ void CustomSearcherManager::setSearchRegion(
         return;
     }
 
-    m_searchRegion =
+    /*
+     * Se esiste una subscription precedente, la rimuoviamo.
+     */
+    if(m_regionId1 >= 0 &&
+        m_captureCoordinator)
+    {
+        m_captureCoordinator->unsubscribe(
+            m_regionId1
+            );
+    }
+
+    m_searchRegion1 =
         normalizedRect;
 
     saveSearchRegion();
@@ -240,13 +316,69 @@ void CustomSearcherManager::setSearchRegion(
     if(!m_captureCoordinator)
         return;
 
-    if(m_regionId < 0)
+    /*
+     * Regione Zona 1 non valida:
+     * deregistriamo l'ID esistente.
+     */
+    if(!m_searchRegion1.isValid())
     {
-        if(m_searchRegion.isValid())
+        if(m_regionId1 >= 0)
         {
-            m_regionId =
+            m_captureCoordinator->unregisterRegion(
+                m_regionId1
+                );
+
+            m_regionId1 = -1;
+        }
+
+        return;
+    }
+
+    /*
+     * Nessun region ID: registriamo la nuova regione.
+     */
+    if(m_regionId1 < 0)
+    {
+        m_regionId1 =
+            m_captureCoordinator->registerRegion(
+                m_searchRegion1
+                );
+
+        if(m_enabled)
+            subscribeCapture();
+
+        return;
+    }
+
+    /*
+     * La regione esiste già: aggiorniamo la geometria.
+     */
+    m_captureCoordinator->updateRegion(
+        m_regionId1,
+        m_searchRegion1
+        );
+
+    if(m_enabled)
+        subscribeCapture();
+}
+
+
+void CustomSearcherManager::setSearchRegion2(
+    const QRect &rect
+    )
+{
+    const QRect normalizedRect =
+        rect.normalized();
+
+    if(m_searchRegion2 == normalizedRect)
+    {
+        if(m_regionId2 < 0 &&
+            m_captureCoordinator &&
+            m_searchRegion2.isValid())
+        {
+            m_regionId2 =
                 m_captureCoordinator->registerRegion(
-                    m_searchRegion
+                    m_searchRegion2
                     );
 
             if(m_enabled)
@@ -256,29 +388,86 @@ void CustomSearcherManager::setSearchRegion(
         return;
     }
 
-    if(!m_searchRegion.isValid())
+    /*
+     * Rimuoviamo la subscription precedente.
+     */
+    if(m_regionId2 >= 0 &&
+        m_captureCoordinator)
     {
-        unsubscribeCapture();
-
-        m_captureCoordinator->unregisterRegion(
-            m_regionId
+        m_captureCoordinator->unsubscribe(
+            m_regionId2
             );
+    }
 
-        m_regionId = -1;
+    m_searchRegion2 =
+        normalizedRect;
+
+    saveSearchRegion();
+
+    if(!m_captureCoordinator)
+        return;
+
+    /*
+     * Zona 2 non valida: rimuoviamo la regione.
+     */
+    if(!m_searchRegion2.isValid())
+    {
+        if(m_regionId2 >= 0)
+        {
+            m_captureCoordinator->unregisterRegion(
+                m_regionId2
+                );
+
+            m_regionId2 = -1;
+        }
 
         return;
     }
 
+    /*
+     * Nessun region ID: registriamo la nuova regione.
+     */
+    if(m_regionId2 < 0)
+    {
+        m_regionId2 =
+            m_captureCoordinator->registerRegion(
+                m_searchRegion2
+                );
+
+        if(m_enabled)
+            subscribeCapture();
+
+        return;
+    }
+
+    /*
+     * La regione esiste già: aggiorniamo la geometria.
+     */
     m_captureCoordinator->updateRegion(
-        m_regionId,
-        m_searchRegion
+        m_regionId2,
+        m_searchRegion2
         );
+
+    if(m_enabled)
+        subscribeCapture();
 }
 
 
 QRect CustomSearcherManager::searchRegion() const
 {
-    return m_searchRegion;
+    return m_searchRegion1;
+}
+
+
+QRect CustomSearcherManager::searchRegion1() const
+{
+    return m_searchRegion1;
+}
+
+
+QRect CustomSearcherManager::searchRegion2() const
+{
+    return m_searchRegion2;
 }
 
 
@@ -464,62 +653,61 @@ CustomSearcherManager::templates() const
 
 void CustomSearcherManager::subscribeCapture()
 {
-    if (!m_captureCoordinator)
+    if(!m_captureCoordinator)
+        return;
+
+    if(!m_enabled)
         return;
 
     /*
-     * Difesa:
-     * se per qualche motivo il regionId non esiste ancora,
-     * registriamo la regione prima della subscription.
+     * ==========================
+     * ZONA 1
+     * ==========================
      */
-    if (m_regionId < 0 && m_searchRegion.isValid())
+    if(m_regionId1 < 0 &&
+        m_searchRegion1.isValid())
     {
-        m_regionId =
-            m_captureCoordinator->registerRegion(m_searchRegion);
+        m_regionId1 =
+            m_captureCoordinator->registerRegion(
+                m_searchRegion1
+                );
     }
 
-    if (m_regionId < 0)
-        return;
-
-    if (!m_searchRegion.isValid())
-        return;
-
-    if (!m_enabled)
-        return;
+    if(m_regionId1 >= 0 &&
+        m_searchRegion1.isValid())
+    {
+        m_captureCoordinator->subscribe(
+            m_regionId1,
+            m_captureIntervalMs,
+            this,
+            "onFrameCapturedZone1"
+            );
+    }
 
     /*
-     * IMPORTANTE:
-     *
-     * CaptureCoordinator usa:
-     *
-     * QMetaObject::invokeMethod(
-     *     receiver,
-     *     slot,
-     *     Qt::QueuedConnection,
-     *     Q_ARG(QImage, frame)
-     * );
-     *
-     * In questa overload di invokeMethod() il nome deve essere
-     * SOLO quello del metodo.
-     *
-     * CORRETTO:
-     *
-     *     "onFrameCaptured"
-     *
-     * SBAGLIATO:
-     *
-     *     "onFrameCaptured(QImage)"
-     *
-     * SBAGLIATO:
-     *
-     *     SLOT(onFrameCaptured(QImage))
+     * ==========================
+     * ZONA 2
+     * ==========================
      */
-    m_captureCoordinator->subscribe(
-        m_regionId,
-        m_captureIntervalMs,
-        this,
-        "onFrameCaptured"
-        );
+    if(m_regionId2 < 0 &&
+        m_searchRegion2.isValid())
+    {
+        m_regionId2 =
+            m_captureCoordinator->registerRegion(
+                m_searchRegion2
+                );
+    }
+
+    if(m_regionId2 >= 0 &&
+        m_searchRegion2.isValid())
+    {
+        m_captureCoordinator->subscribe(
+            m_regionId2,
+            m_captureIntervalMs,
+            this,
+            "onFrameCapturedZone2"
+            );
+    }
 }
 
 
@@ -528,16 +716,38 @@ void CustomSearcherManager::unsubscribeCapture()
     if(!m_captureCoordinator)
         return;
 
-    if(m_regionId < 0)
-        return;
+    if(m_regionId1 >= 0)
+    {
+        m_captureCoordinator->unsubscribe(
+            m_regionId1
+            );
+    }
 
-    m_captureCoordinator->unsubscribe(
-        m_regionId
-        );
+    if(m_regionId2 >= 0)
+    {
+        m_captureCoordinator->unsubscribe(
+            m_regionId2
+            );
+    }
 }
 
 
 void CustomSearcherManager::onFrameCaptured(
+    QImage frame
+    )
+{
+    /*
+     * Compatibilità con il vecchio slot.
+     *
+     * La vecchia subscription utilizzava la Zona 1.
+     */
+    onFrameCapturedZone1(
+        frame
+        );
+}
+
+
+void CustomSearcherManager::onFrameCapturedZone1(
     QImage frame
     )
 {
@@ -553,7 +763,35 @@ void CustomSearcherManager::onFrameCaptured(
     if(!hasActiveTemplates())
         return;
 
-    m_worker->submitFrame(
+    /*
+     * Il frame appartiene esclusivamente alla Zona 1.
+     */
+    m_worker->submitFrameZone1(
+        frame
+        );
+}
+
+
+void CustomSearcherManager::onFrameCapturedZone2(
+    QImage frame
+    )
+{
+    if(!m_enabled)
+        return;
+
+    if(!m_worker)
+        return;
+
+    if(frame.isNull())
+        return;
+
+    if(!hasActiveTemplates())
+        return;
+
+    /*
+     * Il frame appartiene esclusivamente alla Zona 2.
+     */
+    m_worker->submitFrameZone2(
         frame
         );
 }
@@ -578,22 +816,45 @@ void CustomSearcherManager::rebuildWorkerTemplates()
         return;
     }
 
+    /*
+     * IMPORTANTISSIMO:
+     *
+     * Costruiamo due liste completamente separate.
+     *
+     * Un template assegnato alla Zona 1 non può essere
+     * testato contro un frame della Zona 2 e viceversa.
+     */
     QVector<CustomSearcherMultiFinder::Template>
-        activeTemplates;
+        zone1Templates;
 
-    activeTemplates.reserve(
+    QVector<CustomSearcherMultiFinder::Template>
+        zone2Templates;
+
+    zone1Templates.reserve(
+        m_templates.size()
+        );
+
+    zone2Templates.reserve(
         m_templates.size()
         );
 
     for(const RuntimeTemplate &runtime : m_templates)
     {
-        // Template disabilitato dalla configurazione.
+        /*
+         * Template disabilitato dalla configurazione.
+         */
         if(!runtime.config.searchEnabled)
             continue;
 
+        /*
+         * Template attualmente in cooldown.
+         */
         if(runtime.coolingDown)
             continue;
 
+        /*
+         * Senza immagine di matching non possiamo cercare.
+         */
         if(runtime.config.templateImage.isNull())
             continue;
 
@@ -611,20 +872,44 @@ void CustomSearcherManager::rebuildWorkerTemplates()
         templ.matchThreshold =
             runtime.config.matchThreshold;
 
-        activeTemplates.append(
-            templ
-            );
+        /*
+         * Separazione effettiva per zona.
+         */
+        if(runtime.config.searchZone ==
+            SearchZone::Zone2)
+        {
+            zone2Templates.append(
+                templ
+                );
+        }
+        else
+        {
+            zone1Templates.append(
+                templ
+                );
+        }
     }
 
     /*
      * Il worker vive su un thread separato.
+     *
+     * Aggiorniamo SEMPRE entrambe le liste.
+     * In questo modo, se ad esempio tutti i template
+     * vengono spostati dalla Zona 1 alla Zona 2,
+     * la vecchia lista della Zona 1 viene svuotata.
      */
     QMetaObject::invokeMethod(
         m_worker,
-        [worker = m_worker, activeTemplates]()
+        [worker = m_worker,
+         zone1Templates,
+         zone2Templates]()
         {
-            worker->setTemplates(
-                activeTemplates
+            worker->setTemplatesZone1(
+                zone1Templates
+                );
+
+            worker->setTemplatesZone2(
+                zone2Templates
                 );
         },
         Qt::QueuedConnection
@@ -632,7 +917,7 @@ void CustomSearcherManager::rebuildWorkerTemplates()
 }
 
 
-void CustomSearcherManager::onWorkerResults(
+void CustomSearcherManager::onWorkerResultsZone1(
     const QVector<CustomSearcherMultiFinder::Result> &results
     )
 {
@@ -664,16 +949,111 @@ void CustomSearcherManager::onWorkerResults(
         RuntimeTemplate &runtime =
             m_templates[index];
 
-        // Difesa da risultati già in coda nel worker.
+        /*
+         * Difesa da risultati già in coda nel worker.
+         */
         if(!runtime.config.searchEnabled)
             continue;
 
         if(runtime.coolingDown)
             continue;
 
+        /*
+         * Difesa aggiuntiva:
+         * un risultato Zone1 deve appartenere a un template
+         * configurato per Zone1.
+         */
+        if(runtime.config.searchZone !=
+            SearchZone::Zone1)
+        {
+            continue;
+        }
+
+        /*
+         * Il Finder restituisce coordinate locali alla
+         * cattura della Zona 1.
+         *
+         * Le convertiamo in coordinate schermo.
+         */
         const QRect screenRect =
             result.rect.translated(
-                m_searchRegion.topLeft()
+                m_searchRegion1.topLeft()
+                );
+
+        emit templateFound(
+            result.templateId,
+            screenRect,
+            result.score
+            );
+
+        startCooldown(
+            result.templateId
+            );
+    }
+}
+
+
+void CustomSearcherManager::onWorkerResultsZone2(
+    const QVector<CustomSearcherMultiFinder::Result> &results
+    )
+{
+    if(!m_enabled)
+        return;
+
+    if(results.isEmpty())
+        return;
+
+    for(const CustomSearcherMultiFinder::Result &result : results)
+    {
+        int index = -1;
+
+        for(int i = 0;
+             i < m_templates.size();
+             ++i)
+        {
+            if(m_templates[i].config.id ==
+                result.templateId)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if(index < 0)
+            continue;
+
+        RuntimeTemplate &runtime =
+            m_templates[index];
+
+        /*
+         * Difesa da risultati già in coda nel worker.
+         */
+        if(!runtime.config.searchEnabled)
+            continue;
+
+        if(runtime.coolingDown)
+            continue;
+
+        /*
+         * Difesa aggiuntiva:
+         * un risultato Zone2 deve appartenere a un template
+         * configurato per Zone2.
+         */
+        if(runtime.config.searchZone !=
+            SearchZone::Zone2)
+        {
+            continue;
+        }
+
+        /*
+         * Il Finder restituisce coordinate locali alla
+         * cattura della Zona 2.
+         *
+         * Le convertiamo in coordinate schermo.
+         */
+        const QRect screenRect =
+            result.rect.translated(
+                m_searchRegion2.topLeft()
                 );
 
         emit templateFound(
@@ -852,10 +1232,18 @@ void CustomSearcherManager::configure()
 }
 
 
-void CustomSearcherManager::captureTemplateCrop()
+
+
+void CustomSearcherManager::captureTemplateCrop(
+    SearchZone zone
+    )
 {
-    if(m_searchRegion.isNull() ||
-        m_searchRegion.isEmpty())
+    const QRect region =
+        (zone == SearchZone::Zone2)
+            ? m_searchRegion2
+            : m_searchRegion1;
+
+    if(region.isNull() || region.isEmpty())
     {
         emit templateCropCanceled();
         return;
@@ -865,9 +1253,6 @@ void CustomSearcherManager::captureTemplateCrop()
     {
         m_searchAreaWindow->hide();
     }
-
-    const QRect region =
-        m_searchRegion;
 
     QTimer::singleShot(
         120,
@@ -926,9 +1311,7 @@ void CustomSearcherManager::captureTemplateCrop()
                 this,
                 [this, crop](const QImage &image)
                 {
-                    emit templateCropReady(
-                        image
-                        );
+                    emit templateCropReady(image);
 
                     crop->close();
                     crop->deleteLater();
@@ -987,8 +1370,11 @@ void CustomSearcherManager::captureTemplateCrop()
 
 void CustomSearcherManager::configureSearchRegion()
 {
+    /*
+     * Configurazione Zona 1.
+     */
     QRect initialArea =
-        m_searchRegion;
+        m_searchRegion1;
 
     if(!initialArea.isValid() ||
         initialArea.isEmpty())
@@ -1075,6 +1461,115 @@ void CustomSearcherManager::configureSearchRegion()
 }
 
 
+void CustomSearcherManager::configureSearchRegion2()
+{
+    /*
+     * Configurazione Zona 2.
+     *
+     * Usiamo la stessa finestra di selezione della Zona 1,
+     * ma salviamo il risultato in m_searchRegion2.
+     */
+    QRect initialArea =
+        m_searchRegion2;
+
+    if(!initialArea.isValid() ||
+        initialArea.isEmpty())
+    {
+        QScreen *screen =
+            QGuiApplication::primaryScreen();
+
+        const QRect screenGeometry =
+            screen
+                ? screen->geometry()
+                : QRect(0, 0, 1920, 1080);
+
+        /*
+         * Posizione iniziale leggermente diversa dalla Zona 1,
+         * così le due aree non vengono visualizzate sovrapposte
+         * quando vengono configurate per la prima volta.
+         */
+        initialArea =
+            QRect(
+                screenGeometry.center().x() - 150,
+                screenGeometry.center().y() + 100,
+                300,
+                150
+                );
+
+        /*
+         * Manteniamo l'area all'interno dello schermo.
+         */
+        initialArea =
+            initialArea.intersected(
+                screenGeometry
+                );
+    }
+
+    auto *searchArea =
+        new CustomSearcherSearchArea(
+            initialArea
+            );
+
+    m_searchAreaWindow =
+        searchArea;
+
+    connect(
+        searchArea,
+        &CustomSearcherSearchArea::accepted,
+        this,
+        [this, searchArea](const QRect &area)
+        {
+            setSearchRegion2(area);
+
+            emit searchRegion2Changed(
+                area
+                );
+
+            if(m_searchAreaWindow == searchArea)
+            {
+                m_searchAreaWindow = nullptr;
+            }
+
+            searchArea->deleteLater();
+
+            if(m_configWindow)
+            {
+                m_configWindow->raise();
+                m_configWindow->activateWindow();
+                m_configWindow->setFocus();
+            }
+        }
+        );
+
+    connect(
+        searchArea,
+        &CustomSearcherSearchArea::canceled,
+        this,
+        [this, searchArea]()
+        {
+            if(m_searchAreaWindow == searchArea)
+            {
+                m_searchAreaWindow = nullptr;
+            }
+
+            searchArea->deleteLater();
+
+            if(m_configWindow)
+            {
+                m_configWindow->raise();
+                m_configWindow->activateWindow();
+                m_configWindow->setFocus();
+            }
+        }
+        );
+
+    searchArea->show();
+    searchArea->raise();
+    searchArea->activateWindow();
+    searchArea->setFocus();
+}
+
+
 void CustomSearcherManager::loadSettings()
 {
     QSettings settings;
@@ -1083,39 +1578,62 @@ void CustomSearcherManager::loadSettings()
         QStringLiteral("CustomSearcher")
         );
 
-    const int x =
+    m_captureIntervalMs =
         settings.value(
-                    QStringLiteral("SearchRegionX"),
-                    700
-                    ).toInt();
-
-    const int y =
-        settings.value(
-                    QStringLiteral("SearchRegionY"),
-                    600
-                    ).toInt();
-
-    const int width =
-        settings.value(
-                    QStringLiteral("SearchRegionWidth"),
-                    300
-                    ).toInt();
-
-    const int height =
-        settings.value(
-                    QStringLiteral("SearchRegionHeight"),
+                    QStringLiteral("CaptureInterval"),
                     150
                     ).toInt();
 
+    m_captureIntervalMs =
+        qMax(
+            15,
+            m_captureIntervalMs
+            );
+
+    /*
+     * Nuova configurazione:
+     *
+     * SearchRegion1
+     * SearchRegion2
+     */
+    if(settings.contains(
+            QStringLiteral("SearchRegion1")
+            ))
+    {
+        m_searchRegion1 =
+            settings.value(
+                        QStringLiteral("SearchRegion1")
+                        ).toRect();
+
+        m_searchRegion2 =
+            settings.value(
+                        QStringLiteral("SearchRegion2")
+                        ).toRect();
+    }
+    else
+    {
+        /*
+         * Compatibilità con le vecchie configurazioni:
+         *
+         * SearchRegion -> Zona 1
+         * Zona 2 vuota.
+         */
+        m_searchRegion1 =
+            settings.value(
+                        QStringLiteral("SearchRegion")
+                        ).toRect();
+
+        m_searchRegion2 =
+            QRect();
+    }
+
     settings.endGroup();
 
-    m_searchRegion =
-        QRect(
-            x,
-            y,
-            width,
-            height
-            ).normalized();
+    m_searchRegion1 =
+        m_searchRegion1.normalized();
+
+    m_searchRegion2 =
+        m_searchRegion2.normalized();
 }
 
 
@@ -1128,23 +1646,13 @@ void CustomSearcherManager::saveSearchRegion()
         );
 
     settings.setValue(
-        QStringLiteral("SearchRegionX"),
-        m_searchRegion.x()
+        QStringLiteral("SearchRegion1"),
+        m_searchRegion1
         );
 
     settings.setValue(
-        QStringLiteral("SearchRegionY"),
-        m_searchRegion.y()
-        );
-
-    settings.setValue(
-        QStringLiteral("SearchRegionWidth"),
-        m_searchRegion.width()
-        );
-
-    settings.setValue(
-        QStringLiteral("SearchRegionHeight"),
-        m_searchRegion.height()
+        QStringLiteral("SearchRegion2"),
+        m_searchRegion2
         );
 
     settings.endGroup();
@@ -1252,10 +1760,26 @@ void CustomSearcherManager::saveTemplates()
             config.cooldownMs
             );
 
-        // Stato della checkbox: template attivo/disattivo.
+        /*
+         * Stato checkbox:
+         * template attivo/disattivo.
+         */
         settings.setValue(
             QStringLiteral("SearchEnabled"),
             config.searchEnabled
+            );
+
+        /*
+         * Zona di ricerca del template.
+         *
+         * 0 = Zona 1
+         * 1 = Zona 2
+         */
+        settings.setValue(
+            QStringLiteral("SearchZone"),
+            static_cast<int>(
+                config.searchZone
+                )
             );
 
         settings.setValue(
@@ -1348,13 +1872,30 @@ void CustomSearcherManager::loadTemplates()
                             ).toInt()
                 );
 
-        // Se la chiave non esiste nelle vecchie configurazioni,
-        // il template rimane abilitato.
+        /*
+         * Se la chiave non esiste nelle vecchie configurazioni,
+         * il template rimane abilitato.
+         */
         config.searchEnabled =
             settings.value(
                         QStringLiteral("SearchEnabled"),
                         true
                         ).toBool();
+
+        /*
+         * Se la chiave non esiste nelle vecchie configurazioni,
+         * il template viene assegnato alla Zona 1.
+         */
+        const int searchZone =
+            settings.value(
+                        QStringLiteral("SearchZone"),
+                        0
+                        ).toInt();
+
+        config.searchZone =
+            searchZone == 1
+                ? SearchZone::Zone2
+                : SearchZone::Zone1;
 
         const int overlayX =
             settings.value(
@@ -1622,7 +2163,9 @@ void CustomSearcherManager::createOverlay(
     RuntimeTemplate &runtime
     )
 {
-    // Se il template è disabilitato, non creare l'overlay.
+    /*
+     * Se il template è disabilitato, non creare l'overlay.
+     */
     if(!runtime.config.searchEnabled)
         return;
 

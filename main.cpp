@@ -333,6 +333,17 @@ int main(int argc, char *argv[])
         &customSearcher,
         &CustomSearcherManager::setEnabled
         );
+    // ==================================================
+    // CUSTOM SEARCHER - GLOBAL RESET
+    // ==================================================
+
+    QObject::connect(
+        &keyboard,
+        &GlobalKeyboard::resetPressed,
+        &customSearcher,
+        &CustomSearcherManager::reset,
+        Qt::QueuedConnection
+        );
 
 
 

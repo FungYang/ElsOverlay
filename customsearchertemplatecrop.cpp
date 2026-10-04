@@ -542,42 +542,54 @@ void CustomSearcherTemplateCrop::mouseReleaseEvent(
 }
 
 
+
 void CustomSearcherTemplateCrop::keyPressEvent(
-    QKeyEvent *event
-    )
+        QKeyEvent *event
+        )
 {
-    switch (event->key())
+    if(!event)
+        return;
+
+    switch(event->key())
     {
     case Qt::Key_Left:
         moveLeft();
+        event->accept();
         return;
 
     case Qt::Key_Right:
         moveRight();
+        event->accept();
         return;
 
     case Qt::Key_Up:
         moveUp();
+        event->accept();
         return;
 
     case Qt::Key_Down:
         moveDown();
+        event->accept();
         return;
 
     case Qt::Key_B:
         increaseCropSize();
+        event->accept();
         return;
 
     case Qt::Key_V:
         decreaseCropSize();
+        event->accept();
         return;
 
     case Qt::Key_Return:
     case Qt::Key_Enter:
+        event->accept();
         acceptCrop();
         return;
 
     case Qt::Key_Escape:
+        event->accept();
         close();
         return;
 
@@ -585,19 +597,29 @@ void CustomSearcherTemplateCrop::keyPressEvent(
         break;
     }
 
-
-    QWidget::keyPressEvent(
-        event
-        );
+    QWidget::keyPressEvent(event);
 }
 
 
 void CustomSearcherTemplateCrop::acceptCrop()
 {
-    const QImage image =
-        croppedImage();
+    if(m_accepted)
+        return;
 
-    if (image.isNull())
+    if(m_source.isNull())
+        return;
+
+    if(m_cropRect.isEmpty())
+        return;
+
+    // Garantisce che il rettangolo sia sempre valido
+    // prima di effettuare il crop.
+    clampCrop();
+
+    const QImage image =
+        m_source.copy(m_cropRect);
+
+    if(image.isNull())
         return;
 
     m_accepted = true;
