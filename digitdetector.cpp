@@ -54,23 +54,71 @@ DigitDetector::~DigitDetector()
 
 bool DigitDetector::loadOrt()
 {
-    if (m_ort)
+    // Già completamente inizializzato.
+    if (m_ort &&
+        m_ortDll &&
+        m_env &&
+        m_sessionOptions)
+    {
         return true;
+    }
+
+    // --------------------------------------------------------
+    // Cleanup di eventuale stato parziale precedente.
+    // --------------------------------------------------------
+
+    if (m_memoryInfo && m_ort)
+    {
+        m_ort->ReleaseMemoryInfo(m_memoryInfo);
+        m_memoryInfo = nullptr;
+    }
+
+    if (m_session && m_ort)
+    {
+        m_ort->ReleaseSession(m_session);
+        m_session = nullptr;
+    }
+
+    if (m_sessionOptions && m_ort)
+    {
+        m_ort->ReleaseSessionOptions(m_sessionOptions);
+        m_sessionOptions = nullptr;
+    }
+
+    if (m_env && m_ort)
+    {
+        m_ort->ReleaseEnv(m_env);
+        m_env = nullptr;
+    }
+
+    m_ort = nullptr;
+
+    if (m_ortDll)
+    {
+        FreeLibrary(m_ortDll);
+        m_ortDll = nullptr;
+    }
+
+    // --------------------------------------------------------
+    // Load DLL
+    // --------------------------------------------------------
 
     const QString dllPath =
         QCoreApplication::applicationDirPath() +
         "/onnxruntime.dll";
 
-    qDebug() << "Caricamento ONNX Runtime:" << dllPath;
+    qDebug()
+        << "Caricamento ONNX Runtime:"
+        << dllPath;
 
-    m_ortDll =
+    HMODULE dll =
         LoadLibraryW(
             reinterpret_cast<LPCWSTR>(
                 dllPath.utf16()
                 )
             );
 
-    if (!m_ortDll)
+    if (!dll)
     {
         qDebug()
         << "ERRORE: impossibile caricare onnxruntime.dll";
@@ -82,13 +130,17 @@ bool DigitDetector::loadOrt()
         return false;
     }
 
+    // --------------------------------------------------------
+    // Get OrtGetApiBase
+    // --------------------------------------------------------
+
     using OrtGetApiBaseFunc =
         const OrtApiBase* (ORT_API_CALL*)();
 
     auto getApiBase =
         reinterpret_cast<OrtGetApiBaseFunc>(
             GetProcAddress(
-                m_ortDll,
+                dll,
                 "OrtGetApiBase"
                 )
             );
@@ -98,11 +150,14 @@ bool DigitDetector::loadOrt()
         qDebug()
         << "ERRORE: OrtGetApiBase non trovata";
 
-        FreeLibrary(m_ortDll);
-        m_ortDll = nullptr;
+        FreeLibrary(dll);
 
         return false;
     }
+
+    // --------------------------------------------------------
+    // Get API base
+    // --------------------------------------------------------
 
     const OrtApiBase* apiBase =
         getApiBase();
@@ -112,6 +167,8 @@ bool DigitDetector::loadOrt()
         qDebug()
         << "ERRORE: OrtApiBase nulla";
 
+        FreeLibrary(dll);
+
         return false;
     }
 
@@ -119,18 +176,21 @@ bool DigitDetector::loadOrt()
         << "ONNX Runtime version:"
         << apiBase->GetVersionString();
 
-    m_ort =
+    // --------------------------------------------------------
+    // Get API
+    // --------------------------------------------------------
+
+    const OrtApi* api =
         apiBase->GetApi(
             ORT_API_VERSION
             );
 
-    if (!m_ort)
+    if (!api)
     {
         qDebug()
         << "ERRORE: impossibile ottenere OrtApi";
 
-        FreeLibrary(m_ortDll);
-        m_ortDll = nullptr;
+        FreeLibrary(dll);
 
         return false;
     }
@@ -139,20 +199,24 @@ bool DigitDetector::loadOrt()
     // Environment
     // --------------------------------------------------------
 
+    OrtEnv* env = nullptr;
+
     OrtStatus* status =
-        m_ort->CreateEnv(
+        api->CreateEnv(
             ORT_LOGGING_LEVEL_WARNING,
             "ElsOverlay",
-            &m_env
+            &env
             );
 
     if (status)
     {
         qDebug()
         << "ERRORE CreateEnv:"
-        << m_ort->GetErrorMessage(status);
+        << api->GetErrorMessage(status);
 
-        m_ort->ReleaseStatus(status);
+        api->ReleaseStatus(status);
+
+        FreeLibrary(dll);
 
         return false;
     }
@@ -161,25 +225,34 @@ bool DigitDetector::loadOrt()
     // Session options
     // --------------------------------------------------------
 
+    OrtSessionOptions* sessionOptions = nullptr;
+
     status =
-        m_ort->CreateSessionOptions(
-            &m_sessionOptions
+        api->CreateSessionOptions(
+            &sessionOptions
             );
 
     if (status)
     {
         qDebug()
         << "ERRORE CreateSessionOptions:"
-        << m_ort->GetErrorMessage(status);
+        << api->GetErrorMessage(status);
 
-        m_ort->ReleaseStatus(status);
+        api->ReleaseStatus(status);
+
+        api->ReleaseEnv(env);
+        FreeLibrary(dll);
 
         return false;
     }
 
+    // --------------------------------------------------------
+    // Intra-op threads
+    // --------------------------------------------------------
+
     status =
-        m_ort->SetIntraOpNumThreads(
-            m_sessionOptions,
+        api->SetIntraOpNumThreads(
+            sessionOptions,
             1
             );
 
@@ -187,16 +260,24 @@ bool DigitDetector::loadOrt()
     {
         qDebug()
         << "ERRORE SetIntraOpNumThreads:"
-        << m_ort->GetErrorMessage(status);
+        << api->GetErrorMessage(status);
 
-        m_ort->ReleaseStatus(status);
+        api->ReleaseStatus(status);
+
+        api->ReleaseSessionOptions(sessionOptions);
+        api->ReleaseEnv(env);
+        FreeLibrary(dll);
 
         return false;
     }
 
+    // --------------------------------------------------------
+    // Inter-op threads
+    // --------------------------------------------------------
+
     status =
-        m_ort->SetInterOpNumThreads(
-            m_sessionOptions,
+        api->SetInterOpNumThreads(
+            sessionOptions,
             1
             );
 
@@ -204,12 +285,31 @@ bool DigitDetector::loadOrt()
     {
         qDebug()
         << "ERRORE SetInterOpNumThreads:"
-        << m_ort->GetErrorMessage(status);
+        << api->GetErrorMessage(status);
 
-        m_ort->ReleaseStatus(status);
+        api->ReleaseStatus(status);
+
+        api->ReleaseSessionOptions(sessionOptions);
+        api->ReleaseEnv(env);
+        FreeLibrary(dll);
 
         return false;
     }
+
+    // --------------------------------------------------------
+    // COMMIT
+    //
+    // Da questo punto lo stato dell'oggetto è completamente
+    // valido.
+    // --------------------------------------------------------
+
+    m_ortDll = dll;
+    m_ort = api;
+    m_env = env;
+    m_sessionOptions = sessionOptions;
+
+    qDebug()
+        << "ONNX Runtime inizializzato correttamente";
 
     return true;
 }
@@ -218,44 +318,78 @@ bool DigitDetector::loadOrt()
 // Load Model
 // ============================================================
 
-bool DigitDetector::loadModel(
-    const QString& modelPath
-    )
+bool DigitDetector::loadModel(const QString& modelPath)
 {
     if (m_modelLoaded)
         return true;
 
+    // loadModel() è responsabile anche
+    // dell'inizializzazione del runtime.
     if (!loadOrt())
         return false;
 
-    if (!QFileInfo::exists(modelPath))
+    // --------------------------------------------------------
+    // Reset di eventuale modello precedente.
+    // --------------------------------------------------------
+
+    if (m_memoryInfo)
     {
-        qDebug()
-        << "ERRORE: modello non trovato:"
+        m_ort->ReleaseMemoryInfo(m_memoryInfo);
+        m_memoryInfo = nullptr;
+    }
+
+    if (m_session)
+    {
+        m_ort->ReleaseSession(m_session);
+        m_session = nullptr;
+    }
+
+    m_modelLoaded = false;
+
+    // --------------------------------------------------------
+    // Validazione path
+    // --------------------------------------------------------
+
+    if (modelPath.isEmpty())
+    {
+        qWarning()
+        << "Percorso modello vuoto";
+
+        return false;
+    }
+
+    const QFileInfo modelInfo(modelPath);
+
+    if (!modelInfo.exists() ||
+        !modelInfo.isFile())
+    {
+        qWarning()
+        << "Modello ONNX non trovato:"
         << modelPath;
 
         return false;
     }
 
-    m_modelPath = modelPath;
+    // --------------------------------------------------------
+    // Session temporanea
+    // --------------------------------------------------------
 
-    qDebug()
-        << "Caricamento modello:"
-        << m_modelPath;
+    OrtSession* session = nullptr;
+
+    const std::wstring wideModelPath =
+        modelPath.toStdWString();
 
     OrtStatus* status =
         m_ort->CreateSession(
             m_env,
-            reinterpret_cast<const wchar_t*>(
-                modelPath.utf16()
-                ),
+            wideModelPath.c_str(),
             m_sessionOptions,
-            &m_session
+            &session
             );
 
     if (status)
     {
-        qDebug()
+        qWarning()
         << "ERRORE CreateSession:"
         << m_ort->GetErrorMessage(status);
 
@@ -265,7 +399,7 @@ bool DigitDetector::loadModel(
     }
 
     // --------------------------------------------------------
-    // Input name
+    // Allocator
     // --------------------------------------------------------
 
     OrtAllocator* allocator = nullptr;
@@ -277,20 +411,25 @@ bool DigitDetector::loadModel(
 
     if (status)
     {
-        qDebug()
+        qWarning()
         << "ERRORE GetAllocator:"
         << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
+        m_ort->ReleaseSession(session);
 
         return false;
     }
+
+    // --------------------------------------------------------
+    // Input name
+    // --------------------------------------------------------
 
     char* inputName = nullptr;
 
     status =
         m_ort->SessionGetInputName(
-            m_session,
+            session,
             0,
             allocator,
             &inputName
@@ -298,16 +437,17 @@ bool DigitDetector::loadModel(
 
     if (status)
     {
-        qDebug()
+        qWarning()
         << "ERRORE SessionGetInputName:"
         << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
+        m_ort->ReleaseSession(session);
 
         return false;
     }
 
-    m_inputName =
+    const QString inputNameString =
         QString::fromUtf8(inputName);
 
     allocator->Free(
@@ -323,7 +463,7 @@ bool DigitDetector::loadModel(
 
     status =
         m_ort->SessionGetOutputName(
-            m_session,
+            session,
             0,
             allocator,
             &outputName
@@ -331,16 +471,17 @@ bool DigitDetector::loadModel(
 
     if (status)
     {
-        qDebug()
+        qWarning()
         << "ERRORE SessionGetOutputName:"
         << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
+        m_ort->ReleaseSession(session);
 
         return false;
     }
 
-    m_outputName =
+    const QString outputNameString =
         QString::fromUtf8(outputName);
 
     allocator->Free(
@@ -352,23 +493,39 @@ bool DigitDetector::loadModel(
     // Memory info
     // --------------------------------------------------------
 
+    OrtMemoryInfo* memoryInfo = nullptr;
+
     status =
         m_ort->CreateCpuMemoryInfo(
             OrtArenaAllocator,
             OrtMemTypeDefault,
-            &m_memoryInfo
+            &memoryInfo
             );
 
     if (status)
     {
-        qDebug()
+        qWarning()
         << "ERRORE CreateCpuMemoryInfo:"
         << m_ort->GetErrorMessage(status);
 
         m_ort->ReleaseStatus(status);
+        m_ort->ReleaseSession(session);
 
         return false;
     }
+
+    // --------------------------------------------------------
+    // COMMIT
+    // --------------------------------------------------------
+
+    m_modelPath = modelPath;
+    m_inputName = inputNameString;
+    m_outputName = outputNameString;
+
+    m_session = session;
+    m_memoryInfo = memoryInfo;
+
+    m_modelLoaded = true;
 
     qDebug()
         << "Modello caricato correttamente";
@@ -380,8 +537,6 @@ bool DigitDetector::loadModel(
     qDebug()
         << "Output:"
         << m_outputName;
-
-    m_modelLoaded = true;
 
     return true;
 }
