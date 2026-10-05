@@ -211,22 +211,22 @@ private slots:
      * Internally it forwards to Zone 1.
      */
     void onFrameCaptured(
+        quint64 frameId,
         QImage frame
         );
 
 
     /*
-     * Capture callback for Zone 1.
+     * Capture callback for Zone 1 and 2
      */
     void onFrameCapturedZone1(
+        quint64 frameId,
         QImage frame
         );
 
 
-    /*
-     * Capture callback for Zone 2.
-     */
     void onFrameCapturedZone2(
+        quint64 frameId,
         QImage frame
         );
 

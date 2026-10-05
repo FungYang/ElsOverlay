@@ -32,13 +32,22 @@ public:
 signals:
     void gateOpened();  // Risonanza torna presente -> pausa terminata
     void gateClosed();  // Risonanza sparisce -> tutto in pausa
+    void frameEvaluated(
+        quint64 frameId,
+        bool isMatch
+        );
+
 #ifdef QT_DEBUG
-    void debugFrame(const QImage &image, bool isMatch);
+    void debugFrame(
+        quint64 frameId,
+        const QImage &image,
+        bool isMatch
+        );
 #endif
 
 private slots:
     void onReferenceLoaded(bool ok);
-    void onCompared(bool isMatch);
+    void onCompared(quint64 frameId, bool isMatch);
 
 private:
     enum class State { Unknown, Match, Mismatch };

@@ -3,7 +3,7 @@
 #include <QObject>
 #include <QImage>
 #include <QThread>
-#include <QTimer>
+#include <QHash>
 #include <array>
 #include <memory>
 
@@ -37,36 +37,62 @@ public:
     void setDetectionSuspended(bool on);
 
 public slots:
-    // Ricevuto dall'esterno (ResonanceGateManager), sostituisce
-    // il vecchio m_blueState calcolato internamente.
-    void setGateOpen(bool open);
+
+    // Ricevuto dall'esterno (ResonanceGateManager).
+    // Il frameId identifica lo stesso frame di acquisizione
+    // utilizzato dalle zone rosse.
+    void setGateFrame(
+        quint64 frameId,
+        bool isMatch
+        );
 
 #ifdef QT_DEBUG
-    // Ricevuto dall'esterno (ResonanceGateManager::blueDebugFrame),
-    // inoltrato alla finestra di debug condivisa.
-    void updateBlueDebug(QImage frame, bool isMatch);
+    // Ricevuto dall'esterno (ResonanceGateManager).
+    // Inoltrato alla finestra di debug condivisa.
+    void updateBlueDebug(
+        QImage frame,
+        bool isMatch
+        );
 #endif
 
 private slots:
-    void onReferencesLoaded(bool ok);
-    void onRedZoneCompared(int index, bool isMatch);
 
-    void processPendingRedEvents();
+    void onReferencesLoaded(bool ok);
+
+    void onRedZoneCompared(
+        int index,
+        quint64 frameId,
+        bool isMatch
+        );
 
 #ifdef QT_DEBUG
-    void onRedDebugFrame(int index, QImage frame, bool isMatch);
+    void onRedDebugFrame(
+        int index,
+        quint64 frameId,
+        QImage frame,
+        bool isMatch
+        );
 #endif
 
 private:
+
     static constexpr int RED_COUNT = 6;
 
-    // Finestra temporale durante la quale un evento rosso resta
-    // "in attesa" prima di essere confermato/scartato in base allo
-    // stato del gate (che può arrivare con un ritardo variabile,
-    // dato che ora proviene da un manager esterno e asincrono).
-    static constexpr int GATE_DELAY_MS = 10;
+    enum class ZoneState
+    {
+        Unknown,
+        Match,
+        Mismatch
+    };
 
-    enum class ZoneState { Unknown, Match, Mismatch };
+    struct PendingFrame
+    {
+        std::array<bool, RED_COUNT> redMatch{};
+        std::array<bool, RED_COUNT> redReceived{};
+
+        bool blueReceived = false;
+        bool blueMatch = false;
+    };
 
     GlobalKeyboard *m_keyboard = nullptr;
     OverlayRoot *m_overlayRoot = nullptr;
@@ -76,19 +102,12 @@ private:
 
     bool m_enabled = false;
     bool m_configured = false;
-
-    // Stato del gate esterno: true = aperto (Risonanza presente,
-    // nessuna pausa), false = chiuso (Risonanza assente).
-    bool m_gateOpen = true;
     bool m_detectionSuspended = false;
 
     std::array<int, RED_COUNT> m_redRegionIds;
     std::array<ZoneState, RED_COUNT> m_redStates;
 
-    std::array<bool, RED_COUNT> m_pendingRedEvents{};
-    bool m_pendingEventsBlockedByGate = false;
-
-    QTimer m_gateTimer;
+    QHash<quint64, PendingFrame> m_pendingFrames;
 
     QThread *m_workerThread = nullptr;
     AtmaZoneWorker *m_worker = nullptr;
@@ -104,5 +123,5 @@ private:
     void subscribeAll();
     void unsubscribeAll();
 
-    void clearPendingRedEvents();
+    void evaluateFrame(quint64 frameId);
 };

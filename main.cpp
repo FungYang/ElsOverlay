@@ -643,13 +643,22 @@ int main(int argc, char *argv[])
         &resonanceGate,
         &ResonanceGateManager::setEnabled
         );
+    QObject::connect(
+        &resonanceGate,
+        &ResonanceGateManager::frameEvaluated,
+        &atmaZones,
+        &AtmaZoneManager::setGateFrame
+        );
 
 #ifdef QT_DEBUG
     QObject::connect(
         &resonanceGate,
         &ResonanceGateManager::debugFrame,
         &atmaZones,
-        &AtmaZoneManager::updateBlueDebug
+        [&atmaZones](quint64 /*frameId*/, const QImage &image, bool isMatch)
+        {
+            atmaZones.updateBlueDebug(image, isMatch);
+        }
         );
 #endif
 
@@ -673,7 +682,6 @@ int main(int argc, char *argv[])
     {
         atma.visionCore()->pauseAtmaCooldowns();
         atma.visionOverlay()->pauseAtmaCooldown();
-        atmaZones.setGateOpen(false);
         overlay->pauseAtmaGate();
         skills->pauseAtmaGate();
         transcendenceVision.pauseAtmaGate();
@@ -683,7 +691,6 @@ int main(int argc, char *argv[])
     {
         atma.visionCore()->resumeAtmaCooldowns();
         atma.visionOverlay()->resumeAtmaCooldown();
-        atmaZones.setGateOpen(true);
         overlay->resumeAtmaGate();
         skills->resumeAtmaGate();
         transcendenceVision.resumeAtmaGate();
@@ -748,9 +755,6 @@ int main(int argc, char *argv[])
         overlayRoot,
         [&]()
         {
-            // SEMPRE: il Gate decide se Atma può usare le pozioni
-            atmaZones.setGateOpen(false);
-
             // SOLO Pausa decide se fermare i cooldown
             if(!overlayHidden &&
                 resonanceGatePauseCooldown)
@@ -770,9 +774,6 @@ int main(int argc, char *argv[])
         overlayRoot,
         [&]()
         {
-            // SEMPRE: il Gate decide se Atma può usare le pozioni
-            atmaZones.setGateOpen(true);
-
             // SOLO Pausa decide se riprendere i cooldown
             if(resonanceGatePauseCooldown)
             {

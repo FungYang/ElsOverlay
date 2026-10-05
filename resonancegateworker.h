@@ -18,14 +18,24 @@ public:
 
 public slots:
     void loadReference(QString imagesDir); // legge invariant.png
-    void compareFrame(QImage frame);
+    void compareFrame(
+        quint64 frameId,
+        QImage frame
+        );
 
 signals:
     void referenceLoaded(bool ok);
-    void compared(bool isMatch);
+    void compared(
+        quint64 frameId,
+        bool isMatch
+        );
 
 #ifdef QT_DEBUG
-    void debugFrame(QImage frame, bool isMatch);
+    void debugFrame(
+        quint64 frameId,
+        QImage frame,
+        bool isMatch
+        );
 #endif
 
 private:

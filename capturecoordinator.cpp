@@ -377,15 +377,15 @@ void CaptureCoordinator::tick()
         //   1 x Unmap()
         if(ScreenCapture::beginFrame(due))
         {
+            const quint64 frameId = ++m_frameId;
+
             for(int regionId : due)
             {
                 QImage frame =
                     ScreenCapture::captureRegion(regionId);
 
                 if(frame.isNull())
-                {
                     continue;
-                }
 
                 for(auto &sub : m_subs)
                 {
@@ -399,6 +399,7 @@ void CaptureCoordinator::tick()
                         sub.receiver,
                         sub.slot.constData(),
                         Qt::QueuedConnection,
+                        Q_ARG(quint64, frameId),
                         Q_ARG(QImage, frame)
                         );
                 }

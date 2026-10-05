@@ -21,13 +21,13 @@ public:
     int index() const { return m_index; }
 
 public slots:
-    void frameReady(QImage frame)
+    void frameReady(quint64 frameId, QImage frame)
     {
-        emit forwardedFrame(m_index, frame);
+        emit forwardedFrame(m_index, frameId, frame);
     }
 
 signals:
-    void forwardedFrame(int index, QImage frame);
+    void forwardedFrame(int index, quint64 frameId, QImage frame);
 
 private:
     int m_index;

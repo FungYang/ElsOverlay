@@ -83,6 +83,8 @@ private:
     QVector<Subscription> m_subs;
 
     QTimer *m_timer = nullptr;
+
+    quint64 m_frameId = 0;
 };
 
 #endif

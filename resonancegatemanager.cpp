@@ -156,30 +156,47 @@ void ResonanceGateManager::onReferenceLoaded(bool ok)
             );
     }
 }
-void ResonanceGateManager::onCompared(bool isMatch)
-
+void ResonanceGateManager::onCompared(
+    quint64 frameId,
+    bool isMatch)
 {
-    if (!m_enabled || !m_configured) return;
-    if (m_detectionSuspended) return;
+#ifdef QT_DEBUG
+    qDebug()
+        << "RESONANCE BLUE"
+        << "frameId =" << frameId
+        << "match =" << isMatch;
+#endif
 
-    const State newState = isMatch ? State::Match : State::Mismatch;
+    if (!m_enabled || !m_configured)
+        return;
+
+    if (m_detectionSuspended)
+        return;
+
+    const State newState =
+        isMatch ? State::Match : State::Mismatch;
+
     const State oldState = m_state;
+
     m_state = newState;
 
-    if(newState == State::Mismatch &&
+    if (newState == State::Mismatch &&
         oldState != State::Mismatch)
     {
         m_gateOpen = false;
-
         emit gateClosed();
     }
-    else if(newState == State::Match &&
+    else if (newState == State::Match &&
              oldState != State::Match)
     {
         m_gateOpen = true;
-
         emit gateOpened();
     }
+
+    emit frameEvaluated(
+        frameId,
+        isMatch
+        );
 }
 
 void ResonanceGateManager::registerRegion()

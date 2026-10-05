@@ -16,15 +16,25 @@ void ResonanceGateWorker::loadReference(QString imagesDir)
     emit referenceLoaded(ok);
 }
 
-void ResonanceGateWorker::compareFrame(QImage frame)
+void ResonanceGateWorker::compareFrame(
+    quint64 frameId,
+    QImage frame
+    )
 {
     const bool isMatch = matches(frame, m_reference, m_mask, TOLERANCE);
 
 #ifdef QT_DEBUG
-    emit debugFrame(frame, isMatch);
+    emit debugFrame(
+        frameId,
+        frame,
+        isMatch
+        );
 #endif
 
-    emit compared(isMatch);
+    emit compared(
+        frameId,
+        isMatch
+        );
 }
 
 bool ResonanceGateWorker::isForegroundPixel(QRgb pixel)

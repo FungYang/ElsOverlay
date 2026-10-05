@@ -733,6 +733,7 @@ void CustomSearcherManager::unsubscribeCapture()
 
 
 void CustomSearcherManager::onFrameCaptured(
+    quint64 frameId,
     QImage frame
     )
 {
@@ -742,15 +743,17 @@ void CustomSearcherManager::onFrameCaptured(
      * La vecchia subscription utilizzava la Zona 1.
      */
     onFrameCapturedZone1(
+        frameId,
         frame
         );
 }
 
 
 void CustomSearcherManager::onFrameCapturedZone1(
-    QImage frame
-    )
+    quint64 frameId,
+    QImage frame)
 {
+    Q_UNUSED(frameId);
     if(!m_enabled)
         return;
 
@@ -773,9 +776,10 @@ void CustomSearcherManager::onFrameCapturedZone1(
 
 
 void CustomSearcherManager::onFrameCapturedZone2(
-    QImage frame
-    )
+    quint64 frameId,
+    QImage frame)
 {
+    Q_UNUSED(frameId);
     if(!m_enabled)
         return;
 

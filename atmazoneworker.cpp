@@ -160,7 +160,11 @@ bool AtmaZoneWorker::matches(
 // COMPARE RED / BLUE
 // ============================================================
 
-void AtmaZoneWorker::compareRedFrame(int index, QImage frame)
+void AtmaZoneWorker::compareRedFrame(
+    int index,
+    quint64 frameId,
+    QImage frame
+    )
 {
     if (index < 0 || index >= RED_COUNT)
         return;
@@ -169,7 +173,17 @@ void AtmaZoneWorker::compareRedFrame(int index, QImage frame)
         matches(frame, m_redReferences[index], m_redMasks[index], TOLERANCE);
 
 #ifdef QT_DEBUG
-    emit redDebugFrame(index, frame, isMatch);
+    emit redDebugFrame(
+        index,
+        frameId,
+        frame,
+        isMatch
+        );
 #endif
-    emit redCompared(index, isMatch);
+
+    emit redCompared(
+        index,
+        frameId,
+        isMatch
+        );
 }

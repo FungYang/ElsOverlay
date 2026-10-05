@@ -32,17 +32,30 @@ public slots:
     void loadReferences(QString imagesDir);
 
     // Un frame per zona rossa (index 0..5) o per il blu (index = -1).
-    void compareRedFrame(int index, QImage frame);
+    void compareRedFrame(
+        int index,
+        quint64 frameId,
+        QImage frame
+        );
 
 signals:
     void referencesLoaded(bool ok);
 
     // isMatch = risultato del confronto per questo frame.
     // La logica di stato/transizione resta nel manager (thread GUI).
-    void redCompared(int index, bool isMatch);
+    void redCompared(
+        int index,
+        quint64 frameId,
+        bool isMatch
+        );
 
 #ifdef QT_DEBUG
-    void redDebugFrame(int index, QImage frame, bool isMatch);
+    void redDebugFrame(
+        int index,
+        quint64 frameId,
+        QImage frame,
+        bool isMatch
+        );
 #endif
 
 private:
