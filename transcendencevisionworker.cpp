@@ -1,10 +1,12 @@
 #include "transcendencevisionworker.h"
+
 #include "transcendencevisionconfig.h"
 
 #include <QThread>
 #include <QtConcurrent/QtConcurrent>
 #include <QFuture>
 #include <QVector>
+#include <QMutexLocker>
 #include <atomic>
 
 TranscendenceVisionWorker::TranscendenceVisionWorker(QObject *parent)
@@ -19,17 +21,85 @@ void TranscendenceVisionWorker::setTemplate(QImage templateIcon, int iconWidth, 
     m_templateIcon = templateIcon;
 }
 
-void TranscendenceVisionWorker::processFrame(QImage area)
+void TranscendenceVisionWorker::submitFrame(QImage area)
 {
-    if (area.isNull() || m_templateIcon.isNull())
+    if (area.isNull())
         return;
 
-    QRect foundRect;
-    double score = 0.0;
+    bool startProcessing = false;
 
-    const bool found = findIcon(area, foundRect, score);
+    {
+        QMutexLocker locker(&m_frameMutex);
 
-    emit scanResult(found, foundRect, score, area);
+        // Se il worker sta già elaborando un frame,
+        // conserviamo soltanto l'ultimo arrivato.
+        if (m_processing)
+        {
+            m_pendingFrame = std::move(area);
+            return;
+        }
+
+        m_processing = true;
+        startProcessing = true;
+    }
+
+    if (startProcessing)
+    {
+        QMetaObject::invokeMethod(
+            this,
+            "processFrame",
+            Qt::QueuedConnection,
+            Q_ARG(QImage, area)
+            );
+    }
+}
+
+
+void TranscendenceVisionWorker::processFrame(QImage area)
+{
+    while (!area.isNull())
+    {
+        if (!m_templateIcon.isNull())
+        {
+            QRect foundRect;
+            double score = 0.0;
+
+            const bool found =
+                findIcon(area, foundRect, score);
+
+            emit scanResult(
+                found,
+                foundRect,
+                score,
+                area
+                );
+        }
+
+        QImage nextFrame;
+
+        {
+            QMutexLocker locker(&m_frameMutex);
+
+            if (!m_pendingFrame.isNull())
+            {
+                // Prendiamo solamente l'ultimo frame disponibile.
+                nextFrame = std::move(m_pendingFrame);
+                m_pendingFrame = QImage();
+            }
+            else
+            {
+                // Nessun altro frame: il worker torna disponibile.
+                m_processing = false;
+                return;
+            }
+        }
+
+        area = std::move(nextFrame);
+    }
+
+    // Caso difensivo: area nulla.
+    QMutexLocker locker(&m_frameMutex);
+    m_processing = false;
 }
 
 bool TranscendenceVisionWorker::findIcon(

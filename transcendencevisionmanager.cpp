@@ -645,10 +645,7 @@ void TranscendenceVisionManager::onFrameReady(QImage area)
     if (!m_enabled || !m_configured || area.isNull())
         return;
 
-    QMetaObject::invokeMethod(
-        m_worker, "processFrame", Qt::QueuedConnection,
-        Q_ARG(QImage, area)
-        );
+    m_worker->submitFrame(std::move(area));
 }
 
 // NUOVO: riceve il risultato dal worker (cross-thread, auto-queued sul
