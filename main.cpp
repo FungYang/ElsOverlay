@@ -820,15 +820,23 @@ int main(int argc, char *argv[])
 
             if(overlayHidden)
             {
-                // Se il gate si era chiuso un attimo prima di Delete,
-                // rimetto subito in moto i timer.
+                // Overlay nascosto:
+                // il Gate viene ignorato e i cooldown continuano.
                 resumeAll();
             }
-            else if(!resonanceGate.isGateOpen())
+            else if(resonanceGatePauseCooldown &&
+                     !resonanceGate.isGateOpen())
             {
-                // Riattivo: se la scritta e' davvero assente,
-                // torno in pausa.
+                // Overlay nuovamente visibile:
+                // il Gate può mettere in pausa i cooldown
+                // SOLO se il checkbox "Pausa" è attivo.
                 pauseAll();
+            }
+            else
+            {
+                // Checkbox "Pausa" disattivato oppure Gate aperto:
+                // i cooldown devono continuare.
+                resumeAll();
             }
         },
         Qt::QueuedConnection
