@@ -8,11 +8,13 @@
 #include <QPointer>
 #include <QRect>
 #include <QImage>
+
 #include "screencapture.h"
 
 class CaptureCoordinator : public QObject
 {
     Q_OBJECT
+
 public:
     // Singleton: un solo coordinator per l'intera applicazione,
     // un solo thread "capture" per tutto il processo.
@@ -28,7 +30,13 @@ public:
     // receiver/slot ricevono: void slot(QImage frame) — sempre in coda
     // sul thread del receiver, quindi è SICURO anche se receiver vive
     // sul thread GUI o su un altro worker.
-    void subscribe(int regionId, int intervalMs, QObject *receiver, const char *slot);
+    void subscribe(
+        int regionId,
+        int intervalMs,
+        QObject *receiver,
+        const char *slot
+        );
+
     void unsubscribe(int regionId);
 
 private:
@@ -36,17 +44,25 @@ private:
     ~CaptureCoordinator();
 
     static CaptureCoordinator *s_instance;
+
     QThread *m_thread = nullptr;
 
 private slots:
-    void start();       // avviato su QThread::started
+    void start();
     void tick();
 
     // Implementazioni reali, eseguite SEMPRE sul thread capture.
     int doRegisterRegion(const QRect &rect);
     void doUnregisterRegion(int regionId);
     bool doUpdateRegion(int regionId, const QRect &rect);
-    void doSubscribe(int regionId, int intervalMs, QObject *receiver, QByteArray slot);
+
+    void doSubscribe(
+        int regionId,
+        int intervalMs,
+        QObject *receiver,
+        QByteArray slot
+        );
+
     void doUnsubscribe(int regionId);
 
 private:
@@ -55,14 +71,18 @@ private:
         int regionId = -1;
         int intervalMs = 50;
         qint64 nextDue = 0;
+
         QPointer<QObject> receiver;
         QByteArray slot;
     };
 
-    QVector<Subscription> m_subs;
-    QTimer *m_timer = nullptr;
+    // Programma il timer in base alla prossima subscription
+    // che deve essere eseguita.
+    void scheduleNextTick();
 
-    static constexpr int MASTER_TICK_MS = 15; // granularità del "polling" interno
+    QVector<Subscription> m_subs;
+
+    QTimer *m_timer = nullptr;
 };
 
 #endif
