@@ -1,25 +1,64 @@
 #include "transcendencevisionworker.h"
-
 #include "transcendencevisionconfig.h"
 
-#include <QThread>
-#include <QtConcurrent/QtConcurrent>
-#include <QFuture>
-#include <QVector>
 #include <QMutexLocker>
+#include <QSemaphore>
+#include <QThreadPool>
+
 #include <atomic>
+#include <memory>
+
+
+namespace
+{
+
+struct ChunkResult
+{
+    double score = 0.0;
+    QRect rect;
+    bool found = false;
+};
+
+struct ScanContext
+{
+    std::atomic<bool> stopFlag{false};
+    QSemaphore finished{0};
+    QVector<ChunkResult> results;
+};
+
+} // namespace
+
 
 TranscendenceVisionWorker::TranscendenceVisionWorker(QObject *parent)
     : QObject(parent)
 {
+    // Il matcher usa un pool dedicato.
+    // Tre thread sono sufficienti per questo tipo di ricerca
+    // e impediscono al matcher di saturare la CPU.
+    m_matchPool.setMaxThreadCount(3);
 }
 
-void TranscendenceVisionWorker::setTemplate(QImage templateIcon, int iconWidth, int iconHeight)
+
+TranscendenceVisionWorker::~TranscendenceVisionWorker()
+{
+    // Aspettiamo che eventuali task del matcher siano terminati
+    // prima di distruggere il worker.
+    m_matchPool.waitForDone();
+}
+
+
+void TranscendenceVisionWorker::setTemplate(
+    QImage templateIcon,
+    int iconWidth,
+    int iconHeight
+    )
 {
     Q_UNUSED(iconWidth);
     Q_UNUSED(iconHeight);
-    m_templateIcon = templateIcon;
+
+    m_templateIcon = std::move(templateIcon);
 }
+
 
 void TranscendenceVisionWorker::submitFrame(QImage area)
 {
@@ -31,8 +70,8 @@ void TranscendenceVisionWorker::submitFrame(QImage area)
     {
         QMutexLocker locker(&m_frameMutex);
 
-        // Se il worker sta già elaborando un frame,
-        // conserviamo soltanto l'ultimo arrivato.
+        // Il worker sta già elaborando un frame:
+        // conserviamo solamente l'ultimo ricevuto.
         if (m_processing)
         {
             m_pendingFrame = std::move(area);
@@ -65,7 +104,11 @@ void TranscendenceVisionWorker::processFrame(QImage area)
             double score = 0.0;
 
             const bool found =
-                findIcon(area, foundRect, score);
+                findIcon(
+                    area,
+                    foundRect,
+                    score
+                    );
 
             emit scanResult(
                 found,
@@ -82,13 +125,13 @@ void TranscendenceVisionWorker::processFrame(QImage area)
 
             if (!m_pendingFrame.isNull())
             {
-                // Prendiamo solamente l'ultimo frame disponibile.
+                // Prendiamo solamente il frame più recente.
                 nextFrame = std::move(m_pendingFrame);
                 m_pendingFrame = QImage();
             }
             else
             {
-                // Nessun altro frame: il worker torna disponibile.
+                // Nessun frame in attesa.
                 m_processing = false;
                 return;
             }
@@ -97,10 +140,11 @@ void TranscendenceVisionWorker::processFrame(QImage area)
         area = std::move(nextFrame);
     }
 
-    // Caso difensivo: area nulla.
+    // Caso difensivo.
     QMutexLocker locker(&m_frameMutex);
     m_processing = false;
 }
+
 
 bool TranscendenceVisionWorker::findIcon(
     const QImage &area,
@@ -109,9 +153,13 @@ bool TranscendenceVisionWorker::findIcon(
     ) const
 {
     score = 0.0;
+    foundRect = QRect();
 
-    if (area.isNull() || m_templateIcon.isNull())
+    if (area.isNull() ||
+        m_templateIcon.isNull())
+    {
         return false;
+    }
 
     const int width =
         m_templateIcon.width();
@@ -131,111 +179,173 @@ bool TranscendenceVisionWorker::findIcon(
     const int maxX =
         area.width() - width;
 
-    struct ChunkResult
-    {
-        double score = 0.0;
-        QRect rect;
-        bool found = false;
-    };
-
-    std::atomic<bool> stopFlag{false};
-
-    const int threadCount =
-        qMax(1, QThread::idealThreadCount()/2);
+    /*
+     * Usiamo tre chunk.
+     *
+     * Il QThreadPool è persistente e contiene già
+     * tre thread disponibili.
+     */
+    constexpr int threadCount = 3;
 
     const int totalRows =
         maxY + 1;
 
-    constexpr int CHUNKS_PER_THREAD = 1;
+    const int chunkCount =
+        qMin(
+            threadCount,
+            totalRows
+            );
 
-    const int desiredChunks =
-        qMax(1, threadCount * CHUNKS_PER_THREAD);
+    if (chunkCount <= 0)
+        return false;
 
     const int rowsPerChunk =
         qMax(
             1,
-            (totalRows + desiredChunks - 1) / desiredChunks
+            (totalRows + chunkCount - 1) /
+                chunkCount
             );
 
-    QVector<QFuture<ChunkResult>> futures;
+    auto context =
+        std::make_shared<ScanContext>();
 
-    for (int yStart = 0;
-         yStart <= maxY;
-         yStart += rowsPerChunk)
+    context->results.resize(chunkCount);
+
+    for (int chunkIndex = 0;
+         chunkIndex < chunkCount;
+         ++chunkIndex)
     {
+        const int yStart =
+            chunkIndex * rowsPerChunk;
+
+        if (yStart > maxY)
+            break;
+
         const int yEnd =
             qMin(
                 yStart + rowsPerChunk - 1,
                 maxY
                 );
 
-        futures.append(
-            QtConcurrent::run(
-                [this, &area, &stopFlag, yStart, yEnd, maxX, width, height]()
-                -> ChunkResult
+        /*
+         * QThreadPool mantiene i thread vivi.
+         *
+         * La lambda viene eseguita in uno dei tre thread
+         * del pool e può accedere a compareAt() perché
+         * viene creata all'interno del metodo della classe.
+         */
+        m_matchPool.start(
+            [this,
+             &area,
+             context,
+             chunkIndex,
+             yStart,
+             yEnd,
+             maxX,
+             width,
+             height]()
+            {
+                ChunkResult result;
+
+                for (int y = yStart;
+                     y <= yEnd;
+                     ++y)
                 {
-                    ChunkResult result;
-
-                    for (int y = yStart;
-                         y <= yEnd;
-                         ++y)
+                    if (context->stopFlag.load(
+                            std::memory_order_relaxed))
                     {
-                        if (stopFlag.load(std::memory_order_relaxed))
-                            break;
+                        break;
+                    }
 
-                        for (int x = 0;
-                             x <= maxX;
-                             ++x)
+                    for (int x = 0;
+                         x <= maxX;
+                         ++x)
+                    {
+                        if (context->stopFlag.load(
+                                std::memory_order_relaxed))
                         {
-                            const double current =
-                                compareAt(
-                                    area,
+                            break;
+                        }
+
+                        const double current =
+                            compareAt(
+                                area,
+                                x,
+                                y
+                                );
+
+                        if (current > result.score)
+                        {
+                            result.score = current;
+
+                            result.rect =
+                                QRect(
                                     x,
-                                    y
+                                    y,
+                                    width,
+                                    height
                                     );
 
-                            if (current > result.score)
+                            /*
+                             * Abbiamo trovato un match
+                             * sufficientemente buono.
+                             *
+                             * Gli altri thread vedranno
+                             * stopFlag e termineranno
+                             * appena possibile.
+                             */
+                            if (current >=
+                                TranscendenceVisionConfig::MATCH_THRESHOLD)
                             {
-                                result.score = current;
+                                result.found = true;
 
-                                result.rect =
-                                    QRect(
-                                        x,
-                                        y,
-                                        width,
-                                        height
-                                        );
+                                context->stopFlag.store(
+                                    true,
+                                    std::memory_order_relaxed
+                                    );
 
-                                if (current >=
-                                    TranscendenceVisionConfig::MATCH_THRESHOLD)
-                                {
-                                    result.found = true;
-
-                                    stopFlag.store(
-                                        true,
-                                        std::memory_order_relaxed
-                                        );
-
-                                    return result;
-                                }
+                                break;
                             }
                         }
                     }
-
-                    return result;
                 }
-                )
+
+                /*
+                 * Ogni thread scrive esclusivamente
+                 * nel proprio elemento del QVector.
+                 */
+                context->results[chunkIndex] =
+                    result;
+
+                context->finished.release();
+            }
             );
     }
 
-    for (QFuture<ChunkResult> &future : futures)
-        future.waitForFinished();
-
-    for (QFuture<ChunkResult> &future : futures)
+    /*
+     * Aspettiamo che tutti i chunk abbiano terminato.
+     *
+     * Questo è importante perché 'area' è un riferimento
+     * al parametro di findIcon() e non deve più essere
+     * utilizzato dai thread quando usciamo dalla funzione.
+     */
+    for (int i = 0;
+         i < chunkCount;
+         ++i)
     {
-        const ChunkResult result =
-            future.result();
+        context->finished.acquire();
+    }
 
+    /*
+     * Se un thread ha trovato un match, restituiamo
+     * immediatamente il risultato.
+     *
+     * Altrimenti conserviamo il miglior punteggio
+     * trovato tra tutti i chunk.
+     */
+    for (const ChunkResult &result :
+         context->results)
+    {
         if (result.score > score)
         {
             score = result.score;
@@ -243,12 +353,18 @@ bool TranscendenceVisionWorker::findIcon(
         }
 
         if (result.found)
+        {
+            foundRect = result.rect;
+            score = result.score;
+
             return true;
+        }
     }
 
     return score >=
            TranscendenceVisionConfig::MATCH_THRESHOLD;
 }
+
 
 double TranscendenceVisionWorker::compareAt(
     const QImage &area,
@@ -256,13 +372,20 @@ double TranscendenceVisionWorker::compareAt(
     int offsetY
     ) const
 {
-    const int width = m_templateIcon.width();
-    const int height = m_templateIcon.height();
+    const int width =
+        m_templateIcon.width();
 
-    const int innerWidth = width - 2;
-    const int innerHeight = height - 2;
+    const int height =
+        m_templateIcon.height();
 
-    const int total = innerWidth * innerHeight;
+    const int innerWidth =
+        width - 2;
+
+    const int innerHeight =
+        height - 2;
+
+    const int total =
+        innerWidth * innerHeight;
 
     if (total <= 0)
         return 0.0;
@@ -277,8 +400,10 @@ double TranscendenceVisionWorker::compareAt(
 
     /*
      * Fast rejection:
-     * controlliamo 16 pixel distribuiti sull'area prima
-     * di eseguire il confronto completo.
+     *
+     * controlliamo 16 pixel distribuiti
+     * sull'area prima di eseguire il confronto
+     * completo.
      */
     int sampleX[sampleCount];
     int sampleY[sampleCount];
@@ -287,47 +412,72 @@ double TranscendenceVisionWorker::compareAt(
     {
         for (int gx = 0; gx < 4; ++gx)
         {
-            const int index = gy * 4 + gx;
+            const int index =
+                gy * 4 + gx;
 
             sampleX[index] =
-                1 + (gx * (innerWidth - 1)) / 3;
+                1 +
+                (gx * (innerWidth - 1)) / 3;
 
             sampleY[index] =
-                1 + (gy * (innerHeight - 1)) / 3;
+                1 +
+                (gy * (innerHeight - 1)) / 3;
         }
     }
 
     int differentSamples = 0;
 
-    for (int i = 0; i < sampleCount; ++i)
+    for (int i = 0;
+         i < sampleCount;
+         ++i)
     {
         const QRgb *sourceLine =
             reinterpret_cast<const QRgb *>(
-                area.constScanLine(offsetY + sampleY[i])
+                area.constScanLine(
+                    offsetY + sampleY[i]
+                    )
                 );
 
         const QRgb *templateLine =
             reinterpret_cast<const QRgb *>(
-                m_templateIcon.constScanLine(sampleY[i])
+                m_templateIcon.constScanLine(
+                    sampleY[i]
+                    )
                 );
 
         const QRgb sourcePixel =
-            sourceLine[offsetX + sampleX[i]];
+            sourceLine[
+                offsetX + sampleX[i]
+        ];
 
         const QRgb templatePixel =
-            templateLine[sampleX[i]];
+            templateLine[
+                sampleX[i]
+        ];
 
         int dr =
-            static_cast<int>((sourcePixel >> 16) & 0xFF) -
-            static_cast<int>((templatePixel >> 16) & 0xFF);
+            static_cast<int>(
+                (sourcePixel >> 16) & 0xFF
+                ) -
+            static_cast<int>(
+                (templatePixel >> 16) & 0xFF
+                );
 
         int dg =
-            static_cast<int>((sourcePixel >> 8) & 0xFF) -
-            static_cast<int>((templatePixel >> 8) & 0xFF);
+            static_cast<int>(
+                (sourcePixel >> 8) & 0xFF
+                ) -
+            static_cast<int>(
+                (templatePixel >> 8) & 0xFF
+                );
 
         int db =
-            static_cast<int>(sourcePixel & 0xFF) -
-            static_cast<int>(templatePixel & 0xFF);
+            static_cast<int>(
+                sourcePixel & 0xFF
+                ) -
+            static_cast<int>(
+                templatePixel & 0xFF
+                );
 
         if (dr < 0)
             dr = -dr;
@@ -338,14 +488,20 @@ double TranscendenceVisionWorker::compareAt(
         if (db < 0)
             db = -db;
 
-        if (dr > TranscendenceVisionConfig::PIXEL_TOLERANCE ||
-            dg > TranscendenceVisionConfig::PIXEL_TOLERANCE ||
-            db > TranscendenceVisionConfig::PIXEL_TOLERANCE)
+        if (dr >
+                TranscendenceVisionConfig::PIXEL_TOLERANCE ||
+            dg >
+                TranscendenceVisionConfig::PIXEL_TOLERANCE ||
+            db >
+                TranscendenceVisionConfig::PIXEL_TOLERANCE)
         {
             ++differentSamples;
 
-            if (differentSamples > maxDifferentSamples)
+            if (differentSamples >
+                maxDifferentSamples)
+            {
                 return 0.0;
+            }
         }
     }
 
@@ -354,15 +510,21 @@ double TranscendenceVisionWorker::compareAt(
         (TranscendenceVisionConfig::MATCH_THRESHOLD / 100.0);
 
     const int maxDifferentPixels =
-        static_cast<int>(maxDifferentRatio * total);
+        static_cast<int>(
+            maxDifferentRatio * total
+            );
 
     int differentPixels = 0;
 
-    for (int y = 1; y <= height - 2; ++y)
+    for (int y = 1;
+         y <= height - 2;
+         ++y)
     {
         const QRgb *sourceLine =
             reinterpret_cast<const QRgb *>(
-                area.constScanLine(offsetY + y)
+                area.constScanLine(
+                    offsetY + y
+                    )
                 );
 
         const QRgb *templateLine =
@@ -376,22 +538,39 @@ double TranscendenceVisionWorker::compareAt(
         const QRgb *templatePixel =
             templateLine + 1;
 
-        for (int x = 1; x <= width - 2; ++x)
+        for (int x = 1;
+             x <= width - 2;
+             ++x)
         {
-            const QRgb source = *sourcePixel++;
-            const QRgb templ = *templatePixel++;
+            const QRgb source =
+                *sourcePixel++;
+
+            const QRgb templ =
+                *templatePixel++;
 
             int dr =
-                static_cast<int>((source >> 16) & 0xFF) -
-                static_cast<int>((templ >> 16) & 0xFF);
+                static_cast<int>(
+                    (source >> 16) & 0xFF
+                    ) -
+                static_cast<int>(
+                    (templ >> 16) & 0xFF
+                    );
 
             int dg =
-                static_cast<int>((source >> 8) & 0xFF) -
-                static_cast<int>((templ >> 8) & 0xFF);
+                static_cast<int>(
+                    (source >> 8) & 0xFF
+                    ) -
+                static_cast<int>(
+                    (templ >> 8) & 0xFF
+                    );
 
             int db =
-                static_cast<int>(source & 0xFF) -
-                static_cast<int>(templ & 0xFF);
+                static_cast<int>(
+                    source & 0xFF
+                    ) -
+                static_cast<int>(
+                    templ & 0xFF
+                    );
 
             if (dr < 0)
                 dr = -dr;
@@ -402,27 +581,46 @@ double TranscendenceVisionWorker::compareAt(
             if (db < 0)
                 db = -db;
 
-            if (dr > TranscendenceVisionConfig::PIXEL_TOLERANCE ||
-                dg > TranscendenceVisionConfig::PIXEL_TOLERANCE ||
-                db > TranscendenceVisionConfig::PIXEL_TOLERANCE)
+            if (dr >
+                    TranscendenceVisionConfig::PIXEL_TOLERANCE ||
+                dg >
+                    TranscendenceVisionConfig::PIXEL_TOLERANCE ||
+                db >
+                    TranscendenceVisionConfig::PIXEL_TOLERANCE)
             {
                 ++differentPixels;
 
-                if (differentPixels > maxDifferentPixels)
+                /*
+                 * Early exit:
+                 * non possiamo più raggiungere
+                 * MATCH_THRESHOLD.
+                 */
+                if (differentPixels >
+                    maxDifferentPixels)
                 {
                     const double ratio =
-                        static_cast<double>(differentPixels) /
-                        static_cast<double>(total);
+                        static_cast<double>(
+                            differentPixels
+                            ) /
+                        static_cast<double>(
+                            total
+                            );
 
-                    return (1.0 - ratio) * 100.0;
+                    return
+                        (1.0 - ratio) * 100.0;
                 }
             }
         }
     }
 
     const double differentRatio =
-        static_cast<double>(differentPixels) /
-        static_cast<double>(total);
+        static_cast<double>(
+            differentPixels
+            ) /
+        static_cast<double>(
+            total
+            );
 
-    return (1.0 - differentRatio) * 100.0;
+    return
+        (1.0 - differentRatio) * 100.0;
 }

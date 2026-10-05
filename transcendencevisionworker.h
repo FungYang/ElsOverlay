@@ -4,6 +4,8 @@
 #include <QImage>
 #include <QRect>
 #include <QMutex>
+#include <QThreadPool>
+
 
 class TranscendenceVisionWorker : public QObject
 {
@@ -11,16 +13,29 @@ class TranscendenceVisionWorker : public QObject
 
 public:
     explicit TranscendenceVisionWorker(QObject *parent = nullptr);
+    ~TranscendenceVisionWorker() override;
 
-    // Thread-safe: può essere chiamato dal thread del manager.
+    // Thread-safe.
+    // Riceve un nuovo frame e mantiene solamente
+    // l'ultimo frame disponibile quando il worker è occupato.
     void submitFrame(QImage area);
 
 public slots:
     void processFrame(QImage area);
-    void setTemplate(QImage templateIcon, int iconWidth, int iconHeight);
+
+    void setTemplate(
+        QImage templateIcon,
+        int iconWidth,
+        int iconHeight
+        );
 
 signals:
-    void scanResult(bool found, QRect foundRect, double score, QImage area);
+    void scanResult(
+        bool found,
+        QRect foundRect,
+        double score,
+        QImage area
+        );
 
 private:
     bool findIcon(
@@ -35,9 +50,23 @@ private:
         int offsetY
         ) const;
 
+private:
+    // Template utilizzato dal matcher.
     QImage m_templateIcon;
 
+    // ---------------------------------------------------------
+    // Latest-frame-wins
+    // ---------------------------------------------------------
+
     QMutex m_frameMutex;
+
     QImage m_pendingFrame;
+
     bool m_processing = false;
+
+    // ---------------------------------------------------------
+    // Persistent matcher thread pool
+    // ---------------------------------------------------------
+
+    mutable QThreadPool m_matchPool;
 };
