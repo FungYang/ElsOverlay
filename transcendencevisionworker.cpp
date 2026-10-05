@@ -256,20 +256,13 @@ double TranscendenceVisionWorker::compareAt(
     int offsetY
     ) const
 {
-    const int width =
-        m_templateIcon.width();
+    const int width = m_templateIcon.width();
+    const int height = m_templateIcon.height();
 
-    const int height =
-        m_templateIcon.height();
+    const int innerWidth = width - 2;
+    const int innerHeight = height - 2;
 
-    const int innerWidth =
-        width - 2;
-
-    const int innerHeight =
-        height - 2;
-
-    const int total =
-        innerWidth * innerHeight;
+    const int total = innerWidth * innerHeight;
 
     if (total <= 0)
         return 0.0;
@@ -282,6 +275,11 @@ double TranscendenceVisionWorker::compareAt(
             sampleCount
             );
 
+    /*
+     * Fast rejection:
+     * controlliamo 16 pixel distribuiti sull'area prima
+     * di eseguire il confronto completo.
+     */
     int sampleX[sampleCount];
     int sampleY[sampleCount];
 
@@ -289,34 +287,28 @@ double TranscendenceVisionWorker::compareAt(
     {
         for (int gx = 0; gx < 4; ++gx)
         {
-            const int idx = gy * 4 + gx;
+            const int index = gy * 4 + gx;
 
-            sampleX[idx] =
+            sampleX[index] =
                 1 + (gx * (innerWidth - 1)) / 3;
 
-            sampleY[idx] =
+            sampleY[index] =
                 1 + (gy * (innerHeight - 1)) / 3;
         }
     }
 
     int differentSamples = 0;
 
-    for (int i = 0;
-         i < sampleCount;
-         ++i)
+    for (int i = 0; i < sampleCount; ++i)
     {
         const QRgb *sourceLine =
             reinterpret_cast<const QRgb *>(
-                area.constScanLine(
-                    offsetY + sampleY[i]
-                    )
+                area.constScanLine(offsetY + sampleY[i])
                 );
 
         const QRgb *templateLine =
             reinterpret_cast<const QRgb *>(
-                m_templateIcon.constScanLine(
-                    sampleY[i]
-                    )
+                m_templateIcon.constScanLine(sampleY[i])
                 );
 
         const QRgb sourcePixel =
@@ -325,14 +317,26 @@ double TranscendenceVisionWorker::compareAt(
         const QRgb templatePixel =
             templateLine[sampleX[i]];
 
-        const int dr =
-            qAbs(qRed(sourcePixel) - qRed(templatePixel));
+        int dr =
+            static_cast<int>((sourcePixel >> 16) & 0xFF) -
+            static_cast<int>((templatePixel >> 16) & 0xFF);
 
-        const int dg =
-            qAbs(qGreen(sourcePixel) - qGreen(templatePixel));
+        int dg =
+            static_cast<int>((sourcePixel >> 8) & 0xFF) -
+            static_cast<int>((templatePixel >> 8) & 0xFF);
 
-        const int db =
-            qAbs(qBlue(sourcePixel) - qBlue(templatePixel));
+        int db =
+            static_cast<int>(sourcePixel & 0xFF) -
+            static_cast<int>(templatePixel & 0xFF);
+
+        if (dr < 0)
+            dr = -dr;
+
+        if (dg < 0)
+            dg = -dg;
+
+        if (db < 0)
+            db = -db;
 
         if (dr > TranscendenceVisionConfig::PIXEL_TOLERANCE ||
             dg > TranscendenceVisionConfig::PIXEL_TOLERANCE ||
@@ -346,16 +350,15 @@ double TranscendenceVisionWorker::compareAt(
     }
 
     const double maxDifferentRatio =
-        1.0 - (TranscendenceVisionConfig::MATCH_THRESHOLD / 100.0);
+        1.0 -
+        (TranscendenceVisionConfig::MATCH_THRESHOLD / 100.0);
 
     const int maxDifferentPixels =
         static_cast<int>(maxDifferentRatio * total);
 
     int differentPixels = 0;
 
-    for (int y = 1;
-         y <= height - 2;
-         ++y)
+    for (int y = 1; y <= height - 2; ++y)
     {
         const QRgb *sourceLine =
             reinterpret_cast<const QRgb *>(
@@ -367,24 +370,37 @@ double TranscendenceVisionWorker::compareAt(
                 m_templateIcon.constScanLine(y)
                 );
 
-        for (int x = 1;
-             x <= width - 2;
-             ++x)
+        const QRgb *sourcePixel =
+            sourceLine + offsetX + 1;
+
+        const QRgb *templatePixel =
+            templateLine + 1;
+
+        for (int x = 1; x <= width - 2; ++x)
         {
-            const QRgb sourcePixel =
-                sourceLine[offsetX + x];
+            const QRgb source = *sourcePixel++;
+            const QRgb templ = *templatePixel++;
 
-            const QRgb templatePixel =
-                templateLine[x];
+            int dr =
+                static_cast<int>((source >> 16) & 0xFF) -
+                static_cast<int>((templ >> 16) & 0xFF);
 
-            const int dr =
-                qAbs(qRed(sourcePixel) - qRed(templatePixel));
+            int dg =
+                static_cast<int>((source >> 8) & 0xFF) -
+                static_cast<int>((templ >> 8) & 0xFF);
 
-            const int dg =
-                qAbs(qGreen(sourcePixel) - qGreen(templatePixel));
+            int db =
+                static_cast<int>(source & 0xFF) -
+                static_cast<int>(templ & 0xFF);
 
-            const int db =
-                qAbs(qBlue(sourcePixel) - qBlue(templatePixel));
+            if (dr < 0)
+                dr = -dr;
+
+            if (dg < 0)
+                dg = -dg;
+
+            if (db < 0)
+                db = -db;
 
             if (dr > TranscendenceVisionConfig::PIXEL_TOLERANCE ||
                 dg > TranscendenceVisionConfig::PIXEL_TOLERANCE ||
