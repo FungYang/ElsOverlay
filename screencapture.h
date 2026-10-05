@@ -4,6 +4,8 @@
 #include <QRect>
 #include <QScreen>
 #include <QHash>
+#include <QVector>
+#include <QSize>
 
 #include <d3d11.h>
 #include <dxgi1_2.h>
@@ -25,16 +27,6 @@ public:
 
     // =====================================================
     // REGIONI
-    //
-    // Ogni consumer registra solo le regioni che gli servono.
-    //
-    // Esempio:
-    //
-    // int id = registerRegion(rect);
-    //
-    // ...
-    //
-    // unregisterRegion(id);
     // =====================================================
 
     static int registerRegion(
@@ -45,15 +37,14 @@ public:
         int regionId
         );
 
-
     static bool isRegionRegistered(
         int regionId
         );
 
-
     static QRect regionRect(
         int regionId
         );
+
     static bool updateRegion(
         int regionId,
         const QRect &rect
@@ -63,7 +54,7 @@ public:
     // =====================================================
     // FRAME CONDIVISO
     //
-    // beginFrame()
+    // beginFrame(regionIds)
     //      ↓
     // captureRegion(id)
     // captureRegion(id)
@@ -72,9 +63,16 @@ public:
     // endFrame()
     //
     // AcquireNextFrame viene chiamato UNA volta.
+    //
+    // Tutte le ROI richieste vengono copiate nell'atlas
+    // GPU e poi lette con un solo Map().
     // =====================================================
 
     static bool beginFrame();
+
+    static bool beginFrame(
+        const QVector<int> &regionIds
+        );
 
     static bool hasFrame();
 
@@ -114,12 +112,32 @@ private:
 
 
     // =====================================================
-    // STAGING
+    // ATLAS
     // =====================================================
 
-    static bool ensureStaging(
+    static bool rebuildAtlas();
+
+    static bool ensureAtlas(
         const QSize &size
         );
+
+
+    // =====================================================
+    // FRAME / GPU COPY
+    // =====================================================
+
+    static bool copyRegionsToAtlas(
+        const QVector<int> &regionIds
+        );
+
+
+    // =====================================================
+    // CPU MAPPING
+    // =====================================================
+
+    static bool mapAtlas();
+
+    static void unmapAtlas();
 
 
     // =====================================================
@@ -145,11 +163,8 @@ private:
         s_duplication;
 
 
-    // Texture CPU-readable.
-    //
-    // Viene riutilizzata tra le catture.
-    // Se arriva una regione più grande,
-    // viene ricreata alla nuova dimensione.
+    // Texture CPU-readable contenente l'atlas
+    // delle ROI richieste nel frame corrente.
 
     static ComPtr<ID3D11Texture2D>
         s_staging;
@@ -168,12 +183,36 @@ private:
 
 
     // =====================================================
-    // GEOMETRIA
+    // ATLAS
     // =====================================================
 
     static QSize
         s_stagingSize;
 
+
+    static QHash<int, QRect>
+        s_atlasRects;
+
+
+    static bool
+        s_atlasDirty;
+
+
+    // =====================================================
+    // MAPPING CORRENTE
+    // =====================================================
+
+    static bool
+        s_atlasMapped;
+
+
+    static D3D11_MAPPED_SUBRESOURCE
+        s_mappedAtlas;
+
+
+    // =====================================================
+    // GEOMETRIA
+    // =====================================================
 
     static QRect
         s_desktopRect;

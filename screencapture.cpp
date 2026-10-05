@@ -5,8 +5,144 @@
 #include <QScreen>
 #include <QPixmap>
 
+#ifdef QT_DEBUG
+#include <QElapsedTimer>
+#endif
+
 #include <cstring>
 
+
+namespace
+{
+
+#ifdef QT_DEBUG
+
+struct CaptureProfiler
+{
+    qint64 frames = 0;
+
+    qint64 acquireNs = 0;
+    qint64 copyNs = 0;
+    qint64 mapNs = 0;
+    qint64 cpuCopyNs = 0;
+    qint64 captureNs = 0;
+
+    qint64 regionCount = 0;
+    qint64 copyCount = 0;
+    qint64 mapCount = 0;
+
+
+    void reset()
+    {
+        frames = 0;
+
+        acquireNs = 0;
+        copyNs = 0;
+        mapNs = 0;
+        cpuCopyNs = 0;
+        captureNs = 0;
+
+        regionCount = 0;
+        copyCount = 0;
+        mapCount = 0;
+    }
+
+
+    void print()
+    {
+        if(frames <= 0)
+            return;
+
+
+        const double divisor =
+            static_cast<double>(frames) *
+            1000000.0;
+
+
+        qDebug()
+            << "[ScreenCapture profiler]"
+            << "frames =" << frames
+
+            << "regions/frame ="
+            << (
+                   static_cast<double>(
+                       regionCount
+                       ) /
+                   static_cast<double>(
+                       frames
+                       )
+                   )
+
+            << "avg acquire ="
+            << (
+                   static_cast<double>(
+                       acquireNs
+                       ) /
+                   divisor
+                   )
+            << "ms"
+
+            << "avg CopySubresourceRegion ="
+            << (
+                   static_cast<double>(
+                       copyNs
+                       ) /
+                   divisor
+                   )
+            << "ms"
+
+            << "avg Map ="
+            << (
+                   static_cast<double>(
+                       mapNs
+                       ) /
+                   divisor
+                   )
+            << "ms"
+
+            << "avg CPU copy ="
+            << (
+                   static_cast<double>(
+                       cpuCopyNs
+                       ) /
+                   divisor
+                   )
+            << "ms"
+
+            << "avg captureRegion ="
+            << (
+                   static_cast<double>(
+                       captureNs
+                       ) /
+                   divisor
+                   )
+            << "ms"
+
+            << "Map/frame ="
+            << (
+                   static_cast<double>(
+                       mapCount
+                       ) /
+                   static_cast<double>(
+                       frames
+                       )
+                   );
+
+        reset();
+    }
+};
+
+
+CaptureProfiler g_captureProfiler;
+
+#endif // QT_DEBUG
+
+}
+
+
+// =========================================================
+// STATIC MEMBERS
+// =========================================================
 
 ComPtr<ID3D11Device>
     ScreenCapture::s_device;
@@ -30,6 +166,22 @@ bool
 
 QSize
     ScreenCapture::s_stagingSize;
+
+
+QHash<int, QRect>
+    ScreenCapture::s_atlasRects;
+
+
+bool
+    ScreenCapture::s_atlasDirty = true;
+
+
+bool
+    ScreenCapture::s_atlasMapped = false;
+
+
+D3D11_MAPPED_SUBRESOURCE
+    ScreenCapture::s_mappedAtlas = {};
 
 
 QRect
@@ -71,14 +223,13 @@ bool ScreenCapture::ensureInit()
 
 bool ScreenCapture::reinit()
 {
-    // Se per qualche motivo avevamo ancora un frame acquisito,
-    // dobbiamo prima abbandonarlo.
-    //
-    // In condizioni normali non dovrebbe succedere, ma evitiamo
-    // di lasciare lo stato interno incoerente.
-
     if(s_frameAcquired)
     {
+        if(s_atlasMapped)
+        {
+            unmapAtlas();
+        }
+
         if(s_duplication)
         {
             s_duplication->ReleaseFrame();
@@ -96,6 +247,12 @@ bool ScreenCapture::reinit()
 
     s_stagingSize = QSize();
 
+    s_atlasRects.clear();
+    s_atlasDirty = true;
+
+    s_atlasMapped = false;
+    s_mappedAtlas = {};
+
     s_desktopRect = QRect();
 
     s_ready = false;
@@ -109,11 +266,6 @@ bool ScreenCapture::reinit()
         primaryScreen
             ? primaryScreen->geometry()
             : QRect();
-
-
-    // qDebug()
-    //     << "ScreenCapture: target geometry:"
-    //     << targetGeometry;
 
 
     ComPtr<IDXGIFactory1> factory;
@@ -186,11 +338,6 @@ bool ScreenCapture::reinit()
                     outputDesc.DesktopCoordinates.top
                 );
 
-
-            // Per ora manteniamo la stessa scelta
-            // dell'implementazione precedente:
-            //
-            // catturiamo lo schermo primario.
 
             if(outputRect != targetGeometry)
             {
@@ -283,13 +430,6 @@ bool ScreenCapture::reinit()
                 true;
 
 
-            // DEBUG TEMPORANEO: confronto tra la geometria che Qt
-            // riporta per lo schermo primario e quella che DXGI
-            // riporta per lo stesso output. Se i due rettangoli non
-            // coincidono (dimensioni diverse), c'e' un mismatch di
-            // scaling/DPI tra il sistema di coordinate usato per
-            // definire m_searchArea (Qt) e quello usato per la
-            // cattura reale (DXGI, sempre in pixel fisici).
 #ifdef QT_DEBUG
             qDebug()
                 << "TRANSCENDENCE DPI CHECK:"
@@ -340,6 +480,9 @@ int ScreenCapture::registerRegion(
         );
 
 
+    s_atlasDirty = true;
+
+
     return id;
 }
 
@@ -364,6 +507,14 @@ void ScreenCapture::unregisterRegion(
     s_regionCache.remove(
         regionId
         );
+
+
+    s_atlasRects.remove(
+        regionId
+        );
+
+
+    s_atlasDirty = true;
 }
 
 
@@ -401,6 +552,36 @@ QRect ScreenCapture::regionRect(
 
 bool ScreenCapture::beginFrame()
 {
+    QVector<int> regionIds;
+
+    regionIds.reserve(
+        s_regions.size()
+        );
+
+    for(auto it = s_regions.constBegin();
+         it != s_regions.constEnd();
+         ++it)
+    {
+        regionIds.append(
+            it.key()
+            );
+    }
+
+
+    return beginFrame(
+        regionIds
+        );
+}
+
+
+// =========================================================
+// BEGIN FRAME — BATCH
+// =========================================================
+
+bool ScreenCapture::beginFrame(
+    const QVector<int> &regionIds
+    )
+{
     if(s_frameAcquired)
     {
         return true;
@@ -411,7 +592,7 @@ bool ScreenCapture::beginFrame()
         return false;
 
 
-    if(s_regions.isEmpty())
+    if(regionIds.isEmpty())
     {
         return false;
     }
@@ -425,12 +606,25 @@ bool ScreenCapture::beginFrame()
         frameInfo = {};
 
 
+#ifdef QT_DEBUG
+    QElapsedTimer acquireTimer;
+
+    acquireTimer.start();
+#endif
+
+
     HRESULT hr =
         s_duplication->AcquireNextFrame(
             0,
             &frameInfo,
             desktopResource.GetAddressOf()
             );
+
+
+#ifdef QT_DEBUG
+    g_captureProfiler.acquireNs +=
+        acquireTimer.nsecsElapsed();
+#endif
 
 
     if(hr == DXGI_ERROR_WAIT_TIMEOUT)
@@ -479,6 +673,32 @@ bool ScreenCapture::beginFrame()
         true;
 
 
+    // Il layout dell'atlas viene ricostruito solo quando
+    // cambia la configurazione delle ROI.
+    if(
+        s_atlasDirty &&
+        !rebuildAtlas()
+        )
+    {
+        endFrame();
+
+        return false;
+    }
+
+
+    // Tutte le copie GPU vengono accodate prima del Map().
+    if(
+        !copyRegionsToAtlas(
+            regionIds
+            )
+        )
+    {
+        endFrame();
+
+        return false;
+    }
+
+
     return true;
 }
 
@@ -494,10 +714,137 @@ bool ScreenCapture::hasFrame()
 
 
 // =========================================================
-// ENSURE STAGING
+// REBUILD ATLAS
 // =========================================================
 
-bool ScreenCapture::ensureStaging(
+bool ScreenCapture::rebuildAtlas()
+{
+    s_atlasRects.clear();
+
+
+    if(s_regions.isEmpty())
+    {
+        s_staging.Reset();
+        s_stagingSize = QSize();
+        s_atlasDirty = false;
+
+        return true;
+    }
+
+
+    // Packing a righe.
+    //
+    // Manteniamo l'atlas compatto senza creare un enorme
+    // bounding box tra ROI distanti.
+    const int maxRowWidth = 4096;
+
+
+    int x = 0;
+    int y = 0;
+    int rowHeight = 0;
+
+
+    for(auto it = s_regions.constBegin();
+         it != s_regions.constEnd();
+         ++it)
+    {
+        const int id =
+            it.key();
+
+        const QRect rect =
+            it.value();
+
+
+        const int width =
+            rect.width();
+
+        const int height =
+            rect.height();
+
+
+        if(
+            x > 0 &&
+            x + width > maxRowWidth
+            )
+        {
+            x = 0;
+
+            y += rowHeight;
+
+            rowHeight = 0;
+        }
+
+
+        s_atlasRects.insert(
+            id,
+            QRect(
+                x,
+                y,
+                width,
+                height
+                )
+            );
+
+
+        x += width;
+
+        rowHeight =
+            qMax(
+                rowHeight,
+                height
+                );
+    }
+
+
+    const int atlasWidth =
+        qMax(
+            1,
+            qMin(
+                maxRowWidth,
+                x > 0 ? x : maxRowWidth
+                )
+            );
+
+
+    int atlasHeight =
+        y + rowHeight;
+
+
+    if(atlasHeight <= 0)
+    {
+        atlasHeight = 1;
+    }
+
+
+    const QSize atlasSize(
+        atlasWidth,
+        atlasHeight
+        );
+
+
+    if(
+        !ensureAtlas(
+            atlasSize
+            )
+        )
+    {
+        s_atlasRects.clear();
+
+        return false;
+    }
+
+
+    s_atlasDirty = false;
+
+    return true;
+}
+
+
+// =========================================================
+// ENSURE ATLAS
+// =========================================================
+
+bool ScreenCapture::ensureAtlas(
     const QSize &size
     )
 {
@@ -505,13 +852,9 @@ bool ScreenCapture::ensureStaging(
         return false;
 
 
-    // La staging esistente viene riutilizzata
-    // anche se è più grande della regione richiesta.
-
     if(
         s_staging &&
-        s_stagingSize.width() >= size.width() &&
-        s_stagingSize.height() >= size.height()
+        s_stagingSize == size
         )
     {
         return true;
@@ -556,38 +899,254 @@ bool ScreenCapture::ensureStaging(
         D3D11_CPU_ACCESS_READ;
 
 
-    s_staging.Reset();
+    ComPtr<ID3D11Texture2D> newStaging;
 
 
     HRESULT hr =
         s_device->CreateTexture2D(
             &desc,
             nullptr,
-            s_staging.GetAddressOf()
+            newStaging.GetAddressOf()
             );
 
 
     if(FAILED(hr))
     {
-        s_stagingSize =
-            QSize();
-
-
         return false;
     }
 
+
+    s_staging =
+        newStaging;
 
     s_stagingSize =
         size;
 
 
-    // qDebug()
-    //     << "ScreenCapture:"
-    //     << "staging resized:"
-    //     << size;
+    return true;
+}
+
+
+// =========================================================
+// COPY REGIONS TO ATLAS
+// =========================================================
+
+bool ScreenCapture::copyRegionsToAtlas(
+    const QVector<int> &regionIds
+    )
+{
+    if(!s_staging)
+        return false;
+
+
+#ifdef QT_DEBUG
+    QElapsedTimer copyTimer;
+
+    copyTimer.start();
+#endif
+
+
+    int copiedCount = 0;
+
+
+    for(const int regionId : regionIds)
+    {
+        if(!s_regions.contains(regionId))
+        {
+            continue;
+        }
+
+
+        if(!s_atlasRects.contains(regionId))
+        {
+            continue;
+        }
+
+
+        const QRect sourceRect =
+            s_regions.value(
+                regionId
+                );
+
+
+        const QRect atlasRect =
+            s_atlasRects.value(
+                regionId
+                );
+
+
+        QRect validRect =
+            sourceRect.intersected(
+                s_desktopRect
+                );
+
+
+        if(validRect.isEmpty())
+        {
+            continue;
+        }
+
+
+        if(validRect.size() != sourceRect.size())
+        {
+            continue;
+        }
+
+
+        D3D11_BOX srcBox = {};
+
+
+        srcBox.left =
+            static_cast<UINT>(
+                sourceRect.left()
+                );
+
+
+        srcBox.top =
+            static_cast<UINT>(
+                sourceRect.top()
+                );
+
+
+        srcBox.front =
+            0;
+
+
+        srcBox.right =
+            static_cast<UINT>(
+                sourceRect.left() +
+                sourceRect.width()
+                );
+
+
+        srcBox.bottom =
+            static_cast<UINT>(
+                sourceRect.top() +
+                sourceRect.height()
+                );
+
+
+        srcBox.back =
+            1;
+
+
+        s_context->CopySubresourceRegion(
+            s_staging.Get(),
+            0,
+
+            static_cast<UINT>(
+                atlasRect.x()
+                ),
+
+            static_cast<UINT>(
+                atlasRect.y()
+                ),
+
+            0,
+
+            s_currentFrame.Get(),
+            0,
+
+            &srcBox
+            );
+
+
+        ++copiedCount;
+    }
+
+
+#ifdef QT_DEBUG
+    g_captureProfiler.copyNs +=
+        copyTimer.nsecsElapsed();
+
+    g_captureProfiler.copyCount +=
+        copiedCount;
+#endif
+
+
+    return copiedCount > 0;
+}
+
+
+// =========================================================
+// MAP ATLAS
+// =========================================================
+
+bool ScreenCapture::mapAtlas()
+{
+    if(s_atlasMapped)
+        return true;
+
+
+    if(!s_staging)
+        return false;
+
+
+#ifdef QT_DEBUG
+    QElapsedTimer mapTimer;
+
+    mapTimer.start();
+#endif
+
+
+    D3D11_MAPPED_SUBRESOURCE mapped = {};
+
+
+    HRESULT hr =
+        s_context->Map(
+            s_staging.Get(),
+            0,
+            D3D11_MAP_READ,
+            0,
+            &mapped
+            );
+
+
+#ifdef QT_DEBUG
+    g_captureProfiler.mapNs +=
+        mapTimer.nsecsElapsed();
+
+    ++g_captureProfiler.mapCount;
+#endif
+
+
+    if(FAILED(hr))
+    {
+        return false;
+    }
+
+
+    s_mappedAtlas =
+        mapped;
+
+    s_atlasMapped =
+        true;
 
 
     return true;
+}
+
+
+// =========================================================
+// UNMAP ATLAS
+// =========================================================
+
+void ScreenCapture::unmapAtlas()
+{
+    if(!s_atlasMapped)
+        return;
+
+
+    s_context->Unmap(
+        s_staging.Get(),
+        0
+        );
+
+
+    s_mappedAtlas = {};
+
+    s_atlasMapped =
+        false;
 }
 
 
@@ -611,9 +1170,6 @@ QImage ScreenCapture::captureRectFromCurrentFrame(
         return QImage();
 
 
-    // Il rettangolo deve appartenere
-    // al desktop catturato.
-
     QRect validRect =
         rect.intersected(
             s_desktopRect
@@ -634,85 +1190,45 @@ QImage ScreenCapture::captureRectFromCurrentFrame(
     }
 
 
-    if(
-        !ensureStaging(
-            rect.size()
-            )
-        )
+    // Trova la ROI corrispondente nell'atlas.
+    int regionId = -1;
+
+
+    for(auto it = s_regions.constBegin();
+         it != s_regions.constEnd();
+         ++it)
+    {
+        if(it.value() == rect)
+        {
+            regionId = it.key();
+
+            break;
+        }
+    }
+
+
+    if(regionId < 0)
     {
         return QImage();
     }
 
 
-    D3D11_BOX srcBox = {};
-
-
-    srcBox.left =
-        static_cast<UINT>(
-            rect.left()
-            );
-
-
-    srcBox.top =
-        static_cast<UINT>(
-            rect.top()
-            );
-
-
-    srcBox.front =
-        0;
-
-
-    srcBox.right =
-        static_cast<UINT>(
-            rect.left() +
-            rect.width()
-            );
-
-
-    srcBox.bottom =
-        static_cast<UINT>(
-            rect.top() +
-            rect.height()
-            );
-
-
-    srcBox.back =
-        1;
-
-
-    s_context->CopySubresourceRegion(
-        s_staging.Get(),
-        0,
-
-        0,
-        0,
-        0,
-
-        s_currentFrame.Get(),
-        0,
-
-        &srcBox
-        );
-
-
-    D3D11_MAPPED_SUBRESOURCE mapped = {};
-
-
-    HRESULT hr =
-        s_context->Map(
-            s_staging.Get(),
-            0,
-            D3D11_MAP_READ,
-            0,
-            &mapped
-            );
-
-
-    if(FAILED(hr))
+    if(!s_atlasRects.contains(regionId))
     {
         return QImage();
     }
+
+
+    if(!mapAtlas())
+    {
+        return QImage();
+    }
+
+
+    const QRect atlasRect =
+        s_atlasRects.value(
+            regionId
+            );
 
 
     QImage image(
@@ -722,9 +1238,22 @@ QImage ScreenCapture::captureRectFromCurrentFrame(
         );
 
 
+    if(image.isNull())
+    {
+        return QImage();
+    }
+
+
+#ifdef QT_DEBUG
+    QElapsedTimer cpuCopyTimer;
+
+    cpuCopyTimer.start();
+#endif
+
+
     const uchar *src =
         static_cast<const uchar *>(
-            mapped.pData
+            s_mappedAtlas.pData
             );
 
 
@@ -736,7 +1265,9 @@ QImage ScreenCapture::captureRectFromCurrentFrame(
             image.scanLine(y),
 
             src +
-                y * mapped.RowPitch,
+                (atlasRect.y() + y) *
+                    s_mappedAtlas.RowPitch +
+                atlasRect.x() * 4,
 
             static_cast<size_t>(
                 rect.width()
@@ -745,10 +1276,10 @@ QImage ScreenCapture::captureRectFromCurrentFrame(
     }
 
 
-    s_context->Unmap(
-        s_staging.Get(),
-        0
-        );
+#ifdef QT_DEBUG
+    g_captureProfiler.cpuCopyNs +=
+        cpuCopyTimer.nsecsElapsed();
+#endif
 
 
     return image;
@@ -777,6 +1308,13 @@ QImage ScreenCapture::captureRegion(
     }
 
 
+#ifdef QT_DEBUG
+    QElapsedTimer captureTimer;
+
+    captureTimer.start();
+#endif
+
+
     const QRect rect =
         s_regions.value(
             regionId
@@ -787,6 +1325,14 @@ QImage ScreenCapture::captureRegion(
         captureRectFromCurrentFrame(
             rect
             );
+
+
+#ifdef QT_DEBUG
+    g_captureProfiler.captureNs +=
+        captureTimer.nsecsElapsed();
+
+    ++g_captureProfiler.regionCount;
+#endif
 
 
     if(!image.isNull())
@@ -800,9 +1346,6 @@ QImage ScreenCapture::captureRegion(
         return image;
     }
 
-
-    // Se la cattura fallisce, manteniamo
-    // l'ultima immagine valida.
 
     return s_regionCache.value(
         regionId
@@ -820,6 +1363,12 @@ void ScreenCapture::endFrame()
         return;
 
 
+    if(s_atlasMapped)
+    {
+        unmapAtlas();
+    }
+
+
     if(s_duplication)
     {
         s_duplication->ReleaseFrame();
@@ -830,6 +1379,21 @@ void ScreenCapture::endFrame()
 
     s_frameAcquired =
         false;
+
+
+#ifdef QT_DEBUG
+
+    ++g_captureProfiler.frames;
+
+
+    if(
+        (g_captureProfiler.frames % 100) == 0
+        )
+    {
+        g_captureProfiler.print();
+    }
+
+#endif
 }
 
 
@@ -861,7 +1425,14 @@ QImage ScreenCapture::captureScreen(
     QImage result;
 
 
-    if(beginFrame())
+    QVector<int> regionIds;
+
+    regionIds.append(
+        tempId
+        );
+
+
+    if(beginFrame(regionIds))
     {
         result =
             captureRegion(
@@ -951,6 +1522,7 @@ QImage ScreenCapture::captureRegionReliable(
             );
 }
 
+
 // =========================================================
 // REGION UPDATE
 // =========================================================
@@ -960,24 +1532,29 @@ bool ScreenCapture::updateRegion(
     const QRect &rect
     )
 {
-    if (rect.isNull() || rect.isEmpty())
+    if(rect.isNull() || rect.isEmpty())
     {
         return false;
     }
 
-    if (!s_regions.contains(regionId))
+
+    if(!s_regions.contains(regionId))
     {
         return false;
     }
 
-    const QRect oldRect =
-        s_regions.value(regionId);
 
-    s_regions[regionId] = rect;
+    s_regions[regionId] =
+        rect;
 
-    // La cache appartiene alla vecchia posizione.
-    // Va quindi eliminata.
-    s_regionCache.remove(regionId);
+
+    s_regionCache.remove(
+        regionId
+        );
+
+
+    s_atlasDirty = true;
+
 
     return true;
 }

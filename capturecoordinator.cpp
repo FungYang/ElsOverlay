@@ -218,11 +218,8 @@ void CaptureCoordinator::doSubscribe(
     QByteArray slot
     )
 {
-    // Evitiamo intervalli non validi.
     intervalMs = qMax(1, intervalMs);
 
-    // Se esiste già una subscription per questa region,
-    // sostituiamo i parametri.
     for (auto &sub : m_subs)
     {
         if (sub.regionId == regionId)
@@ -242,8 +239,6 @@ void CaptureCoordinator::doSubscribe(
     sub.regionId = regionId;
     sub.intervalMs = intervalMs;
 
-    // Manteniamo il comportamento originale:
-    // la prima acquisizione è immediatamente eleggibile.
     sub.nextDue =
         QDateTime::currentMSecsSinceEpoch();
 
@@ -281,7 +276,6 @@ void CaptureCoordinator::scheduleNextTick()
         return;
     }
 
-    // Prima eliminiamo eventuali receiver già distrutti.
     for (int i = m_subs.size() - 1; i >= 0; --i)
     {
         if (!m_subs[i].receiver)
@@ -290,8 +284,6 @@ void CaptureCoordinator::scheduleNextTick()
         }
     }
 
-    // Nessuna subscription:
-    // nessun motivo per mantenere il timer attivo.
     if (m_subs.isEmpty())
     {
         m_timer->stop();
@@ -327,11 +319,9 @@ void CaptureCoordinator::scheduleNextTick()
         return;
     }
 
-    // QTimer accetta un int come intervallo in millisecondi.
     const int timerDelay =
         static_cast<int>(
-            qBound<qint64>(
-                qint64(0),
+            qMin<qint64>(
                 nextDelay,
                 qint64(std::numeric_limits<int>::max())
                 )
@@ -357,7 +347,7 @@ void CaptureCoordinator::tick()
 
     QVector<int> due;
 
-    // Individuiamo le region che devono essere catturate.
+    // Individuiamo tutte le ROI che devono essere catturate.
     for (auto &sub : m_subs)
     {
         if (!sub.receiver)
@@ -374,23 +364,32 @@ void CaptureCoordinator::tick()
         }
     }
 
+
     if (!due.isEmpty())
     {
-        if (ScreenCapture::beginFrame())
+        // Tutte le ROI dovute vengono passate insieme.
+        //
+        // ScreenCapture:
+        //   AcquireNextFrame()
+        //   N x CopySubresourceRegion()
+        //   1 x Map()
+        //   N x lettura CPU
+        //   1 x Unmap()
+        if(ScreenCapture::beginFrame(due))
         {
-            for (int regionId : due)
+            for(int regionId : due)
             {
                 QImage frame =
                     ScreenCapture::captureRegion(regionId);
 
-                if (frame.isNull())
+                if(frame.isNull())
                 {
                     continue;
                 }
 
-                for (auto &sub : m_subs)
+                for(auto &sub : m_subs)
                 {
-                    if (sub.regionId != regionId ||
+                    if(sub.regionId != regionId ||
                         !sub.receiver)
                     {
                         continue;
@@ -409,15 +408,16 @@ void CaptureCoordinator::tick()
         }
     }
 
+
     // Pulizia receiver morti.
-    for (int i = m_subs.size() - 1; i >= 0; --i)
+    for(int i = m_subs.size() - 1; i >= 0; --i)
     {
-        if (!m_subs[i].receiver)
+        if(!m_subs[i].receiver)
         {
             m_subs.removeAt(i);
         }
     }
 
-    // Calcola il prossimo evento.
+
     scheduleNextTick();
 }
