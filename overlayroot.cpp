@@ -729,21 +729,14 @@ void OverlayRoot::setSpecialCooldownOverlay(
 // ============================================================
 
 void OverlayRoot::registerCustomSearcherOverlay(
-    CustomSearcherOverlay *overlay
-    )
+    CustomSearcherOverlay *overlay)
 {
     if(!overlay)
-    {
         return;
-    }
-
 
     if(!m_customSearcherOverlays.contains(overlay))
     {
-        m_customSearcherOverlays.append(
-            overlay
-            );
-
+        m_customSearcherOverlays.append(overlay);
 
         connect(
             overlay,
@@ -751,46 +744,21 @@ void OverlayRoot::registerCustomSearcherOverlay(
             this,
             [this, overlay]()
             {
-                m_customSearcherOverlays.removeAll(
-                    overlay
-                    );
-            }
-            );
+                m_customSearcherOverlays.removeAll(overlay);
+            });
     }
 
+    overlay->setTransparency(m_transparency);
 
-    // ========================================================
-    // TRASPARENZA
-    // ========================================================
+    registerOverlay(overlay);
 
-    overlay->setTransparency(
-        m_transparency
-        );
+    // Lo stato corrente di OverlayRoot deve essere sempre
+    // quello applicato al nuovo overlay.
+    applyClickableState(overlay);
 
-
-    // ========================================================
-    // REGISTRAZIONE GENERALE
-    // ========================================================
-
-    registerOverlay(
-        overlay
-        );
-
-
-    // ========================================================
-    // STACKING
-    //
-    // Se è già visibile, lo mettiamo immediatamente
-    // sopra gli altri.
-    // ========================================================
-
-    if(m_overlaysVisible &&
-        overlay->isVisible())
-    {
+    if(m_overlaysVisible && overlay->isVisible())
         raiseCustomSearcherOverlays();
-    }
 }
-
 
 // ============================================================
 // UNREGISTER CUSTOM SEARCHER OVERLAY
