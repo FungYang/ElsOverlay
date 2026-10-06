@@ -60,41 +60,41 @@ void TranscendenceVisionWorker::setTemplate(
 }
 
 
-void TranscendenceVisionWorker::submitFrame(QImage area)
+void TranscendenceVisionWorker::submitFrame(
+    quint64 frameId,
+    QImage area
+    )
 {
     if (area.isNull())
         return;
 
-    bool startProcessing = false;
-
     {
         QMutexLocker locker(&m_frameMutex);
 
-        // Il worker sta già elaborando un frame:
-        // conserviamo solamente l'ultimo ricevuto.
         if (m_processing)
         {
-            m_pendingFrame = std::move(area);
+            m_pendingFrame.frameId = frameId;
+            m_pendingFrame.image = std::move(area);
             return;
         }
 
         m_processing = true;
-        startProcessing = true;
     }
 
-    if (startProcessing)
-    {
-        QMetaObject::invokeMethod(
-            this,
-            "processFrame",
-            Qt::QueuedConnection,
-            Q_ARG(QImage, area)
-            );
-    }
+    QMetaObject::invokeMethod(
+        this,
+        "processFrame",
+        Qt::QueuedConnection,
+        Q_ARG(quint64, frameId),
+        Q_ARG(QImage, area)
+        );
 }
 
 
-void TranscendenceVisionWorker::processFrame(QImage area)
+void TranscendenceVisionWorker::processFrame(
+    quint64 frameId,
+    QImage area
+    )
 {
     while (!area.isNull())
     {
@@ -111,6 +111,7 @@ void TranscendenceVisionWorker::processFrame(QImage area)
                     );
 
             emit scanResult(
+                frameId,
                 found,
                 foundRect,
                 score,
@@ -118,29 +119,27 @@ void TranscendenceVisionWorker::processFrame(QImage area)
                 );
         }
 
-        QImage nextFrame;
+        PendingFrame nextFrame;
 
         {
             QMutexLocker locker(&m_frameMutex);
 
-            if (!m_pendingFrame.isNull())
+            if (!m_pendingFrame.image.isNull())
             {
-                // Prendiamo solamente il frame più recente.
                 nextFrame = std::move(m_pendingFrame);
-                m_pendingFrame = QImage();
+                m_pendingFrame = PendingFrame();
             }
             else
             {
-                // Nessun frame in attesa.
                 m_processing = false;
                 return;
             }
         }
 
-        area = std::move(nextFrame);
+        frameId = nextFrame.frameId;
+        area = std::move(nextFrame.image);
     }
 
-    // Caso difensivo.
     QMutexLocker locker(&m_frameMutex);
     m_processing = false;
 }

@@ -640,17 +640,28 @@ void TranscendenceVisionManager::stopScanning()
 // SOSTITUISCE la vecchia scanTick(). Gira sul thread GUI (consegna via
 // Qt::QueuedConnection dal CaptureCoordinator), ma qui non c'è più
 // nessun calcolo pesante: si limita a inoltrare il frame al worker.
-void TranscendenceVisionManager::onFrameReady(QImage area)
+void TranscendenceVisionManager::onFrameReady(
+    quint64 frameId,
+    QImage area
+    )
 {
-    if (!m_enabled || !m_configured || area.isNull())
+    if (!m_enabled ||
+        !m_configured ||
+        area.isNull())
+    {
         return;
+    }
 
-    m_worker->submitFrame(std::move(area));
+    m_worker->submitFrame(
+        frameId,
+        std::move(area)
+        );
 }
 
 // NUOVO: riceve il risultato dal worker (cross-thread, auto-queued sul
 // thread GUI). Qui è sicuro toccare overlay/widget.
 void TranscendenceVisionManager::onScanResult(
+    quint64 frameId,
     bool found,
     QRect foundRect,
     double score,

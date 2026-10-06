@@ -48,11 +48,20 @@ private slots:
     // NUOVO: sostituisce scanTick(). Arriva dal CaptureCoordinator
     // (Qt::QueuedConnection), gira sul thread GUI, ma non fa più
     // nessun calcolo pesante: inoltra solo il frame al worker.
-    void onFrameReady(QImage area);
+public slots:
+
+    void onFrameReady(
+        quint64 frameId,
+        QImage area
+        );
 
     // NUOVO: arriva dal TranscendenceVisionWorker (cross-thread,
     // quindi automaticamente in coda sul thread GUI).
-    void onScanResult(bool found, QRect foundRect, double score, QImage area);
+    void onScanResult(quint64 frameId,
+                      bool found,
+                      QRect foundRect,
+                      double score,
+                      QImage area);
 
 private:
 #ifdef QT_DEBUG

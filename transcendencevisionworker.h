@@ -18,10 +18,22 @@ public:
     // Thread-safe.
     // Riceve un nuovo frame e mantiene solamente
     // l'ultimo frame disponibile quando il worker è occupato.
-    void submitFrame(QImage area);
+    void submitFrame(
+        quint64 frameId,
+        QImage area
+        );
+
+    struct PendingFrame
+    {
+        quint64 frameId = 0;
+        QImage image;
+    };
 
 public slots:
-    void processFrame(QImage area);
+    void processFrame(
+        quint64 frameId,
+        QImage area
+        );
 
     void setTemplate(
         QImage templateIcon,
@@ -31,6 +43,7 @@ public slots:
 
 signals:
     void scanResult(
+        quint64 frameId,
         bool found,
         QRect foundRect,
         double score,
@@ -60,7 +73,7 @@ private:
 
     QMutex m_frameMutex;
 
-    QImage m_pendingFrame;
+    PendingFrame m_pendingFrame;
 
     bool m_processing = false;
 
