@@ -52,8 +52,15 @@ public:
 
 private slots:
     // NUOVO: sostituiscono la lambda dentro visionTimer.
-    void onCrop1FrameReady(QImage frame);
-    void onCrop2FrameReady(QImage frame);
+    void onCrop1FrameReady(
+        quint64 frameId,
+        QImage frame
+        );
+
+    void onCrop2FrameReady(
+        quint64 frameId,
+        QImage frame
+        );
     void onNumberDetected(int cropId, int number);
     void onModelLoaded(bool ok);
 

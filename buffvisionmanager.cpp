@@ -216,8 +216,10 @@ void BuffVisionManager::resetTracking()
 // =========================
 // FRAME READY -> inoltra al detection worker
 // =========================
-
-void BuffVisionManager::onCrop1FrameReady(QImage frame)
+void BuffVisionManager::onCrop1FrameReady(
+    quint64 frameId,
+    QImage frame
+    )
 {
     if (!enabled || !configured) return;
 
@@ -226,8 +228,10 @@ void BuffVisionManager::onCrop1FrameReady(QImage frame)
         Q_ARG(int, 1), Q_ARG(QImage, frame)
         );
 }
-
-void BuffVisionManager::onCrop2FrameReady(QImage frame)
+void BuffVisionManager::onCrop2FrameReady(
+    quint64 frameId,
+    QImage frame
+    )
 {
     if (!enabled || !configured) return;
 
