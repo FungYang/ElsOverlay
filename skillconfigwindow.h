@@ -6,6 +6,7 @@
 
 #include "skillconfig.h"
 
+class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
 class QLineEdit;
@@ -77,6 +78,7 @@ private:
     QPushButton *upAddComboKeyButton = nullptr;
 
     QPushButton *upRemoveComboKeyButton = nullptr;
+    QCheckBox *upEnabledCheck = nullptr;
 
 
     // --------------------------------------------------------
@@ -96,6 +98,7 @@ private:
     QPushButton *leftAddComboKeyButton = nullptr;
 
     QPushButton *leftRemoveComboKeyButton = nullptr;
+    QCheckBox *leftEnabledCheck = nullptr;
 
 
     // --------------------------------------------------------
@@ -115,6 +118,7 @@ private:
     QPushButton *downAddComboKeyButton = nullptr;
 
     QPushButton *downRemoveComboKeyButton = nullptr;
+    QCheckBox *downEnabledCheck = nullptr;
 
 
     // --------------------------------------------------------
@@ -134,6 +138,7 @@ private:
     QPushButton *rightAddComboKeyButton = nullptr;
 
     QPushButton *rightRemoveComboKeyButton = nullptr;
+    QCheckBox *rightEnabledCheck = nullptr;
 
 
     // --------------------------------------------------------
@@ -173,7 +178,8 @@ private:
 
         QListWidget *&comboKeysList,
         QPushButton *&addComboKeyButton,
-        QPushButton *&removeComboKeyButton
+        QPushButton *&removeComboKeyButton,
+        QCheckBox *&enabledCheck
         );
 
 
@@ -204,7 +210,8 @@ private:
         QDoubleSpinBox *cooldownSpin,
         QComboBox *activationCombo,
 
-        QListWidget *comboKeysList
+        QListWidget *comboKeysList,
+        QCheckBox *enabledCheck
         );
 
 
@@ -214,7 +221,8 @@ private:
         QDoubleSpinBox *cooldownSpin,
         QComboBox *activationCombo,
 
-        QListWidget *comboKeysList
+        QListWidget *comboKeysList,
+        QCheckBox *enabledCheck
         ) const;
 
 

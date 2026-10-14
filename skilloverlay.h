@@ -178,6 +178,10 @@ private:
 
     void updateSelectedSkillVisual();
 
+    // Applica a ogni SkillBox lo stato "titolo attivo" della config
+    // (box nascosto + cooldown/glow disattivati).
+    void applyEnabledState();
+
     Direction directionFromConfig(int value) const;
 };
 

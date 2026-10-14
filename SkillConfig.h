@@ -25,6 +25,16 @@ struct SkillConfig
         SkillActivation::CtrlCipolla;
 
     QList<int> comboKeys;
+
+    // --------------------------------------------------------
+    // TITOLO ATTIVO
+    //
+    // false => il box non viene mostrato, non parte mai il suo
+    // cooldown e non ha il glow di selezione.
+    // Default true: i vecchi ElsOverlay.ini (senza la chiave
+    // "Enabled") continuano a comportarsi come prima.
+    // --------------------------------------------------------
+    bool enabled = true;
 };
 
 

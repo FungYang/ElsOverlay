@@ -51,6 +51,17 @@ public:
         );
 
 
+    // Attiva/disattiva il titolo. Se disattivato il box sparisce,
+    // il cooldown viene azzerato, non puo' ripartire e non mostra
+    // il glow di selezione. (Non si chiama setEnabled per non
+    // nascondere QWidget::setEnabled.)
+    void setTitleEnabled(
+        bool enabled
+        );
+
+    bool isTitleEnabled() const;
+
+
     double getScale() const;
 
 
@@ -78,6 +89,7 @@ private:
 
     bool cooldownPaused = false;
     bool selected = false;
+    bool titleEnabled = true;
 
     QString skillName;
     QString imagePath;

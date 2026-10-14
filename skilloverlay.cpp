@@ -174,6 +174,13 @@ SkillOverlay::SkillOverlay(
 
 
     // ========================================================
+    // TITOLI ATTIVI / DISATTIVATI
+    // ========================================================
+
+    applyEnabledState();
+
+
+    // ========================================================
     // TIMER
     // ========================================================
 
@@ -528,6 +535,35 @@ void SkillOverlay::loadDefaultConfig()
                             )
                         ).toInt()
             );
+
+
+    // --------------------------------------------------------
+    // TITOLI ATTIVI (default: tutti attivi)
+    // --------------------------------------------------------
+
+    config.up.enabled =
+        settings.value(
+                    "BuffTitles/Up/Enabled",
+                    true
+                    ).toBool();
+
+    config.left.enabled =
+        settings.value(
+                    "BuffTitles/Left/Enabled",
+                    true
+                    ).toBool();
+
+    config.down.enabled =
+        settings.value(
+                    "BuffTitles/Down/Enabled",
+                    true
+                    ).toBool();
+
+    config.right.enabled =
+        settings.value(
+                    "BuffTitles/Right/Enabled",
+                    true
+                    ).toBool();
 
 
     // --------------------------------------------------------
@@ -971,6 +1007,38 @@ void SkillOverlay::updateSkillBoxes()
     rightSkill->setCooldown(
         config.right.cooldown
         );
+
+
+    // --------------------------------------------------------
+    // TITOLI ATTIVI / DISATTIVATI
+    // --------------------------------------------------------
+
+    applyEnabledState();
+
+
+    // Il glow dipende dal titolo selezionato E dal fatto che sia
+    // attivo: va ricalcolato quando cambia lo stato di un titolo.
+    updateSelectedSkillVisual();
+}
+
+
+// ============================================================
+// APPLY ENABLED STATE
+// ============================================================
+
+void SkillOverlay::applyEnabledState()
+{
+    if(upSkill)
+        upSkill->setTitleEnabled(config.up.enabled);
+
+    if(leftSkill)
+        leftSkill->setTitleEnabled(config.left.enabled);
+
+    if(downSkill)
+        downSkill->setTitleEnabled(config.down.enabled);
+
+    if(rightSkill)
+        rightSkill->setTitleEnabled(config.right.enabled);
 }
 
 

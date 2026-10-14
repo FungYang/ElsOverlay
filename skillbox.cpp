@@ -275,6 +275,11 @@ void SkillBox::paintEvent(
 
 void SkillBox::startCooldown()
 {
+    // Titolo disattivato dalla configurazione: nessun cooldown.
+    if(!titleEnabled)
+        return;
+
+
     if(activeCooldown)
         return;
 
@@ -399,11 +404,53 @@ void SkillBox::setSelected(
     bool value
     )
 {
+    // Un titolo disattivato non puo' avere il glow di selezione,
+    // anche se e' quello "selezionato" in gioco.
     selected =
-        value;
+        value && titleEnabled;
 
 
     update();
+}
+
+
+void SkillBox::setTitleEnabled(
+    bool enabled
+    )
+{
+    if(titleEnabled == enabled)
+        return;
+
+
+    titleEnabled =
+        enabled;
+
+
+    if(!titleEnabled)
+    {
+        // Niente cooldown "fantasma" ne' glow residuo.
+        resetCooldown();
+
+        selected =
+            false;
+    }
+
+
+    // Su un widget figlio hide() e' esplicito: anche se l'overlay
+    // viene nascosto e rimostrato (toggle Buff Titles) il box
+    // disattivato resta nascosto.
+    setVisible(
+        titleEnabled
+        );
+
+
+    update();
+}
+
+
+bool SkillBox::isTitleEnabled() const
+{
+    return titleEnabled;
 }
 
 

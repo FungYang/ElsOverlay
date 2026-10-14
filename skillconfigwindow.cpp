@@ -1,5 +1,6 @@
 #include "skillconfigwindow.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDoubleSpinBox>
@@ -282,7 +283,8 @@ void SkillConfigWindow::buildUi()
 
             upComboKeysList,
             upAddComboKeyButton,
-            upRemoveComboKeyButton
+            upRemoveComboKeyButton,
+            upEnabledCheck
             ),
         0,
         0
@@ -304,7 +306,8 @@ void SkillConfigWindow::buildUi()
 
             downComboKeysList,
             downAddComboKeyButton,
-            downRemoveComboKeyButton
+            downRemoveComboKeyButton,
+            downEnabledCheck
             ),
         0,
         1
@@ -326,7 +329,8 @@ void SkillConfigWindow::buildUi()
 
             leftComboKeysList,
             leftAddComboKeyButton,
-            leftRemoveComboKeyButton
+            leftRemoveComboKeyButton,
+            leftEnabledCheck
             ),
         1,
         0
@@ -348,7 +352,8 @@ void SkillConfigWindow::buildUi()
 
             rightComboKeysList,
             rightAddComboKeyButton,
-            rightRemoveComboKeyButton
+            rightRemoveComboKeyButton,
+            rightEnabledCheck
             ),
         1,
         1
@@ -449,7 +454,8 @@ QWidget *SkillConfigWindow::createSkillWidget(
 
     QListWidget *&comboKeysList,
     QPushButton *&addComboKeyButton,
-    QPushButton *&removeComboKeyButton
+    QPushButton *&removeComboKeyButton,
+    QCheckBox *&enabledCheck
     )
 {
     QGroupBox *group =
@@ -463,6 +469,26 @@ QWidget *SkillConfigWindow::createSkillWidget(
         new QFormLayout(
             group
             );
+
+
+    // ========================================================
+    // TITOLO ATTIVO
+    // ========================================================
+
+    enabledCheck =
+        new QCheckBox(
+            "Mostra questo titolo (box e glow)",
+            group
+            );
+
+    enabledCheck->setChecked(
+        true
+        );
+
+    layout->addRow(
+        enabledCheck
+        );
+
 
 
     // ========================================================
@@ -722,6 +748,32 @@ QWidget *SkillConfigWindow::createSkillWidget(
                 comboKeysList
                 );
         }
+        );
+
+
+
+    // ========================================================
+    // CAMPI DISABILITATI QUANDO IL TITOLO E' OFF
+    // ========================================================
+
+    auto applyEnabledUi =
+        [=](bool on)
+    {
+        nameEdit->setEnabled(on);
+        imageEdit->setEnabled(on);
+        browseButton->setEnabled(on);
+        cooldownSpin->setEnabled(on);
+        activationCombo->setEnabled(on);
+        comboKeysList->setEnabled(on);
+        addComboKeyButton->setEnabled(on);
+        removeComboKeyButton->setEnabled(on);
+    };
+
+    connect(
+        enabledCheck,
+        &QCheckBox::toggled,
+        this,
+        applyEnabledUi
         );
 
 
@@ -1094,6 +1146,23 @@ void SkillConfigWindow::loadConfig()
 
 
     // ========================================================
+    // TITOLI ATTIVI (default: tutti attivi)
+    // ========================================================
+
+    m_config.up.enabled =
+        settings.value("BuffTitles/Up/Enabled", true).toBool();
+
+    m_config.left.enabled =
+        settings.value("BuffTitles/Left/Enabled", true).toBool();
+
+    m_config.down.enabled =
+        settings.value("BuffTitles/Down/Enabled", true).toBool();
+
+    m_config.right.enabled =
+        settings.value("BuffTitles/Right/Enabled", true).toBool();
+
+
+    // ========================================================
     // LOAD SKILL
     // ========================================================
 
@@ -1103,7 +1172,8 @@ void SkillConfigWindow::loadConfig()
         upImageEdit,
         upCooldownSpin,
         upActivationCombo,
-        upComboKeysList
+        upComboKeysList,
+        upEnabledCheck
         );
 
 
@@ -1113,7 +1183,8 @@ void SkillConfigWindow::loadConfig()
         leftImageEdit,
         leftCooldownSpin,
         leftActivationCombo,
-        leftComboKeysList
+        leftComboKeysList,
+        leftEnabledCheck
         );
 
 
@@ -1123,7 +1194,8 @@ void SkillConfigWindow::loadConfig()
         downImageEdit,
         downCooldownSpin,
         downActivationCombo,
-        downComboKeysList
+        downComboKeysList,
+        downEnabledCheck
         );
 
 
@@ -1133,7 +1205,8 @@ void SkillConfigWindow::loadConfig()
         rightImageEdit,
         rightCooldownSpin,
         rightActivationCombo,
-        rightComboKeysList
+        rightComboKeysList,
+        rightEnabledCheck
         );
 }
 
@@ -1150,9 +1223,14 @@ void SkillConfigWindow::loadSkill(
     QDoubleSpinBox *cooldownSpin,
     QComboBox *activationCombo,
 
-    QListWidget *comboKeysList
+    QListWidget *comboKeysList,
+    QCheckBox *enabledCheck
     )
 {
+    enabledCheck->setChecked(
+        config.enabled
+        );
+
     nameEdit->setText(
         config.name
         );
@@ -1300,7 +1378,8 @@ void SkillConfigWindow::readUiToConfig()
             upImageEdit,
             upCooldownSpin,
             upActivationCombo,
-            upComboKeysList
+            upComboKeysList,
+            upEnabledCheck
             );
 
 
@@ -1314,7 +1393,8 @@ void SkillConfigWindow::readUiToConfig()
             leftImageEdit,
             leftCooldownSpin,
             leftActivationCombo,
-            leftComboKeysList
+            leftComboKeysList,
+            leftEnabledCheck
             );
 
 
@@ -1328,7 +1408,8 @@ void SkillConfigWindow::readUiToConfig()
             downImageEdit,
             downCooldownSpin,
             downActivationCombo,
-            downComboKeysList
+            downComboKeysList,
+            downEnabledCheck
             );
 
 
@@ -1342,7 +1423,8 @@ void SkillConfigWindow::readUiToConfig()
             rightImageEdit,
             rightCooldownSpin,
             rightActivationCombo,
-            rightComboKeysList
+            rightComboKeysList,
+            rightEnabledCheck
             );
 }
 
@@ -1357,7 +1439,8 @@ SkillConfig SkillConfigWindow::readSkill(
     QDoubleSpinBox *cooldownSpin,
     QComboBox *activationCombo,
 
-    QListWidget *comboKeysList
+    QListWidget *comboKeysList,
+    QCheckBox *enabledCheck
     ) const
 {
     SkillConfig config;
@@ -1366,6 +1449,10 @@ SkillConfig SkillConfigWindow::readSkill(
     // ========================================================
     // DATI BASE
     // ========================================================
+
+    // Deve essere letto PRIMA del return anticipato degli Artifact.
+    config.enabled =
+        enabledCheck->isChecked();
 
     config.name =
         nameEdit->text();
@@ -1544,6 +1631,11 @@ void SkillConfigWindow::saveConfig()
             static_cast<int>(
                 config.activation
                 )
+            );
+
+        settings.setValue(
+            prefix + "/Enabled",
+            config.enabled
             );
 
 

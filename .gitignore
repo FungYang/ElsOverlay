@@ -7,6 +7,7 @@
 # Build folders
 build/
 cmake-build-*/
+patch/
 
 # Compiled files
 *.exe
