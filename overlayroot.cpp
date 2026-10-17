@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QScreen>
+#include <QTimer>
 
 #include <windows.h>
 
@@ -499,6 +500,53 @@ void OverlayRoot::handleForegroundChanged()
 
     // Infine riportiamo sopra i Custom Searcher.
     raiseCustomSearcherOverlays();
+
+
+    // ========================================================
+    // RILANCI RAVVICINATI
+    //
+    // L'evento di foreground arriva nel momento in cui cambia la
+    // finestra attiva. Giochi, launcher e overlay di altre app
+    // (Discord, OBS, Steam...) spesso si riaffermano TOPMOST DOPO,
+    // di qualche decina o centinaio di ms (tipico dopo alt-tab o
+    // cambi di fullscreen): in quel caso vincerebbero loro e
+    // l'overlay resterebbe sotto fino al cambio successivo.
+    //
+    // Ripetiamo quindi il raise poco dopo. Sono 3 timer singoli
+    // per ogni cambio di foreground, NON un timer periodico: a
+    // riposo non c'e' nessun risveglio.
+    //
+    // Se arriva un altro cambio di foreground prima che i rilanci
+    // scattino, quelli vecchi si annullano (generazione diversa) e
+    // ci pensa il nuovo: i timer non si accumulano.
+    // ========================================================
+
+    const quint32 generation =
+        ++m_raiseGeneration;
+
+    for(const int delayMs : { 100, 400, 1500 })
+    {
+        QTimer::singleShot(
+            delayMs,
+            this,
+            [this, generation]()
+            {
+                if(generation != m_raiseGeneration)
+                {
+                    return;
+                }
+
+                if(!m_overlaysVisible)
+                {
+                    return;
+                }
+
+                raiseNormalOverlays();
+
+                raiseCustomSearcherOverlays();
+            }
+            );
+    }
 }
 
 #endif

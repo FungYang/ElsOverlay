@@ -144,6 +144,11 @@ private:
 
     HWINEVENTHOOK m_foregroundHook = nullptr;
 
+    // Numero dell'ultimo cambio di foreground gestito. Serve a far
+    // eseguire solo i rilanci dell'ULTIMO cambio (vedi
+    // handleForegroundChanged).
+    quint32 m_raiseGeneration = 0;
+
 #endif
 
 
