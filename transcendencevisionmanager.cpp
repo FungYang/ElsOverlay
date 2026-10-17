@@ -128,7 +128,15 @@ TranscendenceVisionManager::TranscendenceVisionManager(
                     }
 
                     if (key == 'P')
+                    {
+                        // Crop gia' aperto: invece di ignorare la P
+                        // lo riporto davanti (poteva essere finito
+                        // dietro il gioco).
+                        precisionCrop->raise();
+                        precisionCrop->activateWindow();
+                        precisionCrop->setFocus();
                         return;
+                    }
                 }
 
                 if (key != 'P')
@@ -140,7 +148,35 @@ TranscendenceVisionManager::TranscendenceVisionManager(
                 if (!captureSetup->isVisible())
                     return;
 
+                // Feedback immediato: se questo messaggio compare, la P
+                // e' arrivata; se non compare, e' stata scartata prima
+                // (pausa attiva, hook, ecc.).
+                captureSetup->showFeedback(
+                    "P ricevuto: preparo la foto..."
+                    );
+
                 openPrecisionCrop();
+            }
+            );
+
+        // PAUSA: con la pausa attiva GlobalKeyboard NON emette piu'
+        // nessun tasto (P compresa). Lo rendo visibile nel setup
+        // invece di lasciare l'utente a chiedersi perche' P non parte.
+        connect(
+            keyboard,
+            &GlobalKeyboard::pauseChanged,
+            this,
+            [this](bool paused)
+            {
+                if (!captureSetup || !captureSetup->isVisible())
+                    return;
+
+                captureSetup->showFeedback(
+                    paused
+                        ? "PAUSA ATTIVA: i tasti (P compresa) sono ignorati. "
+                          "Premi Invio per riprendere."
+                        : "Pausa disattivata."
+                    );
             }
             );
 

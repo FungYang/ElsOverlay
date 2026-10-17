@@ -329,6 +329,10 @@ int main(int argc, char *argv[])
         overlayRoot
         );
 
+    // Serve per il Template Crop: attende la P (scatto) e ESC (annulla)
+    // anche mentre il gioco ha il focus.
+    customSearcher.setKeyboard(&keyboard);
+
     QObject::connect(
         &mainWindow,
         &MainWindow::customSearcherConfigRequested,

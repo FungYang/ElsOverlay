@@ -16,6 +16,8 @@ class CustomSearcherWorker;
 class OverlayRoot;
 class CustomSearcherConfigWindow;
 class CustomSearcherSearchArea;
+class GlobalKeyboard;
+class QLabel;
 class CustomSearcherOverlay;
 
 
@@ -166,6 +168,15 @@ signals:
 
     void templateCropCanceled();
 
+    /*
+     * true  = "Template Crop" cliccato: in attesa che l'utente prema P.
+     * false = attesa finita (foto scattata oppure annullata).
+     * Serve alla finestra di config per aggiornare il testo del pulsante.
+     */
+    void templateCropWaitingChanged(
+        bool waiting
+        );
+
 
 public slots:
 
@@ -196,6 +207,22 @@ public slots:
      * At the moment this uses Zone 1.
      */
     void captureTemplateCrop(SearchZone zone);
+
+    /*
+     * Tastiera globale: serve per ricevere la P (scatto) e ESC
+     * (annulla) mentre il gioco ha il focus.
+     */
+    void setKeyboard(GlobalKeyboard *keyboard);
+
+    /*
+     * true se "Template Crop" e' in attesa della P.
+     */
+    bool isWaitingForTemplateCrop() const;
+
+    /*
+     * Annulla l'attesa della P (ESC, oppure secondo click su Crop).
+     */
+    void cancelTemplateCropWait();
 
 
 private slots:
@@ -324,6 +351,14 @@ private:
     void saveTemplates();
     void cleanupTemplateFiles();
 
+    // ---------------------------------------------------------
+    // Template crop (attesa P -> foto -> ritaglio)
+    // ---------------------------------------------------------
+    void grabTemplateCrop(const QRect &region);
+    void restoreAfterTemplateCrop();
+    void showCropHint(bool paused);
+    void hideCropHint();
+
 
     // ---------------------------------------------------------
     // Overlay management
@@ -378,6 +413,14 @@ private:
     // ---------------------------------------------------------
 
     bool m_enabled = false;
+
+    // Template crop: stato dell'attesa della P.
+    QPointer<GlobalKeyboard> m_keyboard;
+    bool m_cropWaiting = false;
+    QRect m_cropRegion;
+    SearchZone m_cropZone = SearchZone::Zone1;
+    bool m_cropHiddenSearchArea = false;
+    QPointer<QLabel> m_cropHint;
 
 
     // ---------------------------------------------------------

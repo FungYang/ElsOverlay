@@ -14,6 +14,20 @@ GlobalKeyboard *GlobalKeyboard::instance =
 
 bool GlobalKeyboard::s_keyDown[256] = { false };
 
+// Istante (ms) dell'ultimo KEYDOWN visto per ogni tasto.
+// Serve a far "auto-ripararsi" il filtro anti auto-repeat:
+// se per qualunque motivo un KEYUP non arriva all'hook (hook
+// saltato per timeout, Win+L, UAC, Alt+Tab...), s_keyDown[tasto]
+// resterebbe true e la pressione successiva di quel tasto verrebbe
+// scartata come "auto-repeat" (il classico "la prima P non parte,
+// la seconda si").
+static ULONGLONG s_keyDownTick[256] = { 0 };
+
+// Un vero auto-repeat arriva sempre entro ~1s dal precedente
+// KEYDOWN (il ritardo iniziale massimo di Windows e' circa 1s,
+// poi ogni ~30ms), quindi oltre questa soglia e' una pressione nuova.
+static constexpr ULONGLONG AUTO_REPEAT_MAX_GAP_MS = 1500;
+
 
 // =========================================================
 // CONSTRUCTOR
@@ -247,11 +261,21 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
     {
         if(isKeyDown)
         {
-            if(s_keyDown[key->vkCode])
+            const ULONGLONG now =
+                GetTickCount64();
+
+            if(s_keyDown[key->vkCode] &&
+                (now - s_keyDownTick[key->vkCode]) <
+                    AUTO_REPEAT_MAX_GAP_MS)
             {
                 // Auto-repeat: il gioco lo riceve comunque
                 // (CallNextHookEx più sotto), ma non lo
                 // mettiamo in coda per Qt.
+                //
+                // Aggiorno l'istante: finche' il tasto resta
+                // premuto i repeat continuano a mantenerlo "vivo".
+                s_keyDownTick[key->vkCode] = now;
+
                 return CallNextHookEx(
                     hook,
                     nCode,
@@ -260,7 +284,10 @@ LRESULT CALLBACK GlobalKeyboard::keyboardProc(
                     );
             }
 
+            // Pressione nuova (oppure stato rimasto "incastrato"
+            // da un KEYUP perso: in quel caso e' comunque nuova).
             s_keyDown[key->vkCode] = true;
+            s_keyDownTick[key->vkCode] = now;
         }
         else if(isKeyUp)
         {

@@ -7,12 +7,14 @@
 #include "customsearchertemplatecrop.h"
 #include "customsearchersearcharea.h"
 #include "customsearcheroverlay.h"
+#include "globalkeyboard.h"
 
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QLabel>
 #include <QMetaObject>
 #include <QScreen>
 #include <QSet>
@@ -148,6 +150,8 @@ CustomSearcherManager::~CustomSearcherManager()
     }
 
     destroyOverlays();
+
+    delete m_cropHint;
 
     m_configWindow = nullptr;
     m_searchAreaWindow = nullptr;
@@ -1334,10 +1338,32 @@ void CustomSearcherManager::configure()
 
 
 
+// ============================================================
+// TEMPLATE CROP
+//
+// Flusso in due fasi:
+//
+//   1) captureTemplateCrop(): il click su "Template Crop" NON scatta
+//      piu' subito. Entra in ATTESA e mostra un avviso a schermo.
+//      L'utente puo' prepararsi con calma nel gioco (far comparire
+//      l'icona, attivare il buff, ecc.).
+//
+//   2) P (tasto globale: funziona anche con il gioco in primo piano)
+//      scatta la foto della zona di ricerca e apre il ritaglio.
+//      ESC, oppure un secondo click su "Template Crop", annulla.
+// ============================================================
+
 void CustomSearcherManager::captureTemplateCrop(
     SearchZone zone
     )
 {
+    // Secondo click mentre si e' in attesa = annulla.
+    if(m_cropWaiting)
+    {
+        cancelTemplateCropWait();
+        return;
+    }
+
     const QRect region =
         (zone == SearchZone::Zone2)
             ? m_searchRegion2
@@ -1349,9 +1375,251 @@ void CustomSearcherManager::captureTemplateCrop(
         return;
     }
 
+    // Senza tastiera globale non c'e' modo di ricevere la P mentre
+    // il gioco ha il focus: comportamento di prima (scatta subito).
+    if(!m_keyboard)
+    {
+        grabTemplateCrop(region);
+        return;
+    }
+
+    m_cropWaiting = true;
+    m_cropRegion = region;
+    m_cropZone = zone;
+
+    // La finestra "Search Area" (se aperta) intercetta i click:
+    // la nascondo per poter usare il gioco mentre si aspetta.
+    if(m_searchAreaWindow && m_searchAreaWindow->isVisible())
+    {
+        m_cropHiddenSearchArea = true;
+        m_searchAreaWindow->hide();
+    }
+
+    showCropHint(false);
+
+    emit templateCropWaitingChanged(true);
+}
+
+
+void CustomSearcherManager::setKeyboard(
+    GlobalKeyboard *keyboard
+    )
+{
+    if(m_keyboard == keyboard)
+        return;
+
+    if(m_keyboard)
+        m_keyboard->disconnect(this);
+
+    m_keyboard = keyboard;
+
+    if(!m_keyboard)
+        return;
+
+    connect(
+        m_keyboard,
+        &GlobalKeyboard::keyPressed,
+        this,
+        [this](int key)
+        {
+            if(!m_cropWaiting)
+                return;
+
+            // Codici Virtual-Key di Windows (e' cio' che emette
+            // GlobalKeyboard): 'P' = 0x50, ESC = 0x1B.
+            if(key == 'P')
+            {
+                m_cropWaiting = false;
+
+                hideCropHint();
+
+                emit templateCropWaitingChanged(false);
+
+                grabTemplateCrop(m_cropRegion);
+
+                return;
+            }
+
+            if(key == 0x1B)
+            {
+                cancelTemplateCropWait();
+            }
+        }
+        );
+
+    // Con la pausa attiva GlobalKeyboard non emette nessun tasto:
+    // lo scrivo nell'avviso invece di lasciare l'utente ad aspettare.
+    connect(
+        m_keyboard,
+        &GlobalKeyboard::pauseChanged,
+        this,
+        [this](bool paused)
+        {
+            if(m_cropWaiting)
+                showCropHint(paused);
+        }
+        );
+}
+
+
+bool CustomSearcherManager::isWaitingForTemplateCrop() const
+{
+    return m_cropWaiting;
+}
+
+
+void CustomSearcherManager::cancelTemplateCropWait()
+{
+    if(!m_cropWaiting)
+        return;
+
+    m_cropWaiting = false;
+
+    hideCropHint();
+
+    // Ripristina la Search Area solo se l'avevamo nascosta noi.
+    if(m_cropHiddenSearchArea)
+    {
+        m_cropHiddenSearchArea = false;
+
+        if(m_searchAreaWindow)
+        {
+            m_searchAreaWindow->show();
+            m_searchAreaWindow->raise();
+        }
+    }
+
+    emit templateCropWaitingChanged(false);
+    emit templateCropCanceled();
+}
+
+
+// ------------------------------------------------------------
+// Avviso "premi P" (non prende il focus: il gioco resta attivo)
+// ------------------------------------------------------------
+
+void CustomSearcherManager::showCropHint(
+    bool paused
+    )
+{
+    if(!m_cropHint)
+    {
+        m_cropHint =
+            new QLabel(
+                nullptr,
+                Qt::Tool |
+                    Qt::FramelessWindowHint |
+                    Qt::WindowStaysOnTopHint |
+                    Qt::WindowDoesNotAcceptFocus
+                );
+
+        m_cropHint->setAttribute(
+            Qt::WA_ShowWithoutActivating,
+            true
+            );
+
+        m_cropHint->setAttribute(
+            Qt::WA_TransparentForMouseEvents,
+            true
+            );
+
+        m_cropHint->setAlignment(
+            Qt::AlignCenter
+            );
+
+        m_cropHint->setStyleSheet(
+            "QLabel {"
+            " background-color: rgba(20, 20, 20, 230);"
+            " color: white;"
+            " border: 2px solid #ffc800;"
+            " border-radius: 6px;"
+            " padding: 8px 14px;"
+            " font-size: 13pt;"
+            " font-weight: bold;"
+            "}"
+            );
+    }
+
+    m_cropHint->setText(
+        paused
+            ? QStringLiteral(
+                  "APP IN PAUSA: la P e' ignorata - premi Invio "
+                  "per riprendere")
+            : QString(
+                  "Template Crop (Zona %1): premi P per scattare  "
+                  "|  Esc per annullare"
+                  ).arg(
+                      m_cropZone == SearchZone::Zone2 ? 2 : 1
+                      )
+        );
+
+    m_cropHint->adjustSize();
+
+    if(QScreen *screen = QGuiApplication::primaryScreen())
+    {
+        const QRect geometry =
+            screen->geometry();
+
+        m_cropHint->move(
+            geometry.center().x() - m_cropHint->width() / 2,
+            geometry.top() + 40
+            );
+    }
+
+    m_cropHint->show();
+    m_cropHint->raise();
+}
+
+
+void CustomSearcherManager::hideCropHint()
+{
+    if(m_cropHint)
+        m_cropHint->hide();
+}
+
+
+// ------------------------------------------------------------
+// Ripristino finestre a fine crop (accettato, annullato o errore)
+// ------------------------------------------------------------
+
+void CustomSearcherManager::restoreAfterTemplateCrop()
+{
+    m_cropHiddenSearchArea = false;
+
+    if(m_searchAreaWindow)
+    {
+        m_searchAreaWindow->show();
+        m_searchAreaWindow->raise();
+    }
+
+    if(m_configWindow)
+    {
+        m_configWindow->show();
+        m_configWindow->raise();
+        m_configWindow->activateWindow();
+        m_configWindow->setFocus();
+    }
+}
+
+
+// ------------------------------------------------------------
+// Scatto vero e proprio (dopo la P) + apertura del ritaglio
+// ------------------------------------------------------------
+
+void CustomSearcherManager::grabTemplateCrop(
+    const QRect &region
+    )
+{
+    // Nascondo tutto cio' che potrebbe finire nella foto:
+    // la finestra Search Area (se aperta) e la finestra di config.
     if(m_searchAreaWindow)
     {
         m_searchAreaWindow->hide();
+    }
+
+    if(m_configWindow)
+    {
+        m_configWindow->hide();
     }
 
     QTimer::singleShot(
@@ -1364,11 +1632,7 @@ void CustomSearcherManager::captureTemplateCrop(
 
             if(!screen)
             {
-                if(m_searchAreaWindow)
-                {
-                    m_searchAreaWindow->show();
-                    m_searchAreaWindow->raise();
-                }
+                restoreAfterTemplateCrop();
 
                 emit templateCropCanceled();
                 return;
@@ -1389,11 +1653,7 @@ void CustomSearcherManager::captureTemplateCrop(
 
             if(source.isNull())
             {
-                if(m_searchAreaWindow)
-                {
-                    m_searchAreaWindow->show();
-                    m_searchAreaWindow->raise();
-                }
+                restoreAfterTemplateCrop();
 
                 emit templateCropCanceled();
                 return;
@@ -1416,19 +1676,7 @@ void CustomSearcherManager::captureTemplateCrop(
                     crop->close();
                     crop->deleteLater();
 
-                    if(m_searchAreaWindow)
-                    {
-                        m_searchAreaWindow->show();
-                        m_searchAreaWindow->raise();
-                    }
-
-                    if(m_configWindow)
-                    {
-                        m_configWindow->show();
-                        m_configWindow->raise();
-                        m_configWindow->activateWindow();
-                        m_configWindow->setFocus();
-                    }
+                    restoreAfterTemplateCrop();
                 }
                 );
 
@@ -1443,19 +1691,7 @@ void CustomSearcherManager::captureTemplateCrop(
                     crop->close();
                     crop->deleteLater();
 
-                    if(m_searchAreaWindow)
-                    {
-                        m_searchAreaWindow->show();
-                        m_searchAreaWindow->raise();
-                    }
-
-                    if(m_configWindow)
-                    {
-                        m_configWindow->show();
-                        m_configWindow->raise();
-                        m_configWindow->activateWindow();
-                        m_configWindow->setFocus();
-                    }
+                    restoreAfterTemplateCrop();
                 }
                 );
 

@@ -496,6 +496,24 @@ CustomSearcherConfigWindow::CustomSearcherConfigWindow(
         }
         );
 
+    // Durante l'attesa della P il pulsante diventa "Annulla".
+    connect(
+        m_manager,
+        &CustomSearcherManager::templateCropWaitingChanged,
+        this,
+        [this](bool waiting)
+        {
+            if(!m_cropButton)
+                return;
+
+            m_cropButton->setText(
+                waiting
+                    ? QStringLiteral("Annulla (premi P nel gioco)")
+                    : QStringLiteral("Template Crop")
+                );
+        }
+        );
+
 
     refreshCheckboxPresets();
 }
@@ -996,6 +1014,13 @@ void CustomSearcherConfigWindow::removeTemplate()
 
 void CustomSearcherConfigWindow::cropTemplate()
 {
+    // Se il crop e' gia' in attesa della P, un nuovo click annulla.
+    if(m_manager && m_manager->isWaitingForTemplateCrop())
+    {
+        m_manager->cancelTemplateCropWait();
+        return;
+    }
+
     const int index = selectedTemplateIndex();
 
     if(index < 0)
