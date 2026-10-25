@@ -387,6 +387,27 @@ void SkillConfigWindow::buildUi()
             );
 
 
+    QPushButton *resetPositionsButton =
+        new QPushButton(
+            "Ripristina posizioni",
+            this
+            );
+
+    resetPositionsButton->setToolTip(
+        "Riporta i 4 titoli nella disposizione a croce originale"
+        );
+
+    connect(
+        resetPositionsButton,
+        &QPushButton::clicked,
+        this,
+        &SkillConfigWindow::resetPositionsRequested
+        );
+
+    buttonsLayout->addWidget(
+        resetPositionsButton
+        );
+
     buttonsLayout->addStretch();
 
 

@@ -373,6 +373,10 @@ int main(int argc, char *argv[])
 
     overlayRoot->registerOverlay(skills);
 
+    // Ogni titolo e' una finestra indipendente: va registrato anche lui
+    // (click-through globale, raise, nascondi/mostra tutto).
+    skills->registerBoxes(overlayRoot);
+
     SkillConfigWindow *skillConfigWindow =
         new SkillConfigWindow(&mainWindow);
 
@@ -393,6 +397,13 @@ int main(int argc, char *argv[])
         &SkillConfigWindow::configurationChanged,
         skills,
         &SkillOverlay::applyConfig
+        );
+
+    QObject::connect(
+        skillConfigWindow,
+        &SkillConfigWindow::resetPositionsRequested,
+        skills,
+        &SkillOverlay::resetPositions
         );
 
     QObject::connect(

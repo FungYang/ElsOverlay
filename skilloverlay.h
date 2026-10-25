@@ -5,11 +5,14 @@
 #include <QTimer>
 #include <QSettings>
 #include <QPoint>
+#include <QRect>
 
 #include "skillbox.h"
 #include "globalkeyboard.h"
 #include "skillconfig.h"
 
+
+class OverlayRoot;
 
     class SkillOverlay : public QWidget
 {
@@ -20,6 +23,14 @@ public:
     explicit SkillOverlay(
         GlobalKeyboard *keyboard,
         QWidget *parent = nullptr
+        );
+
+    ~SkillOverlay() override;
+
+    // Registra i 4 box in OverlayRoot (click-through globale, raise,
+    // nascondi/mostra tutto). Ogni box e' una finestra indipendente.
+    void registerBoxes(
+        OverlayRoot *root
         );
 
 
@@ -50,6 +61,10 @@ public slots:
 
     void resumeAtmaGate();
 
+    // Riporta i 4 box nella disposizione a croce originale
+    // (cancella le posizioni salvate per ogni box).
+    void resetPositions();
+
     void setTransparency(
         int value
         );
@@ -57,13 +72,14 @@ public slots:
 
 protected:
 
-    void mousePressEvent(
-        QMouseEvent *event
+    // Questa finestra e' solo il COORDINATORE dei 4 box (1x1 px,
+    // trasparente). Mostrarla/nasconderla mostra/nasconde i box.
+    void showEvent(
+        QShowEvent *event
         ) override;
 
-
-    void mouseMoveEvent(
-        QMouseEvent *event
+    void hideEvent(
+        QHideEvent *event
         ) override;
 
 
@@ -91,10 +107,21 @@ private:
 
 
     // --------------------------------------------------------
-    // DRAG
+    // POSIZIONE DEI BOX (indipendente per ciascun box)
+    //
+    // 0 = Up, 1 = Left, 2 = Down, 3 = Right.
+    // Se un box non e' mai stato spostato non ha posizione salvata
+    // e sta nella disposizione a croce attorno alla finestra madre.
     // --------------------------------------------------------
 
-    QPoint dragPosition;
+    QPoint m_boxPosition[4];
+    bool m_boxHasPosition[4] = { false, false, false, false };
+
+    SkillBox *boxAt(int index) const;
+    QPoint defaultBoxPosition(int index) const;
+    void initBoxes();
+    void applyBoxPositions();
+    void saveBoxPosition(int index, const QPoint &position);
 
 
     // --------------------------------------------------------

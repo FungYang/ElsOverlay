@@ -37,6 +37,10 @@ signals:
         const SkillOverlayConfig &config
         );
 
+    // Pulsante "Ripristina posizioni": riporta i 4 titoli nella
+    // disposizione a croce originale.
+    void resetPositionsRequested();
+
 
 private:
 

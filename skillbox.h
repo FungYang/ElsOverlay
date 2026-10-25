@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QPixmap>
+#include <QPoint>
 
 
 class SkillBox : public QWidget
@@ -76,7 +77,29 @@ public slots:
         );
 
 
+
+signals:
+
+    // Emesso al RILASCIO del mouse dopo un trascinamento:
+    // posizione finale (angolo in alto a sinistra) del box.
+    void dragFinished(
+        const QPoint &topLeft
+        );
+
+
 protected:
+
+    void mousePressEvent(
+        QMouseEvent *event
+        ) override;
+
+    void mouseMoveEvent(
+        QMouseEvent *event
+        ) override;
+
+    void mouseReleaseEvent(
+        QMouseEvent *event
+        ) override;
 
     void paintEvent(
         QPaintEvent *event
@@ -90,6 +113,10 @@ private:
     bool cooldownPaused = false;
     bool selected = false;
     bool titleEnabled = true;
+
+    // Trascinamento del box (ogni box e' una finestra indipendente).
+    bool dragging = false;
+    QPoint dragOffset;
 
     QString skillName;
     QString imagePath;

@@ -1,8 +1,13 @@
 #include "skilloverlay.h"
 
+#include "overlayroot.h"
+
 #include <QCoreApplication>
-#include <QMouseEvent>
+#include <QGuiApplication>
+#include <QHideEvent>
+#include <QScreen>
 #include <QSettings>
+#include <QShowEvent>
 #include <QtGlobal>
 
 
@@ -92,6 +97,13 @@ SkillOverlay::SkillOverlay(
         Qt::WA_TranslucentBackground
         );
 
+    // La finestra madre non disegna nulla ed e' grande 1x1 px: i box
+    // sono finestre indipendenti. Non deve intercettare il mouse.
+    setAttribute(
+        Qt::WA_TransparentForMouseEvents
+        );
+
+
 
     // ========================================================
     // POSIZIONE
@@ -111,7 +123,7 @@ SkillOverlay::SkillOverlay(
             config.up.imagePath,
             config.up.name,
             config.up.cooldown,
-            this
+            nullptr
             );
 
 
@@ -120,7 +132,7 @@ SkillOverlay::SkillOverlay(
             config.left.imagePath,
             config.left.name,
             config.left.cooldown,
-            this
+            nullptr
             );
 
 
@@ -129,7 +141,7 @@ SkillOverlay::SkillOverlay(
             config.down.imagePath,
             config.down.name,
             config.down.cooldown,
-            this
+            nullptr
             );
 
 
@@ -138,7 +150,7 @@ SkillOverlay::SkillOverlay(
             config.right.imagePath,
             config.right.name,
             config.right.cooldown,
-            this
+            nullptr
             );
 
 
@@ -170,7 +182,10 @@ SkillOverlay::SkillOverlay(
     // POSIZIONAMENTO E DIMENSIONE
     // ========================================================
 
+    initBoxes();
+
     updateOverlayGeometry();
+
 
 
     // ========================================================
@@ -792,96 +807,16 @@ double SkillOverlay::getScale() const
 
 void SkillOverlay::updateOverlayGeometry()
 {
-    int overlayWidth =
-        qMax(
-            1,
-            qRound(
-                180.0 * scale
-                )
-            );
-
-
-    int overlayHeight =
-        qMax(
-            1,
-            qRound(
-                165.0 * scale
-                )
-            );
-
-
+    // La finestra madre e' solo il coordinatore: 1x1 px.
     setFixedSize(
-        overlayWidth,
-        overlayHeight
+        1,
+        1
         );
 
 
-    // --------------------------------------------------------
-    // UP
-    // --------------------------------------------------------
-
-    if(upSkill)
-    {
-        upSkill->move(
-            qRound(
-                60.0 * scale
-                ),
-            qRound(
-                0.0 * scale
-                )
-            );
-    }
-
-
-    // --------------------------------------------------------
-    // LEFT
-    // --------------------------------------------------------
-
-    if(leftSkill)
-    {
-        leftSkill->move(
-            qRound(
-                20.0 * scale
-                ),
-            qRound(
-                50.0 * scale
-                )
-            );
-    }
-
-
-    // --------------------------------------------------------
-    // DOWN
-    // --------------------------------------------------------
-
-    if(downSkill)
-    {
-        downSkill->move(
-            qRound(
-                60.0 * scale
-                ),
-            qRound(
-                100.0 * scale
-                )
-            );
-    }
-
-
-    // --------------------------------------------------------
-    // RIGHT
-    // --------------------------------------------------------
-
-    if(rightSkill)
-    {
-        rightSkill->move(
-            qRound(
-                100.0 * scale
-                ),
-            qRound(
-                50.0 * scale
-                )
-            );
-    }
+    // I box si posizionano da soli (posizione salvata, oppure
+    // disposizione a croce scalata attorno alla finestra madre).
+    applyBoxPositions();
 }
 
 
@@ -1028,17 +963,34 @@ void SkillOverlay::updateSkillBoxes()
 
 void SkillOverlay::applyEnabledState()
 {
-    if(upSkill)
-        upSkill->setTitleEnabled(config.up.enabled);
+    const bool enabled[4] =
+    {
+        config.up.enabled,
+        config.left.enabled,
+        config.down.enabled,
+        config.right.enabled
+    };
 
-    if(leftSkill)
-        leftSkill->setTitleEnabled(config.left.enabled);
+    for(int i = 0; i < 4; ++i)
+    {
+        SkillBox *box =
+            boxAt(i);
 
-    if(downSkill)
-        downSkill->setTitleEnabled(config.down.enabled);
+        if(!box)
+            continue;
 
-    if(rightSkill)
-        rightSkill->setTitleEnabled(config.right.enabled);
+        box->setTitleEnabled(
+            enabled[i]
+            );
+
+        // Un box attivo compare solo se l'overlay e' visibile:
+        // Buff Titles ON e overlay non nascosti con il tasto globale.
+        // (Prima era automatico perche' i box erano figli.)
+        if(enabled[i] && isVisible())
+        {
+            box->show();
+        }
+    }
 }
 
 
@@ -1422,65 +1374,291 @@ void SkillOverlay::resetAllCooldowns()
 
 
 // ============================================================
-// MOUSE PRESS
+// DISTRUTTORE
 // ============================================================
 
-void SkillOverlay::mousePressEvent(
-    QMouseEvent *event
+SkillOverlay::~SkillOverlay()
+{
+    // I box sono finestre indipendenti (senza parent): vanno
+    // eliminati a mano, altrimenti resterebbero a schermo.
+    delete upSkill;
+    delete leftSkill;
+    delete downSkill;
+    delete rightSkill;
+
+    upSkill = nullptr;
+    leftSkill = nullptr;
+    downSkill = nullptr;
+    rightSkill = nullptr;
+}
+
+
+// ============================================================
+// REGISTRA I BOX IN OVERLAYROOT
+// ============================================================
+
+void SkillOverlay::registerBoxes(
+    OverlayRoot *root
     )
 {
-    if(
-        event->button() ==
-        Qt::LeftButton
-        )
+    if(!root)
+        return;
+
+    for(int i = 0; i < 4; ++i)
     {
-        dragPosition =
-            event->globalPosition().toPoint()
-            -
-            frameGeometry().topLeft();
-
-
-        event->accept();
+        root->registerOverlay(
+            boxAt(i)
+            );
     }
 }
 
 
 // ============================================================
-// MOUSE MOVE
+// VISIBILITA' A CASCATA
+//
+// OverlayRoot e main.cpp mostrano/nascondono questa finestra come
+// prima; i box (finestre indipendenti) la seguono.
 // ============================================================
 
-void SkillOverlay::mouseMoveEvent(
-    QMouseEvent *event
+void SkillOverlay::showEvent(
+    QShowEvent *event
     )
 {
-    if(
-        event->buttons() &
-        Qt::LeftButton
-        )
+    QWidget::showEvent(event);
+
+    for(int i = 0; i < 4; ++i)
     {
-        move(
-            event->globalPosition().toPoint()
-            -
-            dragPosition
-            );
+        SkillBox *box =
+            boxAt(i);
 
-
-        QSettings settings(
-            QCoreApplication::applicationDirPath() +
-                "/ElsOverlay.ini",
-            QSettings::IniFormat
-            );
-
-
-        settings.setValue(
-            "Overlay/BuffGroup/position",
-            pos()
-            );
-
-
-        settings.sync();
+        if(box && box->isTitleEnabled())
+        {
+            box->show();
+        }
     }
 }
+
+
+void SkillOverlay::hideEvent(
+    QHideEvent *event
+    )
+{
+    QWidget::hideEvent(event);
+
+    for(int i = 0; i < 4; ++i)
+    {
+        if(SkillBox *box = boxAt(i))
+        {
+            box->hide();
+        }
+    }
+}
+
+
+// ============================================================
+// POSIZIONI DEI BOX
+// ============================================================
+
+namespace
+{
+
+// Disposizione a croce originale (a scala 1.0), relativa
+// all'angolo in alto a sinistra della finestra madre.
+const QPoint BOX_DEFAULT_OFFSET[4] =
+{
+    QPoint(60,   0),    // Up
+    QPoint(20,  50),    // Left
+    QPoint(60, 100),    // Down
+    QPoint(100, 50)     // Right
+};
+
+const char *BOX_SETTINGS_KEY[4] =
+{
+    "Overlay/BuffGroup/position_up",
+    "Overlay/BuffGroup/position_left",
+    "Overlay/BuffGroup/position_down",
+    "Overlay/BuffGroup/position_right"
+};
+
+QString boxSettingsPath()
+{
+    return QCoreApplication::applicationDirPath() +
+           "/ElsOverlay.ini";
+}
+
+// Un box e' "recuperabile" se almeno una parte sensata e' sopra
+// uno schermo (altrimenti, dopo aver cambiato monitor, finirebbe
+// fuori dallo schermo senza possibilita' di riprenderlo).
+bool isReachable(
+    const QRect &rect
+    )
+{
+    const auto screens =
+        QGuiApplication::screens();
+
+    for(const QScreen *screen : screens)
+    {
+        const QRect visible =
+            screen->availableGeometry().intersected(
+                rect
+                );
+
+        if(visible.width() >= 20 &&
+            visible.height() >= 20)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+}
+
+
+SkillBox *SkillOverlay::boxAt(
+    int index
+    ) const
+{
+    switch(index)
+    {
+    case 0: return upSkill;
+    case 1: return leftSkill;
+    case 2: return downSkill;
+    case 3: return rightSkill;
+    }
+
+    return nullptr;
+}
+
+
+QPoint SkillOverlay::defaultBoxPosition(
+    int index
+    ) const
+{
+    const QPoint offset =
+        BOX_DEFAULT_OFFSET[index];
+
+    return pos() +
+           QPoint(
+               qRound(offset.x() * scale),
+               qRound(offset.y() * scale)
+               );
+}
+
+
+void SkillOverlay::initBoxes()
+{
+    QSettings settings(
+        boxSettingsPath(),
+        QSettings::IniFormat
+        );
+
+    for(int i = 0; i < 4; ++i)
+    {
+        SkillBox *box =
+            boxAt(i);
+
+        if(!box)
+            continue;
+
+        // A fine trascinamento ogni box salva la SUA posizione.
+        connect(
+            box,
+            &SkillBox::dragFinished,
+            this,
+            [this, i](const QPoint &position)
+            {
+                saveBoxPosition(
+                    i,
+                    position
+                    );
+            }
+            );
+
+        // Posizione salvata (se c'e' ed e' ancora raggiungibile).
+        m_boxHasPosition[i] = false;
+
+        if(settings.contains(BOX_SETTINGS_KEY[i]))
+        {
+            const QPoint saved =
+                settings.value(
+                            BOX_SETTINGS_KEY[i]
+                            ).toPoint();
+
+            if(isReachable(QRect(saved, box->size())))
+            {
+                m_boxPosition[i] = saved;
+                m_boxHasPosition[i] = true;
+            }
+        }
+    }
+}
+
+
+void SkillOverlay::applyBoxPositions()
+{
+    for(int i = 0; i < 4; ++i)
+    {
+        SkillBox *box =
+            boxAt(i);
+
+        if(!box)
+            continue;
+
+        box->move(
+            m_boxHasPosition[i]
+                ? m_boxPosition[i]
+                : defaultBoxPosition(i)
+            );
+    }
+}
+
+
+void SkillOverlay::saveBoxPosition(
+    int index,
+    const QPoint &position
+    )
+{
+    m_boxPosition[index] = position;
+    m_boxHasPosition[index] = true;
+
+    QSettings settings(
+        boxSettingsPath(),
+        QSettings::IniFormat
+        );
+
+    settings.setValue(
+        BOX_SETTINGS_KEY[index],
+        position
+        );
+
+    settings.sync();
+}
+
+
+void SkillOverlay::resetPositions()
+{
+    QSettings settings(
+        boxSettingsPath(),
+        QSettings::IniFormat
+        );
+
+    for(int i = 0; i < 4; ++i)
+    {
+        settings.remove(
+            BOX_SETTINGS_KEY[i]
+            );
+
+        m_boxHasPosition[i] = false;
+    }
+
+    settings.sync();
+
+    applyBoxPositions();
+}
+
+
 // ============================================================
 // ATMA GATE
 // ============================================================

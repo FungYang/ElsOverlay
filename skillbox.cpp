@@ -3,6 +3,7 @@
 #include <QPainter>
 #include <QImage>
 #include <QFont>
+#include <QMouseEvent>
 
 
 SkillBox::SkillBox(
@@ -46,13 +47,29 @@ SkillBox::SkillBox(
         0.0;
 
 
+    // ========================================================
+    // FINESTRA INDIPENDENTE
+    //
+    // Ogni box e' una finestra a se' (come i BuffBox): cosi' si
+    // puo' trascinare ovunque senza essere vincolata agli altri.
+    // ========================================================
+
+    setWindowFlags(
+        Qt::Tool |
+        Qt::FramelessWindowHint |
+        Qt::WindowStaysOnTopHint
+        );
+
     setAttribute(
         Qt::WA_TranslucentBackground
         );
 
-
-    setAttribute(
-        Qt::WA_TransparentForMouseEvents
+    // IMPORTANTE: niente WA_TransparentForMouseEvents.
+    // Prima il mouse passava alla finestra madre (che si spostava
+    // intera); ora il box deve riceverlo per potersi trascinare.
+    // Il click-through globale e' gestito da OverlayRoot.
+    setCursor(
+        Qt::SizeAllCursor
         );
 }
 
@@ -435,13 +452,14 @@ void SkillBox::setTitleEnabled(
             false;
     }
 
-
-    // Su un widget figlio hide() e' esplicito: anche se l'overlay
-    // viene nascosto e rimostrato (toggle Buff Titles) il box
-    // disattivato resta nascosto.
-    setVisible(
-        titleEnabled
-        );
+    // Un titolo disattivato sparisce subito. Il contrario NON lo
+    // mostra qui: ora il box e' una finestra a se' e deve comparire
+    // solo se l'overlay (Buff Titles ON, overlay non nascosti) e'
+    // visibile: ci pensa SkillOverlay::applyEnabledState().
+    if(!titleEnabled)
+    {
+        hide();
+    }
 
 
     update();
@@ -558,4 +576,75 @@ void SkillBox::setTransparency(
             );
 
     update();
+}
+
+
+// =========================================================
+// TRASCINAMENTO
+// =========================================================
+
+void SkillBox::mousePressEvent(
+    QMouseEvent *event
+    )
+{
+    if(event->button() == Qt::LeftButton)
+    {
+        dragging =
+            true;
+
+        dragOffset =
+            event->globalPosition().toPoint()
+            -
+            frameGeometry().topLeft();
+
+        event->accept();
+        return;
+    }
+
+    QWidget::mousePressEvent(event);
+}
+
+
+void SkillBox::mouseMoveEvent(
+    QMouseEvent *event
+    )
+{
+    if(dragging &&
+        (event->buttons() & Qt::LeftButton))
+    {
+        move(
+            event->globalPosition().toPoint()
+            -
+            dragOffset
+            );
+
+        event->accept();
+        return;
+    }
+
+    QWidget::mouseMoveEvent(event);
+}
+
+
+void SkillBox::mouseReleaseEvent(
+    QMouseEvent *event
+    )
+{
+    if(dragging &&
+        event->button() == Qt::LeftButton)
+    {
+        dragging =
+            false;
+
+        // La posizione si salva solo a fine trascinamento
+        // (non a ogni pixel come faceva la finestra unica).
+        emit dragFinished(
+            pos()
+            );
+
+        event->accept();
+        return;
+    }
+
+    QWidget::mouseReleaseEvent(event);
 }
