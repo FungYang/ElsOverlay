@@ -53,6 +53,13 @@ public:
 
     void raiseAll();
 
+    // Porta TUTTI gli overlay (normali e Custom Searcher) in primo
+    // piano, come se fosse appena cambiata la finestra attiva.
+    // Serve al pulsante manuale della finestra principale per i casi
+    // in cui il rilancio automatico (hook di foreground) non basta.
+    // Non mostra gli overlay nascosti con il tasto globale.
+    void bringAllToFront();
+
 
     // =========================================================
     // VISIBILITY

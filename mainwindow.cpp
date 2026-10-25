@@ -357,6 +357,35 @@ MainWindow::MainWindow(
         );
 
 
+    QPushButton *bringToFrontButton =
+        new QPushButton(
+            "Porta tutto in primo piano",
+            overlayClickabilityGroup
+            );
+
+
+    bringToFrontButton->setToolTip(
+        "Rimette tutti gli overlay sopra le altre finestre.\n"
+        "Utile se qualcuno e' rimasto sotto il gioco."
+        );
+
+
+    connect(
+        bringToFrontButton,
+        &QPushButton::clicked,
+        this,
+        [this]()
+        {
+            emit bringOverlaysToFrontRequested();
+        }
+        );
+
+
+    overlayClickabilityLayout->addWidget(
+        bringToFrontButton
+        );
+
+
     overlayClickabilityLayout->addStretch();
 
 

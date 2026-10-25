@@ -86,6 +86,13 @@ int main(int argc, char *argv[])
 
     QObject::connect(
         &mainWindow,
+        &MainWindow::bringOverlaysToFrontRequested,
+        overlayRoot,
+        &OverlayRoot::bringAllToFront
+        );
+
+    QObject::connect(
+        &mainWindow,
         &MainWindow::transparencyChanged,
         overlayRoot,
         &OverlayRoot::setTransparency

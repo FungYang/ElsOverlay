@@ -374,6 +374,28 @@ void OverlayRoot::raiseAll()
 
 
 // ============================================================
+// BRING ALL TO FRONT (pulsante manuale)
+// ============================================================
+
+void OverlayRoot::bringAllToFront()
+{
+#ifdef Q_OS_WIN
+
+    // Stessa identica routine del cambio di finestra attiva:
+    // TOPMOST su tutti gli overlay, poi sui Custom Searcher, poi i
+    // rilanci a +100 / +400 / +1500 ms per battere chi si riaffermano
+    // TOPMOST dopo di noi.
+    handleForegroundChanged();
+
+#else
+
+    raiseAll();
+
+#endif
+}
+
+
+// ============================================================
 // RAISE CUSTOM SEARCHER OVERLAYS
 // ============================================================
 

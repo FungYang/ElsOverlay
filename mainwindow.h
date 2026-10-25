@@ -96,6 +96,10 @@ signals:
     void overlayClickabilityToggled(
         bool enabled
         );
+
+    // Pulsante "Porta in primo piano": rimette tutti gli overlay
+    // sopra le altre finestre.
+    void bringOverlaysToFrontRequested();
     void resonanceGateConfigRequested();
 
     void resonanceGateToggled(
