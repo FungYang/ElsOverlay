@@ -147,6 +147,7 @@ qt_add_executable(ElsOverlay
     keyedit.cpp
 
     SpecialCooldownConfiguration.h
+    imagepathutil.h
 
     specialcooldownconfigwindow.h
     specialcooldownconfigwindow.cpp

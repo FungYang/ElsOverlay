@@ -1,6 +1,8 @@
 
 #include "specialcooldownmanager.h"
 
+#include "imagepathutil.h"
+
 #include <QCoreApplication>
 #include <QSettings>
 
@@ -127,10 +129,15 @@ void SpecialCooldownManager::load()
         // ====================================================
 
         configuration.imagePath =
-            settings.value(
-                        prefix + "image",
-                        QString()
-                        ).toString();
+            // Il percorso nell'ini e' relativo all'exe (oppure assoluto
+            // per i file fuori dalla cartella dell'app, o di vecchie
+            // versioni). In memoria e' sempre assoluto.
+            ImagePath::resolve(
+                settings.value(
+                            prefix + "image",
+                            QString()
+                            ).toString()
+                );
 
 
         // ====================================================
@@ -306,7 +313,11 @@ void SpecialCooldownManager::save() const
 
         settings.setValue(
             "image",
-            configuration.imagePath
+            // Relativo alla cartella dell'exe: l'ini non dipende piu'
+            // dal nome/posizione della cartella dell'app.
+            ImagePath::toStored(
+                configuration.imagePath
+                )
             );
 
 

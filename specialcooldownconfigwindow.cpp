@@ -1,6 +1,7 @@
 
 #include "specialcooldownconfigwindow.h"
 
+#include "imagepathutil.h"
 #include "keyedit.h"
 #include "specialcooldownmanager.h"
 
@@ -472,7 +473,9 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
                 QFileDialog::getOpenFileName(
                     &dialog,
                     "Seleziona immagine",
-                    QString(),
+                    ImagePath::dialogStartDir(
+                        imageEdit->text()
+                        ),
                     "Immagini (*.png *.jpg *.jpeg *.bmp *.webp)"
                     );
 
@@ -595,7 +598,9 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
 
 
     configuration.imagePath =
-        imagePath;
+        ImagePath::resolve(
+            imagePath
+            );
 
 
     configuration.cooldown =
@@ -1032,7 +1037,9 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
                 QFileDialog::getOpenFileName(
                     &dialog,
                     "Seleziona immagine",
-                    QString(),
+                    ImagePath::dialogStartDir(
+                        imageEdit->text()
+                        ),
                     "Immagini (*.png *.jpg *.jpeg *.bmp *.webp)"
                     );
 
@@ -1152,7 +1159,9 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
 
 
     configuration.imagePath =
-        imagePath;
+        ImagePath::resolve(
+            imagePath
+            );
 
 
     configuration.cooldown =
