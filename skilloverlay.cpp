@@ -1,5 +1,6 @@
 #include "skilloverlay.h"
 
+#include "imagepathutil.h"
 #include "overlayroot.h"
 
 #include <QCoreApplication>
@@ -420,10 +421,14 @@ void SkillOverlay::loadDefaultConfig()
 
 
     config.up.imagePath =
-        settings.value(
-                    "BuffTitles/Up/Image",
-                    "images/concerto.png"
-                    ).toString();
+        // Nell'ini e' relativo all'exe (o assoluto per file esterni/vecchie
+        // versioni). In memoria e' sempre assoluto.
+        ImagePath::resolve(
+            settings.value(
+                        "BuffTitles/Up/Image",
+                        "images/concerto.png"
+                        ).toString()
+            );
 
 
     config.up.cooldown =
@@ -456,10 +461,14 @@ void SkillOverlay::loadDefaultConfig()
 
 
     config.left.imagePath =
-        settings.value(
-                    "BuffTitles/Left/Image",
-                    "images/nightparade.png"
-                    ).toString();
+        // Nell'ini e' relativo all'exe (o assoluto per file esterni/vecchie
+        // versioni). In memoria e' sempre assoluto.
+        ImagePath::resolve(
+            settings.value(
+                        "BuffTitles/Left/Image",
+                        "images/nightparade.png"
+                        ).toString()
+            );
 
 
     config.left.cooldown =
@@ -492,10 +501,14 @@ void SkillOverlay::loadDefaultConfig()
 
 
     config.down.imagePath =
-        settings.value(
-                    "BuffTitles/Down/Image",
-                    "images/settingsun.png"
-                    ).toString();
+        // Nell'ini e' relativo all'exe (o assoluto per file esterni/vecchie
+        // versioni). In memoria e' sempre assoluto.
+        ImagePath::resolve(
+            settings.value(
+                        "BuffTitles/Down/Image",
+                        "images/settingsun.png"
+                        ).toString()
+            );
 
 
     config.down.cooldown =
@@ -528,10 +541,14 @@ void SkillOverlay::loadDefaultConfig()
 
 
     config.right.imagePath =
-        settings.value(
-                    "BuffTitles/Right/Image",
-                    "images/artifact.png"
-                    ).toString();
+        // Nell'ini e' relativo all'exe (o assoluto per file esterni/vecchie
+        // versioni). In memoria e' sempre assoluto.
+        ImagePath::resolve(
+            settings.value(
+                        "BuffTitles/Right/Image",
+                        "images/artifact.png"
+                        ).toString()
+            );
 
 
     config.right.cooldown =

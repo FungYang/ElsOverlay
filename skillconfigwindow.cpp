@@ -1,3 +1,4 @@
+#include "imagepathutil.h"
 #include "skillconfigwindow.h"
 
 #include <QCheckBox>
@@ -575,7 +576,9 @@ QWidget *SkillConfigWindow::createSkillWidget(
                 QFileDialog::getOpenFileName(
                     this,
                     "Seleziona immagine",
-                    QCoreApplication::applicationDirPath(),
+                    ImagePath::dialogStartDir(
+                        imageEdit->text()
+                        ),
                     "Immagini (*.png *.jpg *.jpeg *.bmp)"
                     );
 
@@ -883,10 +886,14 @@ void SkillConfigWindow::loadConfig()
 
 
     m_config.up.imagePath =
-        settings.value(
-                    "BuffTitles/Up/Image",
-                    "images/concerto.png"
-                    ).toString();
+        // Nell'ini e' relativo all'exe (o assoluto per file esterni/vecchie
+        // versioni). In memoria e' sempre assoluto.
+        ImagePath::resolve(
+            settings.value(
+                        "BuffTitles/Up/Image",
+                        "images/concerto.png"
+                        ).toString()
+            );
 
 
     m_config.up.cooldown =
@@ -919,10 +926,14 @@ void SkillConfigWindow::loadConfig()
 
 
     m_config.left.imagePath =
-        settings.value(
-                    "BuffTitles/Left/Image",
-                    "images/nightparade.png"
-                    ).toString();
+        // Nell'ini e' relativo all'exe (o assoluto per file esterni/vecchie
+        // versioni). In memoria e' sempre assoluto.
+        ImagePath::resolve(
+            settings.value(
+                        "BuffTitles/Left/Image",
+                        "images/nightparade.png"
+                        ).toString()
+            );
 
 
     m_config.left.cooldown =
@@ -955,10 +966,14 @@ void SkillConfigWindow::loadConfig()
 
 
     m_config.down.imagePath =
-        settings.value(
-                    "BuffTitles/Down/Image",
-                    "images/settingsun.png"
-                    ).toString();
+        // Nell'ini e' relativo all'exe (o assoluto per file esterni/vecchie
+        // versioni). In memoria e' sempre assoluto.
+        ImagePath::resolve(
+            settings.value(
+                        "BuffTitles/Down/Image",
+                        "images/settingsun.png"
+                        ).toString()
+            );
 
 
     m_config.down.cooldown =
@@ -991,10 +1006,14 @@ void SkillConfigWindow::loadConfig()
 
 
     m_config.right.imagePath =
-        settings.value(
-                    "BuffTitles/Right/Image",
-                    "images/artifact.png"
-                    ).toString();
+        // Nell'ini e' relativo all'exe (o assoluto per file esterni/vecchie
+        // versioni). In memoria e' sempre assoluto.
+        ImagePath::resolve(
+            settings.value(
+                        "BuffTitles/Right/Image",
+                        "images/artifact.png"
+                        ).toString()
+            );
 
 
     m_config.right.cooldown =
@@ -1480,7 +1499,9 @@ SkillConfig SkillConfigWindow::readSkill(
 
 
     config.imagePath =
-        imageEdit->text();
+        ImagePath::resolve(
+            imageEdit->text()
+            );
 
 
     double cooldown =
@@ -1637,7 +1658,9 @@ void SkillConfigWindow::saveConfig()
 
         settings.setValue(
             prefix + "/Image",
-            config.imagePath
+            ImagePath::toStored(
+                config.imagePath
+                )
             );
 
 
