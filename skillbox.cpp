@@ -219,16 +219,20 @@ void SkillBox::paintEvent(
     painter.restore();
 
     // =====================================================
-    // COOLDOWN / READY
+    // COOLDOWN
+    //
+    // Il testo si disegna solo durante il cooldown. A cooldown
+    // finito (titolo pronto) non si scrive piu' "Ready": resta
+    // solo l'icona.
     // =====================================================
 
     if(!activeCooldown)
     {
-        painter.setPen(
-            Qt::white
-            );
+        return;
     }
-    else if(currentCooldown > 3.0)
+
+
+    if(currentCooldown > 3.0)
     {
         painter.setPen(
             QColor(
@@ -275,13 +279,11 @@ void SkillBox::paintEvent(
     painter.drawText(
         rect(),
         Qt::AlignCenter,
-        activeCooldown
-            ? QString::number(
-                  currentCooldown,
-                  'f',
-                  1
-                  )
-            : "Ready"
+        QString::number(
+            currentCooldown,
+            'f',
+            1
+            )
         );
 }
 
