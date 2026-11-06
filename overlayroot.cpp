@@ -1,6 +1,7 @@
 #include "overlayroot.h"
 
 #include <QApplication>
+#include <QFileInfo>
 #include <QScreen>
 #include <QTimer>
 
@@ -381,15 +382,92 @@ void OverlayRoot::bringAllToFront()
 {
 #ifdef Q_OS_WIN
 
-    // Stessa identica routine del cambio di finestra attiva:
-    // TOPMOST su tutti gli overlay, poi sui Custom Searcher, poi i
-    // rilanci a +100 / +400 / +1500 ms per battere chi si riaffermano
-    // TOPMOST dopo di noi.
-    handleForegroundChanged();
+    if(!m_overlaysVisible)
+    {
+        emit bringToFrontFinished(
+            false,
+            QStringLiteral(
+                "Overlay nascosti con il tasto globale"
+                )
+            );
+
+        return;
+    }
+
+
+    // Se si preme di nuovo il pulsante prima della fine, i passi
+    // ancora in coda del click precedente si annullano.
+    const quint32 generation =
+        ++m_manualRaiseGeneration;
+
+
+    // 1) Subito.
+    raiseAllStrong();
+
+
+    // 2) Di nuovo dopo poco: chi si riafferma TOPMOST subito dopo
+    //    di noi (giochi, launcher, overlay di altre app) viene
+    //    battuto una seconda volta.
+    QTimer::singleShot(
+        200,
+        this,
+        [this, generation]()
+        {
+            if(generation != m_manualRaiseGeneration)
+            {
+                return;
+            }
+
+            raiseAllStrong();
+        }
+        );
+
+
+    // 3) Verifica: qualcosa sta ancora sopra ai nostri overlay?
+    QTimer::singleShot(
+        450,
+        this,
+        [this, generation]()
+        {
+            if(generation != m_manualRaiseGeneration)
+            {
+                return;
+            }
+
+            int checked = 0;
+
+            const QString coveredBy =
+                describeWindowCoveringOverlays(
+                    &checked
+                    );
+
+            if(checked == 0)
+            {
+                emit bringToFrontFinished(
+                    false,
+                    QStringLiteral(
+                        "Nessun overlay visibile"
+                        )
+                    );
+
+                return;
+            }
+
+            emit bringToFrontFinished(
+                coveredBy.isEmpty(),
+                coveredBy
+                );
+        }
+        );
 
 #else
 
     raiseAll();
+
+    emit bringToFrontFinished(
+        true,
+        QString()
+        );
 
 #endif
 }
@@ -569,6 +647,260 @@ void OverlayRoot::handleForegroundChanged()
             }
             );
     }
+}
+
+
+// ============================================================
+// RILANCIO "FORTE" + VERIFICA (usati dal pulsante manuale)
+// ============================================================
+
+namespace
+{
+
+// Descrizione leggibile di una finestra:
+//   eldorado.exe - "Titolo finestra" [ClasseFinestra]
+QString describeWindow(
+    HWND window
+    )
+{
+    wchar_t title[256] = { 0 };
+    GetWindowTextW(window, title, 256);
+
+    wchar_t className[128] = { 0 };
+    GetClassNameW(window, className, 128);
+
+    QString executable;
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(window, &processId);
+
+    if(HANDLE process =
+            OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION,
+                FALSE,
+                processId
+                ))
+    {
+        wchar_t path[1024] = { 0 };
+        DWORD size = 1024;
+
+        if(QueryFullProcessImageNameW(
+               process,
+               0,
+               path,
+               &size
+               ))
+        {
+            // Separatori sempre '/', cosi' fileName() funziona
+            // identico su qualunque piattaforma.
+            executable =
+                QFileInfo(
+                    QString::fromWCharArray(
+                        path,
+                        static_cast<int>(size)
+                        ).replace(
+                            '\\',
+                            '/'
+                            )
+                    ).fileName();
+        }
+
+        CloseHandle(process);
+    }
+
+    const QString titleText =
+        QString::fromWCharArray(title).trimmed();
+
+    return QString("%1 - \"%2\" [%3]")
+        .arg(
+            executable.isEmpty()
+                ? QStringLiteral("processo sconosciuto")
+                : executable,
+            titleText.isEmpty()
+                ? QStringLiteral("senza titolo")
+                : titleText,
+            QString::fromWCharArray(className)
+            );
+}
+
+}
+
+
+void OverlayRoot::raiseAllStrong()
+{
+    if(!m_overlaysVisible)
+    {
+        return;
+    }
+
+
+    auto isCustomSearcher =
+        [this](const QWidget *widget)
+    {
+        for(const CustomSearcherOverlay *custom :
+             m_customSearcherOverlays)
+        {
+            if(custom == widget)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+
+    // Toglie e rimette il flag topmost: la finestra riparte dalla
+    // cima della fascia topmost (sopra anche ad altre finestre
+    // topmost), cosa che HWND_TOPMOST ripetuto su una finestra gia'
+    // topmost non garantisce.
+    auto reassertTopmost =
+        [](QWidget *widget)
+    {
+        if(!widget || !widget->isVisible())
+        {
+            return;
+        }
+
+        HWND hwnd =
+            reinterpret_cast<HWND>(
+                widget->winId()
+                );
+
+        if(!hwnd)
+        {
+            return;
+        }
+
+        const UINT flags =
+            SWP_NOMOVE |
+            SWP_NOSIZE |
+            SWP_NOACTIVATE;
+
+        SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
+        SetWindowPos(hwnd, HWND_TOPMOST,   0, 0, 0, 0, flags);
+    };
+
+
+    // Prima gli overlay normali...
+    for(QWidget *overlay : overlays)
+    {
+        if(overlay && !isCustomSearcher(overlay))
+        {
+            reassertTopmost(overlay);
+        }
+    }
+
+    // ...per ultimi i Custom Searcher (restano sopra a tutto).
+    for(CustomSearcherOverlay *custom :
+         m_customSearcherOverlays)
+    {
+        reassertTopmost(custom);
+    }
+}
+
+
+QString OverlayRoot::describeWindowCoveringOverlays(
+    int *checked
+    ) const
+{
+    if(checked)
+    {
+        *checked = 0;
+    }
+
+    const DWORD ourProcessId =
+        GetCurrentProcessId();
+
+
+    auto coveringWindow =
+        [&](const QWidget *widget) -> QString
+    {
+        if(!widget || !widget->isVisible())
+        {
+            return QString();
+        }
+
+        HWND mine =
+            reinterpret_cast<HWND>(
+                widget->winId()
+                );
+
+        if(!mine)
+        {
+            return QString();
+        }
+
+        if(checked)
+        {
+            ++(*checked);
+        }
+
+        RECT mineRect;
+
+        if(!GetWindowRect(mine, &mineRect))
+        {
+            return QString();
+        }
+
+        // GW_HWNDPREV = la finestra SOPRA nello z-order.
+        for(HWND other = GetWindow(mine, GW_HWNDPREV);
+             other;
+             other = GetWindow(other, GW_HWNDPREV))
+        {
+            if(!IsWindowVisible(other))
+            {
+                continue;
+            }
+
+            DWORD otherProcessId = 0;
+
+            GetWindowThreadProcessId(
+                other,
+                &otherProcessId
+                );
+
+            if(otherProcessId == ourProcessId)
+            {
+                continue;
+            }
+
+            RECT otherRect;
+            RECT intersection;
+
+            if(!GetWindowRect(other, &otherRect))
+            {
+                continue;
+            }
+
+            if(!IntersectRect(
+                   &intersection,
+                   &otherRect,
+                   &mineRect
+                   ))
+            {
+                continue;
+            }
+
+            return describeWindow(other);
+        }
+
+        return QString();
+    };
+
+
+    for(const QWidget *overlay : overlays)
+    {
+        const QString covering =
+            coveringWindow(overlay);
+
+        if(!covering.isEmpty())
+        {
+            return covering;
+        }
+    }
+
+    return QString();
 }
 
 #endif

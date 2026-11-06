@@ -35,6 +35,14 @@ public:
         return m_resonanceGatePauseCooldown;
     }
 
+    // Esito di "Porta tutto in primo piano" (da OverlayRoot):
+    // ok = nessuno copre gli overlay; altrimenti detail dice cosa li copre.
+    // Lo mostra per qualche secondo sul pulsante.
+    void showBringToFrontResult(
+        bool ok,
+        const QString &detail
+        );
+
 
 signals:
 
@@ -114,6 +122,11 @@ signals:
 
 
 private:
+
+    // Pulsante "Porta tutto in primo piano" e relativo esito.
+    QPushButton *m_bringToFrontButton = nullptr;
+    quint32 m_bringToFrontResultGeneration = 0;
+
 
     // ==================================================
     // ATMA

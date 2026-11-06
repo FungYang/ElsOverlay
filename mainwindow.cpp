@@ -15,6 +15,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QSlider>
+#include <QTimer>
 #include <QCheckBox>
 
 
@@ -368,6 +369,14 @@ MainWindow::MainWindow(
         "Rimette tutti gli overlay sopra le altre finestre.\n"
         "Utile se qualcuno e' rimasto sotto il gioco."
         );
+
+    // Evita che la finestra si ridimensioni quando il testo cambia.
+    bringToFrontButton->setMinimumWidth(
+        bringToFrontButton->sizeHint().width()
+        );
+
+    m_bringToFrontButton =
+        bringToFrontButton;
 
 
     connect(
@@ -1861,4 +1870,83 @@ void MainWindow::setResonanceGateChecked(bool on)
     QSignalBlocker blocker(resonanceGateToggleButton);
     resonanceGateToggleButton->setChecked(on);
     updateToggleText(resonanceGateToggleButton, on);
+}
+
+
+// =========================================================
+// ESITO "PORTA TUTTO IN PRIMO PIANO"
+// =========================================================
+
+void MainWindow::showBringToFrontResult(
+    bool ok,
+    const QString &detail
+    )
+{
+    if(!m_bringToFrontButton)
+        return;
+
+    const QString defaultText =
+        QStringLiteral("Porta tutto in primo piano");
+
+    const QString defaultTip =
+        QStringLiteral(
+            "Rimette tutti gli overlay sopra le altre finestre.\n"
+            "Utile se qualcuno e' rimasto sotto il gioco."
+            );
+
+
+    if(ok)
+    {
+        m_bringToFrontButton->setText(
+            QStringLiteral("OK: overlay in primo piano")
+            );
+
+        m_bringToFrontButton->setToolTip(
+            QStringLiteral(
+                "Nessuna finestra di altri programmi copre gli overlay."
+                )
+            );
+    }
+    else
+    {
+        // detail = "processo.exe - "titolo" [classe]": sul pulsante
+        // solo il nome del processo, il dettaglio nel tooltip.
+        const QString shortText =
+            detail.section(
+                QStringLiteral(" - "),
+                0,
+                0
+                );
+
+        m_bringToFrontButton->setText(
+            QStringLiteral("Coperti da: ") + shortText
+            );
+
+        m_bringToFrontButton->setToolTip(
+            QStringLiteral(
+                "Gli overlay sono ancora coperti da:\n"
+                ) + detail
+            );
+    }
+
+
+    // Dopo qualche secondo il pulsante torna normale.
+    const quint32 generation =
+        ++m_bringToFrontResultGeneration;
+
+    QTimer::singleShot(
+        6000,
+        this,
+        [this, generation, defaultText, defaultTip]()
+        {
+            if(generation != m_bringToFrontResultGeneration ||
+                !m_bringToFrontButton)
+            {
+                return;
+            }
+
+            m_bringToFrontButton->setText(defaultText);
+            m_bringToFrontButton->setToolTip(defaultTip);
+        }
+        );
 }

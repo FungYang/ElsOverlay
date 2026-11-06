@@ -91,6 +91,14 @@ int main(int argc, char *argv[])
         &OverlayRoot::bringAllToFront
         );
 
+    // Esito (verificato) del rilancio: mostrato sul pulsante.
+    QObject::connect(
+        overlayRoot,
+        &OverlayRoot::bringToFrontFinished,
+        &mainWindow,
+        &MainWindow::showBringToFrontResult
+        );
+
     QObject::connect(
         &mainWindow,
         &MainWindow::transparencyChanged,

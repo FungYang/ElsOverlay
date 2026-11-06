@@ -54,9 +54,17 @@ public:
     void raiseAll();
 
     // Porta TUTTI gli overlay (normali e Custom Searcher) in primo
-    // piano, come se fosse appena cambiata la finestra attiva.
-    // Serve al pulsante manuale della finestra principale per i casi
-    // in cui il rilancio automatico (hook di foreground) non basta.
+    // piano. Usato dal pulsante manuale della finestra principale.
+    //
+    // A differenza del rilancio automatico (che si limita a ripetere
+    // HWND_TOPMOST su finestre che sono GIA' topmost) qui il flag
+    // topmost viene tolto e rimesso: e' il modo affidabile per
+    // riprendere la cima della fascia topmost anche sopra altre
+    // finestre topmost.
+    //
+    // Dopo il rilancio verifica se qualche finestra di altri
+    // processi sta ancora sopra agli overlay e lo comunica con
+    // bringToFrontFinished().
     // Non mostra gli overlay nascosti con il tasto globale.
     void bringAllToFront();
 
@@ -109,6 +117,19 @@ public:
         );
 
 
+signals:
+
+    // Esito di bringAllToFront(), dopo la verifica.
+    //   ok = true  -> nessuna finestra di altri processi copre gli overlay
+    //   ok = false -> detail spiega perche': "<processo> - "<titolo>" [<classe>]"
+    //                 della finestra che li copre ancora, oppure il motivo
+    //                 (overlay nascosti, nessun overlay visibile).
+    void bringToFrontFinished(
+        bool ok,
+        const QString &detail
+        );
+
+
 private:
 
     // =========================================================
@@ -155,6 +176,19 @@ private:
     // eseguire solo i rilanci dell'ULTIMO cambio (vedi
     // handleForegroundChanged).
     quint32 m_raiseGeneration = 0;
+
+    // Come m_raiseGeneration, ma per il pulsante manuale.
+    quint32 m_manualRaiseGeneration = 0;
+
+    // Rilancio "forte" (toglie e rimette il flag topmost).
+    void raiseAllStrong();
+
+    // Cerca una finestra visibile di un altro processo che sta
+    // ancora SOPRA a un nostro overlay e si sovrappone ad esso.
+    // Vuota se nessuna. In *checked il numero di overlay controllati.
+    QString describeWindowCoveringOverlays(
+        int *checked
+        ) const;
 
 #endif
 
