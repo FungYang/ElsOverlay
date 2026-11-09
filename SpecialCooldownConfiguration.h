@@ -25,6 +25,12 @@ struct SpecialCooldownConfiguration
         );
 
     bool visible = true;
+
+    // LOOP: premendo il tasto il cooldown parte e, appena arriva a 0,
+    // RICOMINCIA da solo (contatore ciclico) finche' non si preme il
+    // tasto Reset. Ripremere il tasto lo riallinea (riparte da capo).
+    // Default false: le vecchie configurazioni non cambiano.
+    bool loop = false;
 };
 
 

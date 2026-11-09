@@ -1,6 +1,7 @@
 #ifndef SPECIALCOOLDOWNOVERLAY_H
 #define SPECIALCOOLDOWNOVERLAY_H
 
+#include <QElapsedTimer>
 #include <QList>
 #include <QTimer>
 #include <QWidget>
@@ -72,6 +73,10 @@ private:
 
 
     QTimer m_timer;
+
+    // Istante dell'ultimo tick: il conteggio usa il tempo REALMENTE
+    // trascorso (il QTimer da 100 ms non e' preciso).
+    QElapsedTimer m_tickClock;
 
 
     bool m_enabled = false;

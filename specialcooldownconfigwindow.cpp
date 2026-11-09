@@ -5,12 +5,14 @@
 #include "keyedit.h"
 #include "specialcooldownmanager.h"
 
+#include <QCheckBox>
 #include <QDialogButtonBox>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QIcon>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QListWidgetItem>
@@ -340,6 +342,31 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
         cooldownSpinBox
         );
 
+    // ========================================================
+    // LOOP
+    // ========================================================
+
+    QCheckBox *loopCheckBox =
+        new QCheckBox(
+            "Ripeti in loop (ricomincia appena arriva a 0)",
+            &dialog
+            );
+
+    loopCheckBox->setChecked(
+        false
+        );
+
+    loopCheckBox->setToolTip(
+        "Premendo il tasto il conteggio parte e, appena arriva a 0,\n"
+        "ricomincia da solo, senza fermarsi.\n"
+        "Si ferma con il tasto Reset. Ripremere il tasto lo riallinea\n"
+        "(riparte da capo)."
+        );
+
+    formLayout->addRow(
+        loopCheckBox
+        );
+
 
     mainLayout->addLayout(
         formLayout
@@ -544,6 +571,8 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
 
     const int cooldown =
         cooldownSpinBox->value();
+    const bool loop =
+        loopCheckBox->isChecked();
 
 
     // ========================================================
@@ -605,6 +634,8 @@ void SpecialCooldownConfigWindow::addSpecialCooldown()
 
     configuration.cooldown =
         cooldown;
+    configuration.loop =
+        loop;
 
 
     configuration.position =
@@ -904,6 +935,31 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
         cooldownSpinBox
         );
 
+    // ========================================================
+    // LOOP
+    // ========================================================
+
+    QCheckBox *loopCheckBox =
+        new QCheckBox(
+            "Ripeti in loop (ricomincia appena arriva a 0)",
+            &dialog
+            );
+
+    loopCheckBox->setChecked(
+        configuration.loop
+        );
+
+    loopCheckBox->setToolTip(
+        "Premendo il tasto il conteggio parte e, appena arriva a 0,\n"
+        "ricomincia da solo, senza fermarsi.\n"
+        "Si ferma con il tasto Reset. Ripremere il tasto lo riallinea\n"
+        "(riparte da capo)."
+        );
+
+    formLayout->addRow(
+        loopCheckBox
+        );
+
 
     mainLayout->addLayout(
         formLayout
@@ -1108,6 +1164,8 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
 
     const int cooldown =
         cooldownSpinBox->value();
+    const bool loop =
+        loopCheckBox->isChecked();
 
 
     // ========================================================
@@ -1166,6 +1224,8 @@ void SpecialCooldownConfigWindow::editSpecialCooldown(
 
     configuration.cooldown =
         cooldown;
+    configuration.loop =
+        loop;
 
 
     m_configurations[row] =
@@ -1345,18 +1405,24 @@ QString SpecialCooldownConfigWindow::displayName(
             );
 
 
-    return QString(
-               "%1    |    %2    |    %3 s"
-               )
-        .arg(
-            keysText
+    const QString text =
+        QString(
+            "%1    |    %2    |    %3 s"
             )
-        .arg(
-            fileName
-            )
-        .arg(
-            configuration.cooldown
-            );
+            .arg(
+                keysText
+                )
+            .arg(
+                fileName
+                )
+            .arg(
+                configuration.cooldown
+                );
+
+    // Segnala i cooldown in loop anche nell'elenco.
+    return configuration.loop
+               ? text + "    |    loop"
+               : text;
 }
 
 

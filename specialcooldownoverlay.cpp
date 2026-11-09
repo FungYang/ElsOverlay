@@ -1323,6 +1323,7 @@ void SpecialCooldownOverlay::setEnabled(
 
         if(!m_timer.isActive())
         {
+            m_tickClock.start();
             m_timer.start();
         }
     }
@@ -1435,34 +1436,90 @@ void SpecialCooldownOverlay::updateCooldowns()
     }
 
 
+    // ========================================================
+    // TEMPO REALMENTE TRASCORSO
+    //
+    // Prima ogni tick scalava sempre 100 ms, ma un QTimer da 100 ms
+    // non scatta mai esattamente ogni 100 ms (su Windows tende a
+    // ritardare): il conteggio scorreva un po' piu' lento del
+    // vero. Con il loop l'errore si accumulerebbe a ogni giro,
+    // quindi si misura il tempo vero tra un tick e il successivo.
+    // ========================================================
+
+    qint64 elapsed = 100;
+
+    if(m_tickClock.isValid())
+    {
+        elapsed = m_tickClock.restart();
+    }
+    else
+    {
+        m_tickClock.start();
+    }
+
+
     for(
         int i = 0;
         i < m_states.size();
         ++i
         )
     {
-        if(!m_states[i].active)
+        CooldownState &state =
+            m_states[i];
+
+        if(!state.active)
         {
             continue;
         }
 
+        qint64 remaining =
+            static_cast<qint64>(
+                state.remainingMilliseconds
+                )
+            -
+            elapsed;
 
-        m_states[i].remainingMilliseconds -=
-            100;
-
-
-        if(
-            m_states[i].remainingMilliseconds <= 0
-            )
+        if(remaining <= 0)
         {
-            m_states[i].remainingMilliseconds =
-                0;
+            const qint64 period =
+                static_cast<qint64>(
+                    state.configuration.cooldown
+                    ) *
+                1000;
 
+            if(state.configuration.loop &&
+                period > 0)
+            {
+                // ================================================
+                // LOOP: arrivato a 0 RICOMINCIA da capo.
+                //
+                // Il tempo "in piu'" oltre lo zero (overshoot) non si
+                // perde: il nuovo giro parte gia' consumato di quel
+                // tanto, cosi' il periodo resta esatto. Se il tick e'
+                // arrivato dopo piu' giri interi (GUI bloccata,
+                // sospensione del PC) la fase si mantiene corretta.
+                // ================================================
 
-            m_states[i].active =
-                false;
+                const qint64 overshoot =
+                    -remaining;
+
+                remaining =
+                    period -
+                    (overshoot % period);
+            }
+            else
+            {
+                remaining = 0;
+
+                state.active =
+                    false;
+            }
         }
 
+        state.remainingMilliseconds =
+            static_cast<int>(
+                remaining
+                );
 
         updateWidget(
             i

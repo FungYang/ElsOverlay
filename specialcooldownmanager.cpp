@@ -160,6 +160,16 @@ void SpecialCooldownManager::load()
                         true
                         ).toBool();
 
+        // ====================================================
+        // LOOP (default false: vecchi ini invariati)
+        // ====================================================
+
+        configuration.loop =
+            settings.value(
+                        prefix + "loop",
+                        false
+                        ).toBool();
+
 
         // ====================================================
         // POSITION
@@ -337,6 +347,15 @@ void SpecialCooldownManager::save() const
         settings.setValue(
             "visible",
             configuration.visible
+            );
+
+        // ====================================================
+        // LOOP
+        // ====================================================
+
+        settings.setValue(
+            "loop",
+            configuration.loop
             );
 
 
