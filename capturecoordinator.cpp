@@ -242,6 +242,28 @@ void CaptureCoordinator::doSubscribe(
     sub.nextDue =
         QDateTime::currentMSecsSinceEpoch();
 
+    // ALLINEAMENTO DI FASE.
+    //
+    // Chi deve confrontare ROI diverse "dello stesso frame" (Atma:
+    // 6 zone rosse + zona blu del Gate) si basa sul frameId, che e'
+    // condiviso solo dalle sub che scadono nello STESSO tick.
+    // Se una nuova sub partisse con nextDue = adesso mentre le altre
+    // hanno un'altra fase (es. riaccendendo solo Atma, o dopo una
+    // riconfigurazione), resterebbe sfasata per tutta la sessione e il
+    // suo frameId non coinciderebbe mai con quello delle altre: Atma
+    // sembrerebbe "non funzionare" finche' non si riavvia il programma.
+    // Quindi una nuova sub eredita la fase di una sub gia' attiva con
+    // lo stesso intervallo.
+    for (const auto &other : m_subs)
+    {
+        if (other.receiver &&
+            other.intervalMs == intervalMs)
+        {
+            sub.nextDue = other.nextDue;
+            break;
+        }
+    }
+
     sub.receiver = receiver;
     sub.slot = slot;
 

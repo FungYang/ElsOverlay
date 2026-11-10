@@ -19,6 +19,11 @@ void AtmaZoneWorker::loadReferences(QString imagesDir)
         if (!img.load(imagesDir + QString("ref%1.png").arg(i + 1)))
         {
             ok = false;
+
+            // Non tenere una reference vecchia: meglio un errore
+            // esplicito che un confronto con dati non aggiornati.
+            m_redReferences[i] = QImage();
+            m_redMasks[i].clear();
             continue;
         }
 

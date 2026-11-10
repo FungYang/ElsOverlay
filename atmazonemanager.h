@@ -33,6 +33,13 @@ public:
     ~AtmaZoneManager();
 
     void configure();
+
+    // Da chiamare quando la configurazione (reference su disco e/o
+    // posizione delle zone) e' cambiata. Se Atma e' attivo ricarica le
+    // reference nel worker e ri-registra le regioni di cattura con i
+    // rect aggiornati. Se Atma e' spento non fa nulla: i nuovi valori
+    // verranno letti da setEnabled(true).
+    void reloadConfiguration();
     void setEnabled(bool enabled);
     void setDetectionSuspended(bool on);
 
@@ -108,6 +115,11 @@ private:
     std::array<ZoneState, RED_COUNT> m_redStates;
 
     QHash<quint64, PendingFrame> m_pendingFrames;
+
+    // Scarta i frame incompleti ormai troppo vecchi: se alcune zone
+    // non arrivano mai con lo stesso frameId, non si completeranno
+    // piu' e resterebbero in memoria per sempre.
+    void prunePendingFrames(quint64 latestFrameId);
 
     QThread *m_workerThread = nullptr;
     AtmaZoneWorker *m_worker = nullptr;

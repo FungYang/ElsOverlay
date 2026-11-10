@@ -12,6 +12,11 @@ void ResonanceGateWorker::loadReference(QString imagesDir)
         m_reference = img.convertToFormat(QImage::Format_ARGB32);
         m_mask = buildForegroundMask(m_reference);
     }
+    else
+    {
+        m_reference = QImage();
+        m_mask.clear();
+    }
 
     emit referenceLoaded(ok);
 }

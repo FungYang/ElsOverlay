@@ -45,6 +45,7 @@ ResonanceGateManager::ResonanceGateManager(
                 if (!m_captureSetup || !m_captureSetup->isVisible()) return;
                 m_captureSetup->saveSettings();
                 m_captureSetup->hide();
+                reloadConfiguration();
                 if (m_overlayRoot) m_overlayRoot->raiseAll();
             });
 
@@ -74,6 +75,36 @@ void ResonanceGateManager::configure()
     m_captureSetup->activateWindow();
     m_captureSetup->setFocus();
     m_overlayRoot->raiseAll();
+}
+
+void ResonanceGateManager::reloadConfiguration()
+{
+    if (!m_enabled)
+        return;
+
+    unregisterRegion();
+
+    m_configured = false;
+    m_state = State::Unknown;
+
+    // Se il gate risultava chiuso (cooldown in pausa) con la vecchia
+    // configurazione, lo riapro: finche' il nuovo riferimento non e'
+    // caricato non esiste un'informazione affidabile per tenerli in pausa.
+    if (!m_gateOpen)
+    {
+        m_gateOpen = true;
+        emit gateOpened();
+    }
+
+    const QString imagesDir =
+        QCoreApplication::applicationDirPath() + "/images/";
+
+    QMetaObject::invokeMethod(
+        m_worker,
+        "loadReference",
+        Qt::QueuedConnection,
+        Q_ARG(QString, imagesDir)
+        );
 }
 
 void ResonanceGateManager::setEnabled(bool value)

@@ -23,6 +23,9 @@ public:
     ~ResonanceGateManager();
 
     void configure();
+
+    // Vedi AtmaZoneManager::reloadConfiguration().
+    void reloadConfiguration();
     void setEnabled(bool enabled);
     void setDetectionSuspended(bool on);
 

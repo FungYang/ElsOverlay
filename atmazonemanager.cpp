@@ -145,6 +145,10 @@ AtmaZoneManager::AtmaZoneManager(
             m_captureSetup->saveSettings();
             m_captureSetup->hide();
 
+            // Applica subito le nuove reference/zone senza riavviare
+            // il programma e senza dover fare OFF/ON.
+            reloadConfiguration();
+
             if (m_overlayRoot)
                 m_overlayRoot->raiseAll();
         }
@@ -202,6 +206,39 @@ void AtmaZoneManager::configure()
         m_debugWindow->raise();
     }
 #endif
+}
+
+
+// ============================================================
+// RELOAD CONFIGURATION
+// ============================================================
+
+void AtmaZoneManager::reloadConfiguration()
+{
+    if (!m_enabled)
+        return;
+
+    // Smette di catturare con i vecchi rect e invalida lo stato
+    // calcolato con le vecchie reference.
+    unsubscribeAll();
+    unregisterAllRegions();
+
+    m_configured = false;
+    m_redStates.fill(ZoneState::Unknown);
+    m_pendingFrames.clear();
+
+    // Il worker ricarica ref1..6.png dal disco.
+    // Al termine, onReferencesLoaded() ri-registra le regioni
+    // leggendo i rect aggiornati dal setup e si ri-iscrive.
+    const QString imagesDir =
+        QCoreApplication::applicationDirPath() + "/images/";
+
+    QMetaObject::invokeMethod(
+        m_worker,
+        "loadReferences",
+        Qt::QueuedConnection,
+        Q_ARG(QString, imagesDir)
+        );
 }
 
 
@@ -270,6 +307,11 @@ void AtmaZoneManager::onReferencesLoaded(bool ok)
         return;
     }
 
+    // Risultati ancora in volo, calcolati con la configurazione
+    // precedente, non devono contaminare il nuovo ciclo.
+    m_redStates.fill(ZoneState::Unknown);
+    m_pendingFrames.clear();
+
     m_configured = true;
 
     registerAllRegions();
@@ -303,6 +345,7 @@ void AtmaZoneManager::onRedZoneCompared(
     frame.redReceived[index] = true;
 
     evaluateFrame(frameId);
+    prunePendingFrames(frameId);
 }
 
 
@@ -328,6 +371,31 @@ void AtmaZoneManager::setGateFrame(
     frame.blueReceived = true;
 
     evaluateFrame(frameId);
+    prunePendingFrames(frameId);
+}
+
+
+// ============================================================
+// PRUNE PENDING FRAMES
+// ============================================================
+
+void AtmaZoneManager::prunePendingFrames(quint64 latestFrameId)
+{
+    constexpr quint64 MAX_FRAME_LAG = 32;
+
+    if (latestFrameId <= MAX_FRAME_LAG)
+        return;
+
+    const quint64 limit = latestFrameId - MAX_FRAME_LAG;
+
+    for (auto it = m_pendingFrames.begin();
+         it != m_pendingFrames.end();)
+    {
+        if (it.key() < limit)
+            it = m_pendingFrames.erase(it);
+        else
+            ++it;
+    }
 }
 
 
