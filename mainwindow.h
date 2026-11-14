@@ -49,6 +49,9 @@ signals:
     void customSearcherConfigRequested();
     void customSearcherToggled(bool enabled);
 
+    void screenMirrorConfigRequested();
+    void screenMirrorToggled(bool enabled);
+
     void atmaConfigRequested();
     void atmaZonesConfigRequested();
     void atmaToggled(
@@ -218,6 +221,9 @@ private:
 
     QPushButton *customSearcherConfigButton;
     QPushButton *customSearcherToggleButton;
+
+    QPushButton *screenMirrorConfigButton;
+    QPushButton *screenMirrorToggleButton;
 
     QCheckBox *resonanceGatePauseCooldownCheckBox = nullptr;
     bool m_resonanceGatePauseCooldown = true;

@@ -20,6 +20,7 @@
 #include "classbuffconfigwindow.h"
 #include "capturecoordinator.h"
 #include "customsearchermanager.h"
+#include "screenmirrormanager.h"
 
 #include "distanceguidemanager.h"
 #include "distanceguideconfigwindow.h"
@@ -360,6 +361,32 @@ int main(int argc, char *argv[])
         &MainWindow::customSearcherToggled,
         &customSearcher,
         &CustomSearcherManager::setEnabled
+        );
+
+    // ==================================================
+    // SCREEN MIRROR
+    //
+    // Cattura una regione ogni secondo (CaptureCoordinator) e la
+    // mostra 1:1 in un overlay su un'altra regione.
+    // ==================================================
+
+    ScreenMirrorManager screenMirror(
+        &keyboard,
+        overlayRoot
+        );
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::screenMirrorConfigRequested,
+        &screenMirror,
+        &ScreenMirrorManager::configure
+        );
+
+    QObject::connect(
+        &mainWindow,
+        &MainWindow::screenMirrorToggled,
+        &screenMirror,
+        &ScreenMirrorManager::setEnabled
         );
 
     // ==================================================

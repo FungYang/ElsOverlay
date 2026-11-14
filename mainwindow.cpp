@@ -243,9 +243,9 @@ MainWindow::MainWindow(
         );
 
 
-    setFixedSize(
+    resize(
         520,
-        840
+        960
         );
 
 
@@ -940,6 +940,52 @@ MainWindow::MainWindow(
 
 
     // ========================================================
+    // SCREEN MIRROR
+    // ========================================================
+
+    QGroupBox *screenMirrorGroup =
+        new QGroupBox(
+            "Screen Mirror",
+            central
+            );
+
+    QHBoxLayout *screenMirrorLayout =
+        new QHBoxLayout(
+            screenMirrorGroup
+            );
+
+    screenMirrorConfigButton =
+        new QPushButton(
+            "Configura",
+            screenMirrorGroup
+            );
+
+    screenMirrorToggleButton =
+        new QPushButton(
+            "OFF",
+            screenMirrorGroup
+            );
+
+    setupToggleButton(
+        screenMirrorToggleButton
+        );
+
+    screenMirrorLayout->addWidget(
+        screenMirrorConfigButton
+        );
+
+    screenMirrorLayout->addStretch();
+
+    screenMirrorLayout->addWidget(
+        screenMirrorToggleButton
+        );
+
+    mainLayout->addWidget(
+        screenMirrorGroup
+        );
+
+
+    // ========================================================
     // SPECIAL COOLDOWNS
     // ========================================================
 
@@ -1082,6 +1128,32 @@ MainWindow::MainWindow(
                 );
 
             emit customSearcherToggled(
+                enabled
+                );
+
+            saveToggleStates();
+        }
+        );
+
+    connect(
+        screenMirrorConfigButton,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::screenMirrorConfigRequested
+        );
+
+    connect(
+        screenMirrorToggleButton,
+        &QPushButton::toggled,
+        this,
+        [this](bool enabled)
+        {
+            updateToggleText(
+                screenMirrorToggleButton,
+                enabled
+                );
+
+            emit screenMirrorToggled(
                 enabled
                 );
 
@@ -1673,6 +1745,11 @@ void MainWindow::saveToggleStates()
         customSearcherToggleButton->isChecked()
         );
 
+    settings.setValue(
+        "Toggles/ScreenMirror",
+        screenMirrorToggleButton->isChecked()
+        );
+
 
     settings.setValue(
         "Toggles/SpecialCooldowns",
@@ -1762,6 +1839,11 @@ void MainWindow::loadToggleStates()
                     "Toggles/CustomSearcher",
                     false
                     ).toBool();
+    const bool screenMirror =
+        settings.value(
+                    "Toggles/ScreenMirror",
+                    false
+                    ).toBool();
     const bool resonanceGateEnabled =
         settings.value("Toggles/ResonanceGate", false).toBool();
     m_resonanceGatePauseCooldown =
@@ -1806,6 +1888,9 @@ void MainWindow::loadToggleStates()
     customSearcherToggleButton->setChecked(
         customSearcher
         );
+    screenMirrorToggleButton->setChecked(
+        screenMirror
+        );
 
     overlayClickabilityToggleButton->setChecked(
         overlayClickability
@@ -1839,6 +1924,10 @@ void MainWindow::loadToggleStates()
     updateToggleText(
         customSearcherToggleButton,
         customSearcher
+        );
+    updateToggleText(
+        screenMirrorToggleButton,
+        screenMirror
         );
 
 

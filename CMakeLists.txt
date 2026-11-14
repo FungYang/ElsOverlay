@@ -180,6 +180,9 @@ qt_add_executable(ElsOverlay
     customsearcherconfigwindow.h customsearcherconfigwindow.cpp
     customsearchertemplatecrop.h customsearchertemplatecrop.cpp
     customsearchersearcharea.h customsearchersearcharea.cpp
+    screenmirrormanager.h screenmirrormanager.cpp
+    screenmirrorsetup.h screenmirrorsetup.cpp
+    screenmirroroverlay.h screenmirroroverlay.cpp
     customsearcheroverlay.h customsearcheroverlay.cpp
 
 )
